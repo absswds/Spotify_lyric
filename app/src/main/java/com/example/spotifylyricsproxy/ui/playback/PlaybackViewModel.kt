@@ -3,6 +3,7 @@ package com.example.spotifylyricsproxy.ui.playback
 import android.app.Activity
 import android.app.Application
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
@@ -25,6 +26,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     val currentTrack: StateFlow<SpotifyTrackInfo>
         get() = repository.currentTrack
+
+    val albumArt: StateFlow<Bitmap?>
+        get() = repository.albumArt
 
     fun authorize(activity: Activity) {
         repository.authorize(activity)

@@ -1,9 +1,9 @@
 package com.example.spotifylyricsproxy.ui.playback
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import coil.compose.AsyncImage
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,9 +32,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import android.app.Activity
+import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +52,7 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 fun PlaybackScreen(viewModel: PlaybackViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val trackInfo by viewModel.currentTrack.collectAsState()
+    val albumArt by viewModel.albumArt.collectAsState()
     val activity = LocalContext.current as Activity
 
     Scaffold(
@@ -70,7 +73,7 @@ fun PlaybackScreen(viewModel: PlaybackViewModel) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // Now playing section
-            NowPlayingSection(trackInfo, connectionState)
+            NowPlayingSection(trackInfo, albumArt, connectionState)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -166,6 +169,7 @@ private fun ConnectionStatusSection(
 @Composable
 private fun NowPlayingSection(
     trackInfo: SpotifyTrackInfo,
+    albumArt: Bitmap?,
     connectionState: SpotifyConnectionState
 ) {
     Card(
@@ -184,9 +188,9 @@ private fun NowPlayingSection(
                     .clip(RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                if (trackInfo.imageUri.isNotEmpty()) {
-                    AsyncImage(
-                        model = trackInfo.imageUri,
+                if (albumArt != null) {
+                    Image(
+                        bitmap = albumArt.asImageBitmap(),
                         contentDescription = "专辑封面",
                         modifier = Modifier.size(200.dp)
                     )

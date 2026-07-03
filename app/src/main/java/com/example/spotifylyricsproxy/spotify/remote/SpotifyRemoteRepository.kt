@@ -3,9 +3,11 @@ package com.example.spotifylyricsproxy.spotify.remote
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.util.Log
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.SpotifyAppRemote
+import com.spotify.protocol.types.Image
 import com.spotify.protocol.types.PlayerState
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
@@ -33,6 +35,9 @@ class SpotifyRemoteRepository(
 
     private val _currentTrack = MutableStateFlow(SpotifyTrackInfo())
     val currentTrack: StateFlow<SpotifyTrackInfo> = _currentTrack.asStateFlow()
+
+    private val _albumArt = MutableStateFlow<Bitmap?>(null)
+    val albumArt: StateFlow<Bitmap?> = _albumArt.asStateFlow()
 
     fun authorize(activity: Activity) {
         val request = AuthorizationRequest.Builder(
@@ -118,11 +123,14 @@ class SpotifyRemoteRepository(
         spotifyAppRemote = null
         _connectionState.value = SpotifyConnectionState.Disconnected
         _currentTrack.value = SpotifyTrackInfo()
+        _albumArt.value = null
     }
 
     private fun subscribeToPlayerState() {
         spotifyAppRemote?.playerApi?.subscribeToPlayerState()
             ?.setEventCallback { playerState: PlayerState ->
+                val rawUri = playerState.track?.imageUri?.raw ?: ""
+                Log.i(TAG, "imageUri raw: '$rawUri'")
                 _currentTrack.value = SpotifyTrackInfo(
                     trackId = playerState.track?.uri?.split(":")?.lastOrNull() ?: "",
                     trackUri = playerState.track?.uri ?: "",
@@ -132,8 +140,15 @@ class SpotifyRemoteRepository(
                     durationMs = playerState.track?.duration ?: 0,
                     playbackPositionMs = playerState.playbackPosition,
                     isPaused = playerState.isPaused,
-                    imageUri = playerState.track?.imageUri?.raw ?: ""
+                    imageUri = rawUri
                 )
+                // Load album art via SDK images API
+                playerState.track?.imageUri?.let { uri ->
+                    spotifyAppRemote?.imagesApi?.getImage(uri, Image.Dimension.LARGE)
+                        ?.setResultCallback { bitmap: Bitmap? ->
+                            _albumArt.value = bitmap
+                        }
+                }
             }
             ?.setErrorCallback { error: Throwable ->
                 Log.e(TAG, "Player state subscription error", error)
