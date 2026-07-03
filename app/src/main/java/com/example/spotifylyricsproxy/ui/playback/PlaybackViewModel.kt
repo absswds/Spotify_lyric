@@ -6,6 +6,9 @@ import android.content.Intent
 import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.spotifylyricsproxy.core.model.LrcLine
+import com.example.spotifylyricsproxy.lyrics.LyricStatus
+import com.example.spotifylyricsproxy.lyrics.LyricsRepository
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
@@ -21,6 +24,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val redirectUri = "spotifylyricsproxy://callback"
 
     private val repository = SpotifyRemoteRepository(application, clientId, redirectUri)
+    private val lyricsRepo = LyricsRepository()
     private val clock = PlaybackClock()
 
     private val _estimatedPositionMs = MutableStateFlow(0L)
@@ -35,14 +39,25 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     val albumArt: StateFlow<Bitmap?>
         get() = repository.albumArt
 
+    val currentLyricLine: StateFlow<LrcLine?>
+        get() = lyricsRepo.currentLine
+
+    val parsedLyrics: StateFlow<List<LrcLine>>
+        get() = lyricsRepo.parsedLyrics
+
+    val lyricStatus: StateFlow<LyricStatus>
+        get() = lyricsRepo.lyricStatus
+
+    private var lastFetchedTrackId: String = ""
+
     init {
         repository.tryConnect()
         startClock()
+        observeTrackChanges()
     }
 
     private fun startClock() {
         viewModelScope.launch {
-            // Feed clock with latest track info
             launch {
                 repository.currentTrack.collect { track ->
                     clock.update(
@@ -52,10 +67,28 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     )
                 }
             }
-            // Tick the clock and emit estimated position
             launch {
                 clock.tick(300).collect { pos ->
                     _estimatedPositionMs.value = pos
+                    lyricsRepo.updatePosition(pos)
+                }
+            }
+        }
+    }
+
+    private fun observeTrackChanges() {
+        viewModelScope.launch {
+            repository.currentTrack.collect { track ->
+                if (track.trackId.isNotEmpty() && track.trackId != lastFetchedTrackId) {
+                    lastFetchedTrackId = track.trackId
+                    lyricsRepo.reset()
+                    lyricsRepo.fetchLyrics(
+                        trackId = track.trackId,
+                        title = track.title,
+                        artist = track.artist,
+                        album = track.album,
+                        durationMs = track.durationMs
+                    )
                 }
             }
         }
@@ -71,6 +104,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     fun disconnect() {
         repository.disconnect()
+        lyricsRepo.reset()
+        lastFetchedTrackId = ""
     }
 
     fun togglePlayPause() {

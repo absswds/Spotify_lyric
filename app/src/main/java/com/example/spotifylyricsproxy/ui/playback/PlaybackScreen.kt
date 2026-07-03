@@ -44,6 +44,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.spotifylyricsproxy.core.model.LrcLine
+import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 
@@ -54,6 +56,9 @@ fun PlaybackScreen(viewModel: PlaybackViewModel) {
     val trackInfo by viewModel.currentTrack.collectAsState()
     val albumArt by viewModel.albumArt.collectAsState()
     val estimatedPositionMs by viewModel.estimatedPositionMs.collectAsState()
+    val currentLyricLine by viewModel.currentLyricLine.collectAsState()
+    val parsedLyrics by viewModel.parsedLyrics.collectAsState()
+    val lyricStatus by viewModel.lyricStatus.collectAsState()
     val activity = LocalContext.current as Activity
 
     Scaffold(
@@ -75,6 +80,11 @@ fun PlaybackScreen(viewModel: PlaybackViewModel) {
 
             // Now playing section
             NowPlayingSection(trackInfo, albumArt, estimatedPositionMs, connectionState)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Lyrics section
+            LyricsSection(currentLyricLine, parsedLyrics, lyricStatus)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -311,6 +321,118 @@ private fun PlaybackControls(
                 contentDescription = "下一首",
                 modifier = Modifier.size(40.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun LyricsSection(
+    currentLine: LrcLine?,
+    allLines: List<LrcLine>,
+    status: LyricStatus
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "歌词",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            when (status) {
+                is LyricStatus.Idle -> {
+                    Text(
+                        text = "等待播放...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                is LyricStatus.Searching -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("正在搜索歌词...")
+                    }
+                }
+                is LyricStatus.Synced -> {
+                    Text(
+                        text = currentLine?.text ?: "...",
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center
+                    )
+                    // Show surrounding context
+                    if (allLines.isNotEmpty() && currentLine != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val idx = allLines.indexOf(currentLine)
+                        if (idx > 0) {
+                            Text(
+                                text = allLines[idx - 1].text,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (idx >= 0 && idx + 1 < allLines.size) {
+                            Text(
+                                text = allLines[idx + 1].text,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+                is LyricStatus.PlainOnly -> {
+                    Text(
+                        text = "仅有普通歌词，无同步时间轴",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                is LyricStatus.NotFound -> {
+                    Text(
+                        text = "未找到歌词",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                is LyricStatus.LowConfidence -> {
+                    Text(
+                        text = "匹配置信度不足 (${status.score}分)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                is LyricStatus.ParseError -> {
+                    Text(
+                        text = "歌词解析失败",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                is LyricStatus.Error -> {
+                    Text(
+                        text = "错误: ${status.message}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
     }
 }
