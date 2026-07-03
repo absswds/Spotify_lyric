@@ -16,6 +16,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private val repository = SpotifyRemoteRepository(application, clientId, redirectUri)
 
+    init {
+        repository.tryConnect()
+    }
+
     val connectionState: StateFlow<SpotifyConnectionState>
         get() = repository.connectionState
 

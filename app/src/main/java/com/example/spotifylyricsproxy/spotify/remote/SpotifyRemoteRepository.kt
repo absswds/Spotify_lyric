@@ -53,7 +53,7 @@ class SpotifyRemoteRepository(
         when (response.type) {
             AuthorizationResponse.Type.TOKEN -> {
                 Log.i(TAG, "Auth successful, token received")
-                connectAfterAuth()
+                tryConnect()
                 return true
             }
             AuthorizationResponse.Type.ERROR -> {
@@ -70,7 +70,7 @@ class SpotifyRemoteRepository(
         }
     }
 
-    private fun connectAfterAuth() {
+    fun tryConnect() {
         if (_connectionState.value is SpotifyConnectionState.Connecting ||
             _connectionState.value is SpotifyConnectionState.Connected) {
             return
