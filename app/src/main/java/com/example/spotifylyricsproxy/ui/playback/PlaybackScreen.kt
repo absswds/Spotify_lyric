@@ -23,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
@@ -49,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -231,7 +231,8 @@ private fun AlbumArtHero(albumArt: Bitmap?, accent: Color) {
                 Image(
                     bitmap = albumArt.asImageBitmap(),
                     contentDescription = "专辑封面",
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
             } else {
                 Icon(
@@ -418,16 +419,20 @@ private fun PlaybackControls(
         Surface(
             modifier = Modifier.size(72.dp),
             shape = CircleShape,
-            color = accent,
+            color = if (isConnected) accent else Color.White.copy(alpha = 0.14f),
             contentColor = Color.White,
             shadowElevation = 8.dp
         ) {
             IconButton(onClick = onPlayPause, enabled = isConnected) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Filled.Close else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "暂停" else "播放",
-                    modifier = Modifier.size(42.dp)
-                )
+                if (isPlaying) {
+                    PauseGlyph()
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "播放",
+                        modifier = Modifier.size(42.dp)
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.width(28.dp))
@@ -440,6 +445,30 @@ private fun PlaybackControls(
             )
         }
     }
+}
+
+@Composable
+private fun PauseGlyph() {
+    Row(
+        modifier = Modifier.size(42.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        PauseBar()
+        Spacer(modifier = Modifier.width(7.dp))
+        PauseBar()
+    }
+}
+
+@Composable
+private fun PauseBar() {
+    Box(
+        modifier = Modifier
+            .width(7.dp)
+            .height(28.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(Color.White)
+    )
 }
 
 @Composable
@@ -527,7 +556,7 @@ private fun albumPalette(bitmap: Bitmap?): AlbumPalette {
 private fun stateLabel(state: SpotifyConnectionState): String = when (state) {
     is SpotifyConnectionState.Disconnected -> "未连接 Spotify"
     is SpotifyConnectionState.Connecting -> "正在连接..."
-    is SpotifyConnectionState.Connected -> "跟随封面"
+    is SpotifyConnectionState.Connected -> "已连接 · 跟随封面"
     is SpotifyConnectionState.Error -> "连接失败"
     SpotifyConnectionState.SpotifyNotInstalled -> "未安装 Spotify"
     SpotifyConnectionState.SpotifyNotLoggedIn -> "Spotify 未登录"

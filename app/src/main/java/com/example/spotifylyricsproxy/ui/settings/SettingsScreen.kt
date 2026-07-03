@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -75,7 +76,7 @@ fun SettingsScreen() {
                     color = Color(0xFF747D8C)
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                Row {
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                     listOf("跟随封面", "深色", "浅色", "自定义").forEachIndexed { index, label ->
                         FilterChip(
                             selected = index == 0,

@@ -1,6 +1,7 @@
 package com.example.spotifylyricsproxy.ui.cache
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -90,7 +91,10 @@ private fun SearchPlaceholder() {
 
 @Composable
 private fun FilterRow() {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         listOf("全部 128", "已缓存 86", "仅文本 18", "未找到 15", "失败 9").forEach {
             AssistChip(onClick = {}, label = { Text(it) })
         }
