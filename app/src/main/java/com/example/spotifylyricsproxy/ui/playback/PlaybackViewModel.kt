@@ -10,6 +10,7 @@ import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.lyrics.LyricsRepository
 import com.example.spotifylyricsproxy.database.AppDatabase
+import com.example.spotifylyricsproxy.notification.LyricsForegroundService
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
@@ -83,6 +84,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             repository.currentTrack.collect { track ->
                 android.util.Log.i("LyricsVM", "Track changed: id=${track.trackId}, title=${track.title}, artist=${track.artist}")
                 if (track.trackId.isNotEmpty() && track.trackId != lastFetchedTrackId) {
+                    LyricsForegroundService.start(getApplication())
                     android.util.Log.i("LyricsVM", "Fetching lyrics for: ${track.title} - ${track.artist}")
                     lastFetchedTrackId = track.trackId
                     lyricsRepo.reset()
@@ -107,6 +109,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun disconnect() {
+        LyricsForegroundService.stop(getApplication())
         repository.disconnect()
         lyricsRepo.reset()
         lastFetchedTrackId = ""

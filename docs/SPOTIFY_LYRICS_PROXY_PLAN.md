@@ -388,6 +388,34 @@ MVP 5 单独实验。
 - 如果 Media3 能稳定显示并转发控制，采用 Media3。
 - 如果 Media3 代理模型过重或 OPPO 表现不稳定，使用 MediaSessionCompat 作为个人项目稳妥方案。
 
+### 后续方案 C：Android 16 Live Updates / 厂商流体云
+
+不作为 MVP 4 的交付范围。MVP 4 先完成标准前台服务通知，确保 Android 8+ 到 Android 15 的基础体验可用。
+
+后续适配 Android 16 Live Updates 时参考 Google 官方示例的实现思路：
+
+- 需要 `POST_PROMOTED_NOTIFICATIONS` 权限。
+- 需要在 Android 16 / Baklava API 上使用 promoted ongoing notification 能力。
+- 通知构建需要关注 `setRequestPromotedOngoing(true)`。
+- 可通过 `NotificationManager.canPostPromotedNotifications()` 判断用户是否允许 promoted notification。
+- 可通过系统设置入口引导用户打开 App 的 promoted notification 权限。
+- 可使用 `NotificationCompat.ProgressStyle`、`setShortCriticalText`、`setUsesChronometer` 等能力增强实时状态表达。
+
+本项目的歌词场景和外卖/行程类进度不同，适配时不要照搬进度条语义。更合适的映射是：
+
+- promoted notification 标题：当前歌词行。
+- content text：歌名 - 歌手。
+- short critical text：播放状态或极短歌词片段。
+- chronometer：仅在系统表现合适时用于播放进度，不强依赖。
+- progress style：默认不使用，除非 OPPO / Android 16 真机验证对音乐歌词场景有明确收益。
+
+适配原则：
+
+- 建立独立实验分支。
+- 保持标准前台通知作为兜底。
+- 所有 Live Updates API 必须做 Android 版本判断。
+- 不因为流体云适配牺牲 Android 8+ 到 Android 15 的稳定通知体验。
+
 ## 10. 缓存与离线策略
 
 ### 歌词缓存
