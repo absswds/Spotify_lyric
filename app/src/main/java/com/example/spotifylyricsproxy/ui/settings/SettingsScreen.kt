@@ -7,13 +7,24 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -21,8 +32,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 
@@ -44,52 +58,74 @@ fun SettingsScreen() {
     ) { granted -> permissionGranted = granted }
 
     Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("设置") })
-        }
+        topBar = { TopAppBar(title = { Text("设置") }) },
+        containerColor = Color(0xFFF7F8FC)
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            Text(
-                text = "设置",
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-            SettingsGroup(
-                title = "权限",
-                items = listOf(
-                    SettingsItem(
-                        label = "通知权限",
-                        description = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            if (permissionGranted) "已授权" else "未授权 — 点击申请"
-                        } else {
-                            "Android 12 及以下无需额外申请"
-                        },
-                        enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !permissionGranted,
-                        onClick = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                notificationPermissionLauncher.launch(
-                                    Manifest.permission.POST_NOTIFICATIONS
-                                )
-                            }
-                        }
-                    )
+            SettingsGroup(title = "播放页主题") {
+                Text(
+                    text = "默认从专辑封面提取颜色，也可以改成固定主题。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF747D8C)
                 )
-            )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row {
+                    listOf("跟随封面", "深色", "浅色", "自定义").forEachIndexed { index, label ->
+                        FilterChip(
+                            selected = index == 0,
+                            onClick = {},
+                            label = { Text(label) },
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
+                }
+            }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            SettingsGroup(title = "缓存与下载") {
+                ToggleRow("自动缓存新播放的歌曲", "播放时自动补齐同步歌词", true)
+                ToggleRow("仅在 Wi-Fi 下缓存", "避免使用移动数据下载歌词", true)
+                ToggleRow("缓存封面图片", "离线时仍可显示专辑封面", true)
+            }
 
-            Text(
-                text = "更多设置将在后续 MVP 中添加",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            SettingsGroup(title = "播放与代理") {
+                ToggleRow("启用 MediaSession 代理", "在系统媒体卡片显示当前歌词", true)
+                ToggleRow("允许通知中显示歌词", "前台服务通知标题使用当前歌词", true)
+                Text("全局歌词偏移", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Slider(value = 0.5f, onValueChange = {})
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text("-2s", color = Color(0xFF747D8C), style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text("+2s", color = Color(0xFF747D8C), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            SettingsGroup(title = "权限") {
+                SettingsItemRow(
+                    label = "通知权限",
+                    description = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (permissionGranted) "已授权" else "未授权，点击申请"
+                    } else {
+                        "Android 12 及以下无需额外申请"
+                    },
+                    enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !permissionGranted,
+                    onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                )
+            }
+
+            SettingsGroup(title = "缓存存储") {
+                SettingsItemRow("清理歌词缓存", "删除所有歌词、封面和失败记录")
+                SettingsItemRow("关于 Lyrics Proxy", "版本 0.1.0")
+            }
         }
     }
 }
@@ -97,51 +133,64 @@ fun SettingsScreen() {
 @Composable
 private fun SettingsGroup(
     title: String,
-    items: List<SettingsItem>
+    content: @Composable ColumnScope.() -> Unit
 ) {
-    Column {
+    Column(modifier = Modifier.padding(bottom = 16.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 8.dp)
+            color = Color(0xFF4F5EDC),
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
-        items.forEach { item ->
-            SettingsItemRow(item)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), content = content)
         }
     }
 }
 
 @Composable
-private fun SettingsItemRow(item: SettingsItem) {
-    Column(
+private fun ToggleRow(label: String, description: String, checked: Boolean) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = item.enabled) { item.onClick() }
-            .padding(vertical = 8.dp)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = item.label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (item.enabled)
-                MaterialTheme.colorScheme.primary
-            else
-                MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = item.description,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (item.enabled)
-                MaterialTheme.colorScheme.primary
-            else
-                MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = Color(0xFF747D8C))
+        }
+        Switch(checked = checked, onCheckedChange = {})
     }
 }
 
-private data class SettingsItem(
-    val label: String,
-    val description: String,
-    val enabled: Boolean = false,
-    val onClick: () -> Unit = {}
-)
+@Composable
+private fun SettingsItemRow(
+    label: String,
+    description: String,
+    enabled: Boolean = false,
+    onClick: () -> Unit = {}
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onClick() }
+            .padding(vertical = 8.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (enabled) MaterialTheme.colorScheme.primary else Color(0xFF747D8C)
+        )
+    }
+}
