@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,8 +31,8 @@ sealed class NavRoute(
     val icon: ImageVector
 ) {
     data object Playback : NavRoute("playback", "播放", Icons.Filled.Home)
-    data object Cache : NavRoute("cache", "缓存", Icons.Filled.Storage)
-    data object Precache : NavRoute("precache", "预缓存", Icons.Filled.Download)
+    data object Cache : NavRoute("cache", "缓存", Icons.Filled.Star)
+    data object Precache : NavRoute("precache", "预缓存", Icons.Filled.Refresh)
     data object Settings : NavRoute("settings", "设置", Icons.Filled.Settings)
 }
 
