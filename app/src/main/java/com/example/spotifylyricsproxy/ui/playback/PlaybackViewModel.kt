@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.lyrics.LyricsRepository
+import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
@@ -24,7 +25,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val redirectUri = "spotifylyricsproxy://callback"
 
     private val repository = SpotifyRemoteRepository(application, clientId, redirectUri)
-    private val lyricsRepo = LyricsRepository()
+    private val db = AppDatabase.getInstance(application)
+    private val lyricsRepo = LyricsRepository(db)
     private val clock = PlaybackClock()
 
     private val _estimatedPositionMs = MutableStateFlow(0L)
