@@ -5,10 +5,15 @@ import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -16,10 +21,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val redirectUri = "spotifylyricsproxy://callback"
 
     private val repository = SpotifyRemoteRepository(application, clientId, redirectUri)
+    private val clock = PlaybackClock()
 
-    init {
-        repository.tryConnect()
-    }
+    private val _estimatedPositionMs = MutableStateFlow(0L)
+    val estimatedPositionMs: StateFlow<Long> = _estimatedPositionMs.asStateFlow()
 
     val connectionState: StateFlow<SpotifyConnectionState>
         get() = repository.connectionState
@@ -29,6 +34,32 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     val albumArt: StateFlow<Bitmap?>
         get() = repository.albumArt
+
+    init {
+        repository.tryConnect()
+        startClock()
+    }
+
+    private fun startClock() {
+        viewModelScope.launch {
+            // Feed clock with latest track info
+            launch {
+                repository.currentTrack.collect { track ->
+                    clock.update(
+                        positionMs = track.playbackPositionMs,
+                        paused = track.isPaused,
+                        duration = track.durationMs
+                    )
+                }
+            }
+            // Tick the clock and emit estimated position
+            launch {
+                clock.tick(300).collect { pos ->
+                    _estimatedPositionMs.value = pos
+                }
+            }
+        }
+    }
 
     fun authorize(activity: Activity) {
         repository.authorize(activity)

@@ -53,6 +53,7 @@ fun PlaybackScreen(viewModel: PlaybackViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val trackInfo by viewModel.currentTrack.collectAsState()
     val albumArt by viewModel.albumArt.collectAsState()
+    val estimatedPositionMs by viewModel.estimatedPositionMs.collectAsState()
     val activity = LocalContext.current as Activity
 
     Scaffold(
@@ -73,7 +74,7 @@ fun PlaybackScreen(viewModel: PlaybackViewModel) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // Now playing section
-            NowPlayingSection(trackInfo, albumArt, connectionState)
+            NowPlayingSection(trackInfo, albumArt, estimatedPositionMs, connectionState)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -170,6 +171,7 @@ private fun ConnectionStatusSection(
 private fun NowPlayingSection(
     trackInfo: SpotifyTrackInfo,
     albumArt: Bitmap?,
+    estimatedPositionMs: Long,
     connectionState: SpotifyConnectionState
 ) {
     Card(
@@ -234,9 +236,8 @@ private fun NowPlayingSection(
             // Progress bar
             if (trackInfo.durationMs > 0) {
                 Spacer(modifier = Modifier.height(16.dp))
-                val progress = if (trackInfo.durationMs > 0) {
-                    trackInfo.playbackPositionMs.toFloat() / trackInfo.durationMs.toFloat()
-                } else 0f
+                val progress = (estimatedPositionMs.toFloat() / trackInfo.durationMs.toFloat())
+                    .coerceIn(0f, 1f)
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxWidth()
@@ -247,7 +248,7 @@ private fun NowPlayingSection(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = formatMs(trackInfo.playbackPositionMs),
+                        text = formatMs(estimatedPositionMs),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
