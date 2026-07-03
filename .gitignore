@@ -50,9 +50,13 @@ desktop.ini
 *.db-wal
 *.sqlite
 *.sqlite3
-cache/
-tmp/
-temp/
+/cache/
+/tmp/
+/temp/
+
+# Local development instructions (do not commit to public repo)
+AGENTS.md
+CLAUDE.md
 
 # Environment files
 .env
