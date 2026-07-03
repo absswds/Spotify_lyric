@@ -30,24 +30,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import android.app.Activity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlaybackScreen(viewModel: PlaybackViewModel = viewModel()) {
+fun PlaybackScreen(viewModel: PlaybackViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val trackInfo by viewModel.currentTrack.collectAsState()
+    val activity = LocalContext.current as Activity
 
     Scaffold(
         topBar = {
@@ -62,7 +64,7 @@ fun PlaybackScreen(viewModel: PlaybackViewModel = viewModel()) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Connection status section
-            ConnectionStatusSection(connectionState, viewModel::connect, viewModel::disconnect)
+            ConnectionStatusSection(connectionState, { viewModel.authorize(activity) }, viewModel::disconnect)
 
             Spacer(modifier = Modifier.height(24.dp))
 

@@ -1,19 +1,16 @@
 package com.example.spotifylyricsproxy.ui.playback
 
+import android.app.Activity
 import android.app.Application
+import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
 
-    // TODO: Replace with your Spotify Developer app credentials
-    // Register at https://developer.spotify.com/dashboard
     private val clientId = com.example.spotifylyricsproxy.BuildConfig.SPOTIFY_CLIENT_ID
     private val redirectUri = "spotifylyricsproxy://callback"
 
@@ -25,8 +22,12 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     val currentTrack: StateFlow<SpotifyTrackInfo>
         get() = repository.currentTrack
 
-    fun connect() {
-        repository.connect()
+    fun authorize(activity: Activity) {
+        repository.authorize(activity)
+    }
+
+    fun onAuthResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        return repository.handleAuthResponse(requestCode, resultCode, data)
     }
 
     fun disconnect() {

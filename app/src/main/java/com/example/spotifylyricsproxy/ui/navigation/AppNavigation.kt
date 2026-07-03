@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.spotifylyricsproxy.ui.cache.CacheScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackScreen
+import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheScreen
 import com.example.spotifylyricsproxy.ui.settings.SettingsScreen
 
@@ -44,7 +45,7 @@ val bottomNavItems = listOf(
 )
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(playbackViewModel: PlaybackViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -77,7 +78,7 @@ fun AppNavigation() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(NavRoute.Playback.route) {
-                PlaybackScreen()
+                PlaybackScreen(viewModel = playbackViewModel)
             }
             composable(NavRoute.Cache.route) {
                 CacheScreen()

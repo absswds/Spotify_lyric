@@ -1,10 +1,15 @@
 package com.example.spotifylyricsproxy.spotify.remote
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.SpotifyAppRemote
 import com.spotify.protocol.types.PlayerState
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +21,7 @@ class SpotifyRemoteRepository(
 ) {
     companion object {
         private const val TAG = "SpotifyRemoteRepo"
+        const val AUTH_REQUEST_CODE = 0x10
     }
 
     private var spotifyAppRemote: SpotifyAppRemote? = null
@@ -28,7 +34,43 @@ class SpotifyRemoteRepository(
     private val _currentTrack = MutableStateFlow(SpotifyTrackInfo())
     val currentTrack: StateFlow<SpotifyTrackInfo> = _currentTrack.asStateFlow()
 
-    fun connect() {
+    fun authorize(activity: Activity) {
+        val request = AuthorizationRequest.Builder(
+            clientId,
+            AuthorizationResponse.Type.TOKEN,
+            redirectUri
+        )
+            .setScopes(arrayOf("app-remote-control"))
+            .build()
+
+        AuthorizationClient.openLoginActivity(activity, AUTH_REQUEST_CODE, request)
+    }
+
+    fun handleAuthResponse(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        if (requestCode != AUTH_REQUEST_CODE) return false
+
+        val response = AuthorizationClient.getResponse(resultCode, data)
+        when (response.type) {
+            AuthorizationResponse.Type.TOKEN -> {
+                Log.i(TAG, "Auth successful, token received")
+                connectAfterAuth()
+                return true
+            }
+            AuthorizationResponse.Type.ERROR -> {
+                Log.e(TAG, "Auth error: ${response.error}")
+                _connectionState.value = SpotifyConnectionState.Error(
+                    response.error ?: "授权失败"
+                )
+                return true
+            }
+            else -> {
+                _connectionState.value = SpotifyConnectionState.Disconnected
+                return true
+            }
+        }
+    }
+
+    private fun connectAfterAuth() {
         if (_connectionState.value is SpotifyConnectionState.Connecting ||
             _connectionState.value is SpotifyConnectionState.Connected) {
             return
@@ -38,12 +80,13 @@ class SpotifyRemoteRepository(
 
         val connectionParams = ConnectionParams.Builder(clientId)
             .setRedirectUri(redirectUri)
-            .showAuthView(true)
+            .showAuthView(false)
             .build()
 
         SpotifyAppRemote.connect(context, connectionParams,
             object : com.spotify.android.appremote.api.Connector.ConnectionListener {
                 override fun onConnected(appRemote: SpotifyAppRemote) {
+                    Log.i(TAG, "Connected to Spotify")
                     spotifyAppRemote = appRemote
                     _connectionState.value = SpotifyConnectionState.Connected
                     subscribeToPlayerState()
@@ -56,10 +99,11 @@ class SpotifyRemoteRepository(
                         message.contains("not installed", ignoreCase = true) ||
                         message.contains("unavailable", ignoreCase = true) ->
                             SpotifyConnectionState.SpotifyNotInstalled
-                        message.contains("not logged in", ignoreCase = true) ||
-                        message.contains("authentication", ignoreCase = true) ||
-                        message.contains("auth", ignoreCase = true) ->
+                        message.contains("not logged in", ignoreCase = true) ->
                             SpotifyConnectionState.SpotifyNotLoggedIn
+                        message.contains("UserNotAuthorized") ||
+                        message.contains("user is required to use Spotify") ->
+                            SpotifyConnectionState.Error("需要先授权 — 请重试")
                         else ->
                             SpotifyConnectionState.Error(message)
                     }
