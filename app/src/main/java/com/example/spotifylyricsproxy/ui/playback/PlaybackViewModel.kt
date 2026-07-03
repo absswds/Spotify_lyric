@@ -14,7 +14,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     // TODO: Replace with your Spotify Developer app credentials
     // Register at https://developer.spotify.com/dashboard
-    private val clientId = "YOUR_SPOTIFY_CLIENT_ID"
+    private val clientId = com.example.spotifylyricsproxy.BuildConfig.SPOTIFY_CLIENT_ID
     private val redirectUri = "spotifylyricsproxy://callback"
 
     private val repository = SpotifyRemoteRepository(application, clientId, redirectUri)

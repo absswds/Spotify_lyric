@@ -1,2 +1,5 @@
 # Set the path to your Android SDK here
 # sdk.dir=/path/to/Android/Sdk
+
+# Spotify Developer app credentials (register at https://developer.spotify.com/dashboard)
+# spotify.client.id=YOUR_SPOTIFY_CLIENT_ID
