@@ -12,6 +12,7 @@ junitExt = "1.2.1"
 espresso = "3.6.1"
 spotifyAppRemote = "0.8.0"
 spotifyAuth = "2.1.0"
+gson = "2.11.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +30,7 @@ androidx-junit-ext = { group = "androidx.test.ext", name = "junit", version.ref 
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 spotify-app-remote = { group = "com.spotify.android", name = "spotify-app-remote", version.ref = "spotifyAppRemote" }
 spotify-auth = { group = "com.spotify.android", name = "spotify-auth", version.ref = "spotifyAuth" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
