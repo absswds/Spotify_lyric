@@ -3,6 +3,7 @@ package com.example.spotifylyricsproxy.ui.playback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import coil.compose.AsyncImage
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -176,19 +177,27 @@ private fun NowPlayingSection(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Album art placeholder
+            // Album art
             Box(
                 modifier = Modifier
                     .size(200.dp)
                     .clip(RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = "封面",
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (trackInfo.imageUri.isNotEmpty()) {
+                    AsyncImage(
+                        model = trackInfo.imageUri,
+                        contentDescription = "专辑封面",
+                        modifier = Modifier.size(200.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "封面",
+                        modifier = Modifier.size(80.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

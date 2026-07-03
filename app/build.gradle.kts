@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
     implementation(libs.gson)
+    implementation(libs.coil.compose)
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)
