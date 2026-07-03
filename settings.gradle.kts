@@ -16,8 +16,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-            }
+    }
 }
 
-rootProject.name = "SpotifyLyricProxy"
+rootProject.name = "LyricsCard"
 include(":app")
