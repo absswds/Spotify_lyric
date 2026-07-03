@@ -10,6 +10,8 @@ uiTooling = "1.7.6"
 junit = "4.13.2"
 junitExt = "1.2.1"
 espresso = "3.6.1"
+spotifyAppRemote = "0.8.0"
+spotifyAuth = "2.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -25,6 +27,8 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit-ext = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+spotify-app-remote = { group = "com.spotify.android", name = "spotify-app-remote", version.ref = "spotifyAppRemote" }
+spotify-auth = { group = "com.spotify.android", name = "spotify-auth", version.ref = "spotifyAuth" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

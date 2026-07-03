@@ -16,6 +16,11 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        manifestPlaceholders.putAll(mapOf(
+            "redirectSchemeName" to "spotifylyricsproxy",
+            "redirectHostName" to "callback"
+        ))
     }
 
     buildTypes {
@@ -49,6 +54,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.aar"))))
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)

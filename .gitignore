@@ -29,6 +29,7 @@ google-services.json
 *.ap_
 *.aab
 *.aar
+!app/libs/*.aar
 
 # Kotlin / Java
 *.class
