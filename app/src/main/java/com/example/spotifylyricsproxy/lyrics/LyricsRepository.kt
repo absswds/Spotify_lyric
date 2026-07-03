@@ -35,7 +35,11 @@ class LyricsRepository {
         album: String = "",
         durationMs: Long = 0
     ) {
-        if (title.isEmpty() || artist.isEmpty()) return
+        Log.i(TAG, "fetchLyrics: title=$title artist=$artist")
+        if (title.isEmpty() || artist.isEmpty()) {
+            Log.w(TAG, "Empty title/artist, skip")
+            return
+        }
 
         _lyricStatus.value = LyricStatus.Searching
 
@@ -48,8 +52,13 @@ class LyricsRepository {
             )
 
             val candidates = withContext(Dispatchers.IO) {
-                source.search(request)
+                Log.i(TAG, "Calling LRCLIB...")
+                val result = source.search(request)
+                Log.i(TAG, "LRCLIB returned ${result.size} candidates")
+                result
             }
+
+            Log.i(TAG, "Got ${candidates.size} candidates")
 
             if (candidates.isEmpty()) {
                 Log.w(TAG, "No lyrics found for: $title - $artist")

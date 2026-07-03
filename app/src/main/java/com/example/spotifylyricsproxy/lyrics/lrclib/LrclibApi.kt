@@ -20,7 +20,7 @@ interface LrclibApi {
         @Query("track_name") trackName: String,
         @Query("artist_name") artistName: String,
         @Query("album_name") albumName: String? = null,
-        @Query("duration") durationMs: Long? = null
+        @Query("duration") durationSec: Double? = null
     ): LrclibGetResult?
 }
 
@@ -29,7 +29,9 @@ data class LrclibSearchResult(
     val trackName: String = "",
     val artistName: String = "",
     val albumName: String = "",
-    val duration: Long = 0
+    val duration: Double = 0.0,
+    val syncedLyrics: String? = null,
+    val plainLyrics: String? = null
 )
 
 data class LrclibGetResult(
@@ -37,7 +39,7 @@ data class LrclibGetResult(
     val trackName: String = "",
     val artistName: String = "",
     val albumName: String = "",
-    val duration: Long = 0,
+    val duration: Double = 0.0,
     val syncedLyrics: String? = null,
     val plainLyrics: String? = null
 )

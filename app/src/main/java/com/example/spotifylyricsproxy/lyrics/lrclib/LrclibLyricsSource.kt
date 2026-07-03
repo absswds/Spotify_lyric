@@ -26,23 +26,38 @@ class LrclibLyricsSource {
     }
 
     suspend fun search(request: LyricsSearchRequest): List<LyricCandidate> {
-        return try {
-            // Try precise lookup first
-            val result = api.getByTrack(
+        // Try precise lookup first (best effort, don't crash on failure)
+        val preciseResult: LrclibGetResult? = try {
+            val durationSec = if (request.durationMs > 0) request.durationMs / 1000.0 else null
+            api.getByTrack(
                 trackName = request.trackName,
                 artistName = request.artistName,
                 albumName = request.albumName.ifEmpty { null },
-                durationMs = if (request.durationMs > 0) request.durationMs else null
+                durationSec = durationSec
             )
-            if (result != null) {
-                listOf(result.toCandidate())
-            } else {
-                // Fallback to search
-                val query = "${request.trackName} ${request.artistName}"
-                api.search(query).map { it.toCandidate() }
-            }
         } catch (e: Exception) {
-            emptyList()
+            android.util.Log.w("Lrclib", "Precise lookup failed: ${e.message}")
+            null
+        }
+
+        // If precise lookup succeeded with synced lyrics, return it
+        if (preciseResult != null && preciseResult.syncedLyrics != null) {
+            return listOf(preciseResult.toCandidate())
+        }
+
+        // Fallback to search
+        return try {
+            val query = "${request.trackName} ${request.artistName}"
+            android.util.Log.i("Lrclib", "Searching with query: $query")
+            val searchResults = api.search(query).map { it.toCandidate() }
+            android.util.Log.i("Lrclib", "Search returned ${searchResults.size} results")
+            if (searchResults.isNotEmpty()) searchResults
+            else if (preciseResult != null) listOf(preciseResult.toCandidate())
+            else emptyList()
+        } catch (e: Exception) {
+            android.util.Log.e("Lrclib", "Search failed: ${e.message}", e)
+            if (preciseResult != null) listOf(preciseResult.toCandidate())
+            else emptyList()
         }
     }
 
@@ -51,7 +66,7 @@ class LrclibLyricsSource {
         trackName = trackName,
         artistName = artistName,
         albumName = albumName,
-        durationMs = duration,
+        durationMs = (duration * 1000).toLong(),
         syncedLyrics = syncedLyrics,
         plainLyrics = plainLyrics,
         source = "lrclib"
@@ -62,7 +77,9 @@ class LrclibLyricsSource {
         trackName = trackName,
         artistName = artistName,
         albumName = albumName,
-        durationMs = duration,
+        durationMs = (duration * 1000).toLong(),
+        syncedLyrics = syncedLyrics,
+        plainLyrics = plainLyrics,
         source = "lrclib"
     )
 }

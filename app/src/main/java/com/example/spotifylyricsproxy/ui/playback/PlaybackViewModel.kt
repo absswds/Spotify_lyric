@@ -79,7 +79,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private fun observeTrackChanges() {
         viewModelScope.launch {
             repository.currentTrack.collect { track ->
+                android.util.Log.i("LyricsVM", "Track changed: id=${track.trackId}, title=${track.title}, artist=${track.artist}")
                 if (track.trackId.isNotEmpty() && track.trackId != lastFetchedTrackId) {
+                    android.util.Log.i("LyricsVM", "Fetching lyrics for: ${track.title} - ${track.artist}")
                     lastFetchedTrackId = track.trackId
                     lyricsRepo.reset()
                     lyricsRepo.fetchLyrics(
