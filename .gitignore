@@ -1,0 +1,60 @@
+# Android / Gradle
+.gradle/
+**/build/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Signing keys and local secrets
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+keystore.properties
+secrets.properties
+google-services.json
+
+# Generated APKs / bundles
+*.apk
+*.ap_
+*.aab
+*.aar
+
+# Kotlin / Java
+*.class
+hs_err_pid*
+replay_pid*
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local app/runtime caches
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+cache/
+tmp/
+temp/
+
+# Environment files
+.env
+.env.*
+!.env.example
