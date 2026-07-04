@@ -67,7 +67,23 @@ class LyricsForegroundService : Service() {
             ACTION_START -> startNotificationLoop()
             ACTION_PLAY_PAUSE -> {
                 val track = currentTrack.value
-                if (track.isPaused) spotifyRepository.play() else spotifyRepository.pause()
+                val wasPaused = track.isPaused
+                if (wasPaused) spotifyRepository.play() else spotifyRepository.pause()
+                // Immediately update notification with toggled state
+                val snapshot = LyricsNotificationSnapshot(
+                    trackId = track.trackId,
+                    title = currentLine.value?.text?.takeIf { it.isNotBlank() } ?: track.title.ifBlank { "等待播放" },
+                    subtitle = if (track.title.isNotBlank() && track.artist.isNotBlank()) "${track.title} - ${track.artist}" else track.title,
+                    isPlaying = wasPaused // toggled
+                )
+                notificationGate.reset()
+                publishNotification(snapshot, currentAlbumArt.value)
+                // Also update MediaSession immediately
+                mediaSessionController.updateForTrack(
+                    track = track.copy(isPaused = wasPaused),
+                    currentLine = currentLine.value,
+                    albumArt = currentAlbumArt.value
+                )
             }
             ACTION_PREVIOUS -> spotifyRepository.skipPrevious()
             ACTION_NEXT -> spotifyRepository.skipNext()
