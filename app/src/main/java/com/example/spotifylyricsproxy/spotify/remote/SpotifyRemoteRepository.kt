@@ -148,12 +148,12 @@ class SpotifyRemoteRepository(
                 if (rawUri != lastImageUri) {
                     lastImageUri = rawUri
                     _albumArt.value = null
-                }
-                playerState.track?.imageUri?.let { uri ->
-                    spotifyAppRemote?.imagesApi?.getImage(uri, albumArtDimension)
-                        ?.setResultCallback { bitmap: Bitmap? ->
-                            _albumArt.value = bitmap
-                        }
+                    playerState.track?.imageUri?.let { uri ->
+                        spotifyAppRemote?.imagesApi?.getImage(uri, albumArtDimension)
+                            ?.setResultCallback { bitmap: Bitmap? ->
+                                _albumArt.value = bitmap
+                            }
+                    }
                 }
             }
             ?.setErrorCallback { error: Throwable ->

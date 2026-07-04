@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -399,9 +400,9 @@ private fun AlbumArtHero(albumArt: Bitmap?, accent: Color) {
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            accent.copy(alpha = 0.55f),
-                            Color.White.copy(alpha = 0.08f),
-                            Color.Black.copy(alpha = 0.2f)
+                            accent.copy(alpha = 0.32f),
+                            Color.White.copy(alpha = 0.05f),
+                            Color.Black.copy(alpha = 0.18f)
                         )
                     )
                 )
@@ -419,7 +420,8 @@ private fun AlbumArtHero(albumArt: Bitmap?, accent: Color) {
                     bitmap = albumArt.asImageBitmap(),
                     contentDescription = "专辑封面",
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    filterQuality = FilterQuality.High
                 )
             } else {
                 Icon(

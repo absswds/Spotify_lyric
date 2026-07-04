@@ -3,6 +3,7 @@ package com.example.spotifylyricsproxy.ui.navigation
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -85,16 +86,23 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val isPlayback = currentRoute == NavRoute.Playback.route
+    val isDarkTheme = isSystemInDarkTheme()
     val showBottomBar = currentRoute in bottomNavItems.map { it.route }
+    val appBackground = when {
+        isPlayback -> Color(0xFF080D16)
+        isDarkTheme -> Color(0xFF0B0F18)
+        else -> Color(0xFFF7F8FC)
+    }
 
-    SystemBarsForRoute(isPlayback = isPlayback)
+    SystemBarsForRoute(isPlayback = isPlayback, isDarkTheme = isDarkTheme)
 
     Scaffold(
-        containerColor = if (isPlayback) Color(0xFF080D16) else Color(0xFFF7F8FC),
+        containerColor = appBackground,
         bottomBar = {
             if (showBottomBar) {
                 CompactBottomBar(
                     currentRoute = currentRoute,
+                    isDarkTheme = isDarkTheme,
                     onSelect = { item ->
                         navController.navigate(item.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
@@ -152,21 +160,26 @@ fun AppNavigation(
 
 @Composable
 @Suppress("DEPRECATION")
-private fun SystemBarsForRoute(isPlayback: Boolean) {
+private fun SystemBarsForRoute(isPlayback: Boolean, isDarkTheme: Boolean) {
     val view = LocalView.current
     if (view.isInEditMode) return
 
     SideEffect {
         val window = (view.context as Activity).window
+        val navigationBarColor = when {
+            isPlayback -> Color(0xFF080D16)
+            isDarkTheme -> Color(0xFF0B0F18)
+            else -> Color(0xFFF7F8FC)
+        }
         window.statusBarColor = Color.Transparent.toArgb()
-        window.navigationBarColor = (if (isPlayback) Color(0xFF080D16) else Color(0xFFF7F8FC)).toArgb()
+        window.navigationBarColor = navigationBarColor.toArgb()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isStatusBarContrastEnforced = false
             window.isNavigationBarContrastEnforced = false
         }
         WindowCompat.getInsetsController(window, view).apply {
-            isAppearanceLightStatusBars = !isPlayback
-            isAppearanceLightNavigationBars = !isPlayback
+            isAppearanceLightStatusBars = !isPlayback && !isDarkTheme
+            isAppearanceLightNavigationBars = !isPlayback && !isDarkTheme
         }
     }
 }
@@ -174,11 +187,13 @@ private fun SystemBarsForRoute(isPlayback: Boolean) {
 @Composable
 private fun CompactBottomBar(
     currentRoute: String?,
+    isDarkTheme: Boolean,
     onSelect: (NavRoute) -> Unit
 ) {
     val isPlayback = currentRoute == NavRoute.Playback.route
-    val outerColor = if (isPlayback) Color(0xFF080D16) else Color(0xFFF7F8FC)
-    val containerColor = if (isPlayback) Color.White.copy(alpha = 0.08f) else Color(0xFFF7F8FC)
+    val darkChrome = isPlayback || isDarkTheme
+    val outerColor = if (darkChrome) Color(0xFF080D16) else Color(0xFFF7F8FC)
+    val containerColor = if (darkChrome) Color.White.copy(alpha = 0.08f) else Color(0xFFF7F8FC)
 
     Box(
         modifier = Modifier
@@ -191,7 +206,7 @@ private fun CompactBottomBar(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             color = containerColor,
-            border = if (isPlayback) null else BorderStroke(1.dp, Color(0xFFE8EBF2)),
+            border = if (darkChrome) null else BorderStroke(1.dp, Color(0xFFE8EBF2)),
             tonalElevation = 0.dp,
             shadowElevation = 0.dp
         ) {
@@ -206,7 +221,7 @@ private fun CompactBottomBar(
                     CompactBottomBarItem(
                         item = item,
                         selected = currentRoute == item.route,
-                        dark = isPlayback,
+                        dark = darkChrome,
                         onClick = { onSelect(item) },
                         modifier = Modifier.weight(1f)
                     )
