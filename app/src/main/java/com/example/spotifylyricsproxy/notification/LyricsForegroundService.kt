@@ -39,7 +39,9 @@ class LyricsForegroundService : Service() {
     private val notificationGate = LyricsNotificationUpdateGate()
     private val currentAlbumArt = MutableStateFlow<Bitmap?>(null)
     private val currentTrack = MutableStateFlow(SpotifyTrackInfo())
-    private val currentLine = MutableStateFlow<LrcLine?>(null)
+    // currentLine is observed directly from lyricsRepository.currentLine
+    // (no separate forwarding StateFlow — that caused a race where combine
+    //  could fire with newTrack + stale lyrics before reset took effect)
 
     private lateinit var spotifyRepository: SpotifyRemoteRepository
     private lateinit var lyricsRepository: LyricsRepository
@@ -73,7 +75,7 @@ class LyricsForegroundService : Service() {
                 // Immediately update notification with toggled state
                 val snapshot = LyricsNotificationSnapshot(
                     trackId = track.trackId,
-                    title = currentLine.value?.text?.takeIf { it.isNotBlank() } ?: track.title.ifBlank { "等待播放" },
+                    title = lyricsRepository.currentLine.value?.text?.takeIf { it.isNotBlank() } ?: track.title.ifBlank { "等待播放" },
                     subtitle = if (track.title.isNotBlank() && track.artist.isNotBlank()) "${track.title} - ${track.artist}" else track.title,
                     isPlaying = wasPaused // toggled
                 )
@@ -82,7 +84,7 @@ class LyricsForegroundService : Service() {
                 // Also update MediaSession immediately
                 mediaSessionController.updateForTrack(
                     track = track.copy(isPaused = wasPaused),
-                    currentLine = currentLine.value,
+                    currentLine = lyricsRepository.currentLine.value,
                     albumArt = currentAlbumArt.value,
                     playbackPositionMs = playbackClock.estimatedPositionMs()
                 )
@@ -128,10 +130,6 @@ class LyricsForegroundService : Service() {
             }
 
             launch {
-                lyricsRepository.currentLine.collect { currentLine.value = it }
-            }
-
-            launch {
                 playbackClock.tick(400).collect { positionMs ->
                     lyricsRepository.updatePosition(positionMs)
                     mediaSessionController.updatePlaybackState(
@@ -144,25 +142,25 @@ class LyricsForegroundService : Service() {
             launch {
                 combine(
                     currentTrack,
-                    currentLine,
+                    lyricsRepository.currentLine,
                     currentAlbumArt
                 ) { track, line, albumArt ->
-                    Pair(
-                        LyricsNotificationSnapshot.from(
-                            track = track,
-                            currentLine = line,
-                            hasAlbumArt = albumArt != null
-                        ),
-                        albumArt
-                    )
-                }.collect { (snapshot, albumArt) ->
-                    // Update MediaSession on every track/line/art change
+                    // Update MediaSession right here with the combined values,
+                    // so track, line, and albumArt are guaranteed consistent
+                    // (no race with concurrent coroutines updating the flows).
                     mediaSessionController.updateForTrack(
-                        track = currentTrack.value,
-                        currentLine = currentLine.value,
+                        track = track,
+                        currentLine = line,
                         albumArt = albumArt,
                         playbackPositionMs = playbackClock.estimatedPositionMs()
                     )
+                    val snapshot = LyricsNotificationSnapshot.from(
+                        track = track,
+                        currentLine = line,
+                        hasAlbumArt = albumArt != null
+                    )
+                    snapshot to albumArt
+                }.collect { (snapshot, albumArt) ->
                     if (notificationGate.shouldPublish(snapshot)) {
                         publishNotification(snapshot, albumArt)
                     }
@@ -186,6 +184,18 @@ class LyricsForegroundService : Service() {
         if (track.trackId.isBlank() || track.trackId == lastFetchedTrackId) return
 
         lastFetchedTrackId = track.trackId
+
+        // Immediately clear the MediaSession card's lyrics so it shows the
+        // track title rather than stale lyrics from the previous track.
+        // This must happen BEFORE lyricsRepository.reset() so combine sees
+        // the cleared state consistently.
+        mediaSessionController.updateForTrack(
+            track = track,
+            currentLine = null,
+            albumArt = currentAlbumArt.value,
+            playbackPositionMs = track.playbackPositionMs
+        )
+
         lyricsRepository.reset()
         serviceScope.launch {
             lyricsRepository.fetchLyrics(

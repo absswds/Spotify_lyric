@@ -142,7 +142,11 @@ fun PlaylistScreen(
                     items(tracks, key = { it.id }) { track ->
                         TrackRow(
                             track = track,
-                            onClick = { viewModel.playTrack(track) }
+                            onClick = {
+                                selectedPlaylist?.let { playlist ->
+                                    viewModel.playTrack(track, playlist.id)
+                                }
+                            }
                         )
                     }
                 }

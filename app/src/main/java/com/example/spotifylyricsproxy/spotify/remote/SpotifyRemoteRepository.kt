@@ -198,6 +198,13 @@ class SpotifyRemoteRepository(
         spotifyAppRemote?.playerApi?.play(uri)
     }
 
+    /** Play a context URI (playlist/album). The App Remote SDK will queue all
+     *  tracks in the context and begin playback from the start of the list. */
+    fun playContext(contextUri: String) {
+        if (contextUri.isBlank()) return
+        spotifyAppRemote?.playerApi?.play(contextUri)
+    }
+
     fun pause() {
         spotifyAppRemote?.playerApi?.pause()
     }
