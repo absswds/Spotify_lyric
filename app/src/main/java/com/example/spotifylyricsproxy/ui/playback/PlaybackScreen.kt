@@ -547,7 +547,7 @@ private fun CompactLyricsBlock(
     val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
     val previous = allLines.getOrNull(currentIndex - 1)?.text
     val next = allLines.getOrNull(currentIndex + 1)?.text
-    val config = LyricDisplayPreferences.resolvedConfig()
+    val config = LyricDisplayPreferences.resolvedCompactPreviewConfig()
 
     Card(
         modifier = Modifier
@@ -580,10 +580,11 @@ private fun CompactLyricsBlock(
                     LyricMessage("正在查找歌词")
                 }
                 is LyricStatus.Synced -> {
-                    previous?.let { ContextLyric(it) }
+                    previous?.let { ContextLyric(it, config) }
                     Text(
                         text = currentLine?.text ?: "...",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontSize = config.currentLineSp,
                         color = Color.White,
                         textAlign = config.textAlign,
                         fontWeight = FontWeight.SemiBold,
@@ -592,7 +593,7 @@ private fun CompactLyricsBlock(
                     )
                     next?.let {
                         Spacer(modifier = Modifier.height(10.dp))
-                        ContextLyric(it)
+                        ContextLyric(it, config)
                     }
                 }
                 is LyricStatus.PlainOnly -> LyricMessage("当前歌曲暂无同步歌词")
@@ -616,14 +617,17 @@ private fun LyricMessage(text: String) {
 }
 
 @Composable
-private fun ContextLyric(text: String) {
-    val config = LyricDisplayPreferences.resolvedConfig()
+private fun ContextLyric(
+    text: String,
+    config: CompactLyricPreviewConfig = LyricDisplayPreferences.resolvedCompactPreviewConfig()
+) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
+        fontSize = config.contextLineSp,
         color = Color.White.copy(alpha = 0.48f),
         textAlign = config.textAlign,
-        maxLines = 1,
+        maxLines = 2,
         overflow = TextOverflow.Ellipsis
     )
     Spacer(modifier = Modifier.height(12.dp))
@@ -863,7 +867,7 @@ private fun ExpandedLyricsView(
     val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    val config = LyricDisplayPreferences.resolvedConfig()
+    val config = LyricDisplayPreferences.resolvedLandscapeConfig()
 
     // Detect if the current line has scrolled out of the viewport
     val isScrolledAway by remember(currentIndex) {
@@ -1217,7 +1221,7 @@ private fun LandscapeLyricsList(
 ) {
     val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
     val listState = rememberLazyListState()
-    val config = LyricDisplayPreferences.resolvedConfig()
+    val config = LyricDisplayPreferences.resolvedLandscapeConfig()
 
     // Auto-scroll to keep the current line centered
     LaunchedEffect(currentIndex) {
@@ -1244,12 +1248,14 @@ private fun LandscapeLyricsList(
                 fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
                 fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
                 textAlign = config.textAlign,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
                         if (line.startMs >= 0) onSeek(line.startMs)
                     }
-                    .padding(horizontal = 8.dp, vertical = 5.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
     }
@@ -1267,7 +1273,12 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
         title = { Text("歌词显示设置") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                // Font size
+                Text(
+                    text = "这些设置影响展开歌词页和横屏歌词区，主页预览歌词会保持紧凑显示。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 Column {
                     Text(
                         text = "字体大小",
@@ -1291,7 +1302,6 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
                     }
                 }
 
-                // Bold toggle
                 Column {
                     Text(
                         text = "当前行加粗",
@@ -1312,7 +1322,6 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
                     }
                 }
 
-                // Dim level
                 Column {
                     Text(
                         text = "非当前行透明度",
@@ -1331,7 +1340,6 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
                     }
                 }
 
-                // Alignment
                 Column {
                     Text(
                         text = "对齐方式",

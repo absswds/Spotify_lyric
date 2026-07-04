@@ -110,6 +110,25 @@ object LyricDisplayPreferences {
             textAlign = if (align == "start") TextAlign.Start else TextAlign.Center
         )
     }
+
+    @Composable
+    fun resolvedLandscapeConfig(): LyricDisplayConfig {
+        val base = resolvedConfig()
+        return base.copy(
+            currentLineSp = (base.currentLineSp.value - 2f).coerceAtLeast(16f).sp,
+            otherLineSp = (base.otherLineSp.value - 1f).coerceAtLeast(12f).sp
+        )
+    }
+
+    @Composable
+    fun resolvedCompactPreviewConfig(): CompactLyricPreviewConfig {
+        val align = _alignment.value
+        return CompactLyricPreviewConfig(
+            currentLineSp = 18.sp,
+            contextLineSp = 14.sp,
+            textAlign = if (align == "start") TextAlign.Start else TextAlign.Center
+        )
+    }
 }
 
 data class LyricDisplayConfig(
@@ -118,5 +137,11 @@ data class LyricDisplayConfig(
     val currentLineWeight: FontWeight,
     val pastLineAlpha: Float,
     val futureLineAlpha: Float,
+    val textAlign: TextAlign
+)
+
+data class CompactLyricPreviewConfig(
+    val currentLineSp: TextUnit,
+    val contextLineSp: TextUnit,
     val textAlign: TextAlign
 )

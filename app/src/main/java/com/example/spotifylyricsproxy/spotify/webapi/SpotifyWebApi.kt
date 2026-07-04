@@ -92,7 +92,8 @@ data class SpotifyArtist(
 )
 
 data class SpotifyAlbum(
-    val name: String = ""
+    val name: String = "",
+    val images: List<SpotifyImage> = emptyList()
 )
 
 data class SpotifyImage(

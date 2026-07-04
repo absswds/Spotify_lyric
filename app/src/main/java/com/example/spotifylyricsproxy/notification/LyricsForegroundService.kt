@@ -83,7 +83,8 @@ class LyricsForegroundService : Service() {
                 mediaSessionController.updateForTrack(
                     track = track.copy(isPaused = wasPaused),
                     currentLine = currentLine.value,
-                    albumArt = currentAlbumArt.value
+                    albumArt = currentAlbumArt.value,
+                    playbackPositionMs = playbackClock.estimatedPositionMs()
                 )
             }
             ACTION_PREVIOUS -> spotifyRepository.skipPrevious()
@@ -133,6 +134,10 @@ class LyricsForegroundService : Service() {
             launch {
                 playbackClock.tick(400).collect { positionMs ->
                     lyricsRepository.updatePosition(positionMs)
+                    mediaSessionController.updatePlaybackState(
+                        isPlaying = currentTrack.value.trackId.isNotBlank() && !currentTrack.value.isPaused,
+                        positionMs = positionMs
+                    )
                 }
             }
 
@@ -155,7 +160,8 @@ class LyricsForegroundService : Service() {
                     mediaSessionController.updateForTrack(
                         track = currentTrack.value,
                         currentLine = currentLine.value,
-                        albumArt = albumArt
+                        albumArt = albumArt,
+                        playbackPositionMs = playbackClock.estimatedPositionMs()
                     )
                     if (notificationGate.shouldPublish(snapshot)) {
                         publishNotification(snapshot, albumArt)

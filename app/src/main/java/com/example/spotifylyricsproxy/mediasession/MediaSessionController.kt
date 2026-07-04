@@ -5,8 +5,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.os.Build
-import android.os.Bundle
 import android.support.v4.media.MediaDescriptionCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
@@ -67,7 +65,8 @@ class MediaSessionController(
     fun updateForTrack(
         track: SpotifyTrackInfo,
         currentLine: LrcLine?,
-        albumArt: Bitmap?
+        albumArt: Bitmap?,
+        playbackPositionMs: Long = track.playbackPositionMs
     ) {
         currentTrack = track
         val isPlaying = track.trackId.isNotBlank() && !track.isPaused
@@ -111,13 +110,11 @@ class MediaSessionController(
         )
         mediaSession?.setQueue(listOf(queue))
 
-        updatePlaybackState(isPlaying, track.playbackPositionMs)
+        updatePlaybackState(isPlaying, playbackPositionMs)
     }
 
     /**
      * Update just the playback state (position, playing/paused).
-     * Called both during track updates and on every position tick so that
-     * our session's lastPositionChangedTime stays fresher than Spotify's.
      */
     fun updatePlaybackState(isPlaying: Boolean, positionMs: Long) {
         val actions = PlaybackStateCompat.ACTION_PLAY_PAUSE or
@@ -133,7 +130,7 @@ class MediaSessionController(
 
         val playbackState = PlaybackStateCompat.Builder()
             .setActions(actions)
-            .setState(state, positionMs, 1.0f)
+            .setState(state, positionMs, if (isPlaying) 1.0f else 0.0f)
             .build()
         mediaSession?.setPlaybackState(playbackState)
     }
