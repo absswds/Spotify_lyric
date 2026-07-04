@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.example.spotifylyricsproxy.ui.navigation.AppNavigation
+import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
 import kotlinx.coroutines.launch
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheViewModel
@@ -18,6 +19,7 @@ import com.spotify.sdk.android.auth.AuthorizationResponse
 class MainActivity : ComponentActivity() {
 
     private val playbackViewModel: PlaybackViewModel by viewModels()
+    private val cacheViewModel: CacheViewModel by viewModels()
     private val precacheViewModel: PrecacheViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +40,7 @@ class MainActivity : ComponentActivity() {
             SpotifyLyricProxyTheme {
                 AppNavigation(
                     playbackViewModel = playbackViewModel,
+                    cacheViewModel = cacheViewModel,
                     precacheViewModel = precacheViewModel
                 )
             }
