@@ -5,6 +5,7 @@ import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.core.model.LyricCandidate
 import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.database.entity.LyricCacheEntity
+import com.example.spotifylyricsproxy.database.entity.RejectedLyricMatchEntity
 import com.example.spotifylyricsproxy.database.entity.TrackPlayHistoryEntity
 import com.example.spotifylyricsproxy.lyrics.lrclib.LrclibLyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
@@ -24,6 +25,7 @@ class LyricsRepository(private val database: AppDatabase) {
     private val source = LrclibLyricsSource()
     private val cacheDao = database.lyricCacheDao()
     private val historyDao = database.trackPlayHistoryDao()
+    private val rejectedDao = database.rejectedLyricMatchDao()
 
     private val _parsedLyrics = MutableStateFlow<List<LrcLine>>(emptyList())
     val parsedLyrics: StateFlow<List<LrcLine>> = _parsedLyrics.asStateFlow()
@@ -34,6 +36,20 @@ class LyricsRepository(private val database: AppDatabase) {
     private val _lyricStatus = MutableStateFlow<LyricStatus>(LyricStatus.Idle)
     val lyricStatus: StateFlow<LyricStatus> = _lyricStatus.asStateFlow()
 
+    /** Cached candidates for manual selection. */
+    private val _candidates = MutableStateFlow<List<LyricCandidate>>(emptyList())
+    val candidates: StateFlow<List<LyricCandidate>> = _candidates.asStateFlow()
+
+    private var currentTrackId: String = ""
+    private var _offsetMs: Long = 0L
+
+    // Expose offset so UI can display it
+    private val _currentOffsetMs = MutableStateFlow(0L)
+    val currentOffsetMs: StateFlow<Long> = _currentOffsetMs.asStateFlow()
+
+    fun getCurrentTrackId(): String = currentTrackId
+    fun getOffsetMs(): Long = _offsetMs
+
     suspend fun fetchLyrics(
         trackId: String,
         title: String,
@@ -42,11 +58,20 @@ class LyricsRepository(private val database: AppDatabase) {
         durationMs: Long = 0
     ) {
         if (title.isEmpty() || artist.isEmpty()) return
+        currentTrackId = trackId
+        _candidates.value = emptyList()
+
+        // Load rejected lyric IDs for blacklist filtering
+        val rejectedIds = withContext(Dispatchers.IO) {
+            rejectedDao.getRejectedSourceLyricIds(trackId).toSet()
+        }
 
         // Check cache first
         val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
         if (cached != null) {
-            Log.i(TAG, "Cache hit: $title (status=${cached.fetchStatus})")
+            _offsetMs = cached.offsetMs
+            _currentOffsetMs.value = _offsetMs
+            Log.i(TAG, "Cache hit: $title (status=${cached.fetchStatus}, offset=${_offsetMs}ms)")
             updatePlayHistory(cached)
             when (cached.fetchStatus) {
                 "success" -> {
@@ -79,7 +104,7 @@ class LyricsRepository(private val database: AppDatabase) {
             }
         }
 
-        // Not cached or needs refresh, fetch from network
+        // Not cached or needs refresh
         _lyricStatus.value = LyricStatus.Searching
 
         try {
@@ -99,11 +124,22 @@ class LyricsRepository(private val database: AppDatabase) {
                 return
             }
 
-            val scored = candidates.map {
+            // Score, filter rejected, sort
+            var scored = candidates.map {
                 LyricMatcher.score(it, title, artist, album, durationMs)
-            }.sortedByDescending { it.score }
+            }
+            val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
 
-            val best = scored.first()
+            if (filtered.isEmpty()) {
+                Log.w(TAG, "All candidates rejected for: $title - $artist")
+                // Keep the scored list so the user can still manually choose if needed
+                _candidates.value = scored.sortedByDescending { it.score }
+                _lyricStatus.value = LyricStatus.LowConfidence(0)
+                return
+            }
+
+            val best = filtered.maxByOrNull { it.score }!!
+            _candidates.value = scored.sortedByDescending { it.score }
             Log.i(TAG, "Best match: ${best.trackName} (score: ${best.score})")
 
             // Cache the result
@@ -135,6 +171,140 @@ class LyricsRepository(private val database: AppDatabase) {
         }
     }
 
+    /** Manually select a candidate by index from [candidates]. */
+    suspend fun selectCandidate(index: Int) {
+        val list = _candidates.value
+        if (index < 0 || index >= list.size) return
+        val candidate = list[index]
+        Log.i(TAG, "Manual select: ${candidate.trackName} (score=${candidate.score})")
+
+        cacheResult(currentTrackId, "", "", "", 0, candidate)
+
+        val synced = candidate.syncedLyrics
+        if (!synced.isNullOrEmpty()) {
+            val lines = LrcParser.parse(synced)
+            _parsedLyrics.value = lines
+            _lyricStatus.value = LyricStatus.Synced(candidate.score)
+        } else {
+            _lyricStatus.value = LyricStatus.PlainOnly
+        }
+    }
+
+    /** Re-fetch and re-score from network, then update candidates. */
+    suspend fun reSearch(
+        title: String = "",
+        artist: String = "",
+        album: String = "",
+        durationMs: Long = 0
+    ) {
+        val t = currentTrackId.ifBlank { return }
+        val rejectedIds = withContext(Dispatchers.IO) {
+            rejectedDao.getRejectedSourceLyricIds(t).toSet()
+        }
+
+        _lyricStatus.value = LyricStatus.Searching
+        try {
+            val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(t) }
+            val searchTitle = title.ifBlank { cached?.title ?: return }
+            val searchArtist = artist.ifBlank { cached?.artist ?: return }
+
+            val results = withContext(Dispatchers.IO) {
+                source.search(LyricsSearchRequest(
+                    trackName = searchTitle,
+                    artistName = searchArtist,
+                    albumName = album.ifBlank { cached?.album ?: "" },
+                    durationMs = if (durationMs > 0) durationMs else (cached?.durationMs ?: 0)
+                ))
+            }
+            if (results.isEmpty()) {
+                _lyricStatus.value = LyricStatus.NotFound
+                _candidates.value = emptyList()
+                return
+            }
+            var scored = results.map {
+                LyricMatcher.score(it, searchTitle, searchArtist, album, durationMs)
+            }.sortedByDescending { it.score }
+            val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
+
+            _candidates.value = scored
+
+            val best = filtered.maxByOrNull { it.score }
+            if (best != null && LyricMatcher.isAutoAccept(best.score)) {
+                cacheResult(t, searchTitle, searchArtist, album, durationMs, best)
+                val synced = best.syncedLyrics
+                if (!synced.isNullOrEmpty()) {
+                    _parsedLyrics.value = LrcParser.parse(synced)
+                    _lyricStatus.value = LyricStatus.Synced(best.score)
+                } else {
+                    _lyricStatus.value = LyricStatus.PlainOnly
+                }
+            } else if (best != null) {
+                _lyricStatus.value = LyricStatus.LowConfidence(best.score)
+            } else if (scored.isNotEmpty()) {
+                _lyricStatus.value = LyricStatus.LowConfidence(scored.first().score)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Re-search failed", e)
+            _lyricStatus.value = LyricStatus.Error(e.message ?: "重新搜索失败")
+        }
+    }
+
+    /** Mark the current best match as wrong and blacklist it. */
+    suspend fun rejectCurrentMatch(reason: String = "") {
+        val candidates = _candidates.value
+        if (candidates.isEmpty()) return
+        val best = candidates.first()
+        val entity = RejectedLyricMatchEntity(
+            spotifyTrackId = currentTrackId,
+            source = best.source,
+            sourceLyricId = best.id.toString(),
+            reason = reason.ifBlank { "用户手动标记为错误" }
+        )
+        withContext(Dispatchers.IO) {
+            rejectedDao.insert(entity)
+        }
+        Log.i(TAG, "Rejected match: ${best.trackName} (reason=$reason)")
+
+        // Clear current lyrics so user sees empty state
+        _parsedLyrics.value = emptyList()
+        _currentLine.value = null
+        _lyricStatus.value = LyricStatus.NotFound
+
+        // Re-run scoring with the new rejection
+        reSearch()
+    }
+
+    /** Set per-track offset and save to database. */
+    suspend fun setOffsetMs(offsetMs: Long) {
+        _offsetMs = offsetMs
+        _currentOffsetMs.value = offsetMs
+        if (currentTrackId.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                val entity = cacheDao.getByTrackId(currentTrackId)
+                if (entity != null) {
+                    cacheDao.upsert(entity.copy(offsetMs = offsetMs))
+                }
+            }
+        }
+    }
+
+    /** Adjust offset by [deltaMs] (positive = later, negative = earlier). */
+    suspend fun adjustOffset(deltaMs: Long) {
+        setOffsetMs(_offsetMs + deltaMs)
+    }
+
+    fun updatePosition(positionMs: Long) {
+        val lines = _parsedLyrics.value
+        if (lines.isEmpty()) return
+        // Apply offset: adjust the playback position by the offset
+        // Positive offset = lyrics appear later, so we look at an earlier position
+        val adjustedPosition = (positionMs - _offsetMs).coerceAtLeast(0)
+        val line = LyricSyncEngine.findCurrentLine(lines, adjustedPosition)
+        if (line != _currentLine.value) {
+            _currentLine.value = line
+        }
+    }
+
     private suspend fun cacheResult(
         trackId: String, title: String, artist: String,
         album: String, durationMs: Long, best: LyricCandidate
@@ -154,7 +324,8 @@ class LyricsRepository(private val database: AppDatabase) {
             plainLyrics = best.plainLyrics,
             fetchStatus = fetchStatus,
             confidenceScore = best.score,
-            source = best.source
+            source = best.source,
+            offsetMs = _offsetMs
         )
         withContext(Dispatchers.IO) { cacheDao.upsert(entity) }
     }
@@ -193,19 +364,14 @@ class LyricsRepository(private val database: AppDatabase) {
         }
     }
 
-    fun updatePosition(positionMs: Long) {
-        val lines = _parsedLyrics.value
-        if (lines.isEmpty()) return
-        val line = LyricSyncEngine.findCurrentLine(lines, positionMs)
-        if (line != _currentLine.value) {
-            _currentLine.value = line
-        }
-    }
-
     fun reset() {
         _parsedLyrics.value = emptyList()
         _currentLine.value = null
         _lyricStatus.value = LyricStatus.Idle
+        _candidates.value = emptyList()
+        _offsetMs = 0L
+        _currentOffsetMs.value = 0L
+        currentTrackId = ""
     }
 }
 

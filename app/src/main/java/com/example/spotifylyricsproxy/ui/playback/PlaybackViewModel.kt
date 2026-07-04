@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.spotifylyricsproxy.core.model.LrcLine
+import com.example.spotifylyricsproxy.core.model.LyricCandidate
 import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.lyrics.LyricsRepository
@@ -17,10 +18,10 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -53,6 +54,16 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     val lyricStatus: StateFlow<LyricStatus>
         get() = lyricsRepo.lyricStatus
 
+    val candidates: StateFlow<List<LyricCandidate>>
+        get() = lyricsRepo.candidates
+
+    val currentOffsetMs: StateFlow<Long>
+        get() = lyricsRepo.currentOffsetMs
+
+    /** True when the candidate selection dialog should be shown. */
+    private val _showCandidatePicker = MutableStateFlow(false)
+    val showCandidatePicker: StateFlow<Boolean> = _showCandidatePicker.asStateFlow()
+
     private var lastFetchedTrackId: String = ""
     private var authTokenReceived: Boolean = false
 
@@ -81,7 +92,6 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         repository.tryConnect()
     }
 
-    /** Called when a persisted token is restored on app startup. */
     fun handleRestoredToken(token: String) {
         android.util.Log.i("PlaybackVM", "Restored token, reconnecting")
         repository.tryConnect()
@@ -116,13 +126,15 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     LyricsForegroundService.start(getApplication())
                     lastFetchedTrackId = track.trackId
                     lyricsRepo.reset()
-                    lyricsRepo.fetchLyrics(
-                        trackId = track.trackId,
-                        title = track.title,
-                        artist = track.artist,
-                        album = track.album,
-                        durationMs = track.durationMs
-                    )
+                    viewModelScope.launch {
+                        lyricsRepo.fetchLyrics(
+                            trackId = track.trackId,
+                            title = track.title,
+                            artist = track.artist,
+                            album = track.album,
+                            durationMs = track.durationMs
+                        )
+                    }
                 }
             }
         }
@@ -171,6 +183,57 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         )
         _estimatedPositionMs.value = positionMs
         lyricsRepo.updatePosition(positionMs)
+    }
+
+    // ---- Offset controls ----
+
+    fun adjustOffset(deltaMs: Long) {
+        viewModelScope.launch {
+            lyricsRepo.adjustOffset(deltaMs)
+        }
+    }
+
+    fun resetOffset() {
+        viewModelScope.launch {
+            lyricsRepo.setOffsetMs(0)
+        }
+    }
+
+    // ---- Manual re-match ----
+
+    /** Trigger a fresh search and show the candidate picker if multiple candidates found. */
+    fun reSearchLyrics() {
+        viewModelScope.launch {
+            lyricsRepo.reSearch()
+            _showCandidatePicker.value = lyricsRepo.candidates.value.size > 1
+        }
+    }
+
+    /** Dismiss the candidate picker without selecting. */
+    fun dismissCandidatePicker() {
+        _showCandidatePicker.value = false
+    }
+
+    /** Select a candidate by index and apply it. */
+    fun selectCandidate(index: Int) {
+        viewModelScope.launch {
+            lyricsRepo.selectCandidate(index)
+            _showCandidatePicker.value = false
+        }
+    }
+
+    /** Show candidate picker for manual selection. */
+    fun showCandidateSelection() {
+        _showCandidatePicker.value = true
+    }
+
+    // ---- Blacklist ----
+
+    /** Mark current match as wrong and blacklist it. */
+    fun rejectCurrentMatch() {
+        viewModelScope.launch {
+            lyricsRepo.rejectCurrentMatch("用户手动标记为错误")
+        }
     }
 
     override fun onCleared() {

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,8 +79,20 @@ fun PlaybackScreen(
     val currentLyricLine by viewModel.currentLyricLine.collectAsState()
     val parsedLyrics by viewModel.parsedLyrics.collectAsState()
     val lyricStatus by viewModel.lyricStatus.collectAsState()
+    val candidates by viewModel.candidates.collectAsState()
+    val currentOffsetMs by viewModel.currentOffsetMs.collectAsState()
+    val showCandidatePicker by viewModel.showCandidatePicker.collectAsState()
     val activity = LocalContext.current as Activity
     val palette = remember(albumArt) { albumPalette(albumArt) }
+
+    // Candidate picker dialog
+    if (showCandidatePicker && candidates.size > 1) {
+        CandidatePickerDialog(
+            candidates = candidates,
+            onSelect = viewModel::selectCandidate,
+            onDismiss = viewModel::dismissCandidatePicker
+        )
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -125,7 +138,10 @@ fun PlaybackScreen(
                 LyricsBlock(
                     currentLine = currentLyricLine,
                     allLines = parsedLyrics,
-                    status = lyricStatus
+                    status = lyricStatus,
+                    onReSearch = viewModel::reSearchLyrics,
+                    onReject = viewModel::rejectCurrentMatch,
+                    onShowCandidates = viewModel::showCandidateSelection
                 )
 
                 Spacer(modifier = Modifier.height(22.dp))
@@ -157,7 +173,11 @@ fun PlaybackScreen(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                OffsetControls()
+                OffsetControls(
+                    offsetMs = currentOffsetMs,
+                    onAdjust = viewModel::adjustOffset,
+                    onReset = viewModel::resetOffset
+                )
             }
         }
     }
@@ -349,11 +369,18 @@ private fun TrackTitleBlock(
 private fun LyricsBlock(
     currentLine: LrcLine?,
     allLines: List<LrcLine>,
-    status: LyricStatus
+    status: LyricStatus,
+    onReSearch: () -> Unit = {},
+    onReject: () -> Unit = {},
+    onShowCandidates: () -> Unit = {}
 ) {
     val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
     val previous = allLines.getOrNull(currentIndex - 1)?.text
     val next = allLines.getOrNull(currentIndex + 1)?.text
+    val hasActions = status is LyricStatus.Synced ||
+        status is LyricStatus.LowConfidence ||
+        status is LyricStatus.NotFound ||
+        status is LyricStatus.PlainOnly
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -398,6 +425,41 @@ private fun LyricsBlock(
                 is LyricStatus.LowConfidence -> LyricMessage("找到疑似歌词，需要手动确认")
                 is LyricStatus.ParseError -> LyricMessage("歌词解析失败")
                 is LyricStatus.Error -> LyricMessage("歌词加载失败")
+            }
+
+            // Action buttons row
+            if (hasActions) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = onReSearch,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                    ) {
+                        Text("重新匹配", style = MaterialTheme.typography.labelMedium)
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    if (status is LyricStatus.Synced) {
+                        OutlinedButton(
+                            onClick = onReject,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFFB4AB))
+                        ) {
+                            Text("歌曲错误", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                    if (status is LyricStatus.LowConfidence) {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        OutlinedButton(
+                            onClick = onShowCandidates,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                        ) {
+                            Text("选择候选", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
             }
         }
     }
@@ -560,35 +622,132 @@ private fun PauseBar(color: Color) {
 }
 
 @Composable
-private fun OffsetControls() {
+private fun OffsetControls(
+    offsetMs: Long,
+    onAdjust: (Long) -> Unit,
+    onReset: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        OffsetButton("-0.2s")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OffsetButton("-0.5s") { onAdjust(-500) }
+            OffsetButton("-0.2s") { onAdjust(-200) }
+            OffsetButton("-0.1s") { onAdjust(-100) }
+        }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "歌词偏移",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.66f)
+            )
+            if (offsetMs != 0L) {
+                Text(
+                    text = "${offsetMs}ms",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFFFFB4AB)
+                )
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OffsetButton("+0.1s") { onAdjust(100) }
+            OffsetButton("+0.2s") { onAdjust(200) }
+            OffsetButton("+0.5s") { onAdjust(500) }
+        }
+    }
+    if (offsetMs != 0L) {
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "歌词偏移",
-            style = MaterialTheme.typography.labelLarge,
-            color = Color.White.copy(alpha = 0.66f)
+            text = "重置偏移",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.50f),
+            modifier = Modifier
+                .clickable(onClick = onReset)
+                .padding(vertical = 4.dp)
         )
-        OffsetButton("+0.2s")
     }
 }
 
 @Composable
-private fun OffsetButton(text: String) {
+private fun OffsetButton(
+    text: String,
+    onClick: () -> Unit
+) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = Color.White.copy(alpha = 0.12f),
-        contentColor = Color.White
+        contentColor = Color.White,
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.labelLarge
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelMedium
         )
     }
+}
+
+@Composable
+private fun CandidatePickerDialog(
+    candidates: List<com.example.spotifylyricsproxy.core.model.LyricCandidate>,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "选择候选歌词",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        },
+        text = {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(candidates.size) { index ->
+                    val candidate = candidates[index]
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(index) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (index == 0)
+                                Color(0xFF4F5EDC).copy(alpha = 0.12f)
+                            else Color.White
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "候选 ${index + 1}: ${candidate.trackName}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "${candidate.artistName} · 匹配度: ${candidate.score}分",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF747B89)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 private data class AlbumPalette(

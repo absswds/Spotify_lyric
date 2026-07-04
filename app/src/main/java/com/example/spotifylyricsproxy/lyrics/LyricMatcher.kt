@@ -64,6 +64,17 @@ object LyricMatcher {
     fun needsManualReview(score: Int): Boolean =
         score in MANUAL_REVIEW_THRESHOLD until AUTO_ACCEPT_THRESHOLD
 
+    /**
+     * Filter out candidates whose sourceLyricId appears in the rejection list.
+     * Returns the filtered list preserving order.
+     */
+    fun filterRejected(
+        candidates: List<LyricCandidate>,
+        rejectedIds: Set<String>
+    ): List<LyricCandidate> = candidates.filter { candidate ->
+        candidate.id.toString() !in rejectedIds
+    }
+
     private fun cleanTitle(title: String): String {
         return title
             .replace(Regex("""[-–—]\s*(Remastered|Live|Acoustic|Explicit|Radio Edit|Instrumental|Deluxe Edition|Bonus Track|feat\..*|ft\..*|\(.*?\))""", RegexOption.IGNORE_CASE), "")
