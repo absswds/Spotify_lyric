@@ -2,6 +2,8 @@ package com.example.spotifylyricsproxy.ui.playback
 
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -477,21 +479,26 @@ private fun AlbumArtHero(albumArt: Bitmap?, accent: Color) {
                 .background(Color.White.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center
         ) {
-            if (albumArt != null) {
-                Image(
-                    bitmap = albumArt.asImageBitmap(),
-                    contentDescription = "专辑封面",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    filterQuality = FilterQuality.High
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = "封面占位",
-                    modifier = Modifier.size(86.dp),
-                    tint = Color.White.copy(alpha = 0.84f)
-                )
+            Crossfade(
+                targetState = albumArt,
+                animationSpec = tween(durationMillis = 300)
+            ) { art ->
+                if (art != null) {
+                    Image(
+                        bitmap = art.asImageBitmap(),
+                        contentDescription = "专辑封面",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                        filterQuality = FilterQuality.High
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "封面占位",
+                        modifier = Modifier.size(86.dp),
+                        tint = Color.White.copy(alpha = 0.84f)
+                    )
+                }
             }
         }
     }

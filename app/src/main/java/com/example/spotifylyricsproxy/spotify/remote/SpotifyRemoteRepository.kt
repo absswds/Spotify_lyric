@@ -147,7 +147,8 @@ class SpotifyRemoteRepository(
                 )
                 if (rawUri != lastImageUri) {
                     lastImageUri = rawUri
-                    _albumArt.value = null
+                    // Keep old bitmap until the new one arrives — avoids a
+                    // flash from null -> placeholder -> new album art.
                     playerState.track?.imageUri?.let { uri ->
                         spotifyAppRemote?.imagesApi?.getImage(uri, albumArtDimension)
                             ?.setResultCallback { bitmap: Bitmap? ->
