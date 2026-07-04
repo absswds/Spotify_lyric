@@ -2,6 +2,7 @@ package com.example.spotifylyricsproxy.spotify.webapi
 
 import android.app.Activity
 import android.content.Intent
+import androidx.activity.result.ActivityResultLauncher
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
@@ -12,20 +13,21 @@ class SpotifyWebApiAuth(
 ) {
     companion object {
         const val AUTH_REQUEST_CODE = 0x20
-        const val SCOPES = "playlist-read-private playlist-read-collaborative"
+        val SCOPES = arrayOf("playlist-read-private", "playlist-read-collaborative")
     }
 
     private var accessToken: String? = null
 
-    fun authorize(activity: Activity) {
+    fun authorize(activity: Activity, launcher: ActivityResultLauncher<Intent>?) {
         val request = AuthorizationRequest.Builder(
             clientId,
             AuthorizationResponse.Type.TOKEN,
             redirectUri
         )
-            .setScopes(arrayOf(SCOPES))
+            .setScopes(SCOPES)
             .build()
-        AuthorizationClient.openLoginActivity(activity, AUTH_REQUEST_CODE, request)
+        val intent = AuthorizationClient.createLoginActivityIntent(activity, request)
+        launcher?.launch(intent)
     }
 
     fun handleResponse(resultCode: Int, data: Intent?): Boolean {

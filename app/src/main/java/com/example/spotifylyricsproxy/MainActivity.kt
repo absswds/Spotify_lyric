@@ -10,6 +10,8 @@ import com.example.spotifylyricsproxy.ui.navigation.AppNavigation
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheViewModel
 import com.example.spotifylyricsproxy.ui.theme.SpotifyLyricProxyTheme
+import com.spotify.sdk.android.auth.AuthorizationClient
+import com.spotify.sdk.android.auth.AuthorizationResponse
 
 class MainActivity : ComponentActivity() {
 
@@ -19,6 +21,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Check if launched from OAuth redirect
+        intent?.data?.let { uri ->
+            handleAuthRedirect(uri.toString())
+        }
+
+        // Expose auth starter to ViewModels
+        SpotifyAuthHolder.startAuth = { request ->
+            AuthorizationClient.openLoginActivity(this@MainActivity, AUTH_REQ_CODE, request)
+        }
+
         setContent {
             SpotifyLyricProxyTheme {
                 AppNavigation(
@@ -29,12 +42,51 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Deprecated("Use registerForActivityResult instead")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        // Route to the correct auth handler
-        if (!playbackViewModel.onAuthResult(requestCode, resultCode, data)) {
-            precacheViewModel.onAuthResult(resultCode, data)
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent?.data?.let { uri ->
+            handleAuthRedirect(uri.toString())
         }
     }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        android.util.Log.i("MainActivity", "onActivityResult req=$requestCode res=$resultCode")
+        if (requestCode == AUTH_REQ_CODE) {
+            val response = AuthorizationClient.getResponse(resultCode, data)
+            android.util.Log.i("MainActivity", "Auth response type=${response.type}")
+            if (response.type == AuthorizationResponse.Type.TOKEN) {
+                playbackViewModel.handleAuthResponse(response)
+                precacheViewModel.handleAuthResponse(response)
+            }
+        }
+    }
+
+    private fun handleAuthRedirect(uriString: String) {
+        if (!uriString.startsWith("spotifylyricsproxy://callback")) return
+
+        android.util.Log.i("MainActivity", "handleAuthRedirect: $uriString")
+        val uri = android.net.Uri.parse(uriString)
+        val authResponse = AuthorizationResponse.fromUri(uri)
+        android.util.Log.i("MainActivity", "AuthResponse type=${authResponse.type} error=${authResponse.error}")
+
+        when (authResponse.type) {
+            AuthorizationResponse.Type.TOKEN -> {
+                playbackViewModel.handleAuthResponse(authResponse)
+                precacheViewModel.handleAuthResponse(authResponse)
+            }
+            AuthorizationResponse.Type.ERROR -> {
+                android.util.Log.w("MainActivity", "Auth error: ${authResponse.error}")
+            }
+            else -> {}
+        }
+    }
+
+    companion object {
+        private const val AUTH_REQ_CODE = 0x10
+    }
+}
+
+object SpotifyAuthHolder {
+    var startAuth: ((com.spotify.sdk.android.auth.AuthorizationRequest) -> Unit)? = null
 }

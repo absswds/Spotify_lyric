@@ -2,19 +2,21 @@ package com.example.spotifylyricsproxy.ui.playback
 
 import android.app.Activity
 import android.app.Application
-import android.content.Intent
 import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.spotifylyricsproxy.core.model.LrcLine
+import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.lyrics.LyricsRepository
-import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.notification.LyricsForegroundService
+import com.example.spotifylyricsproxy.SpotifyAuthHolder
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,6 +54,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         get() = lyricsRepo.lyricStatus
 
     private var lastFetchedTrackId: String = ""
+    private var authTokenReceived: Boolean = false
 
     init {
         repository.tryConnect()
@@ -59,11 +62,17 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         observeTrackChanges()
     }
 
+    fun handleAuthResponse(response: AuthorizationResponse) {
+        if (authTokenReceived) return
+        authTokenReceived = true
+        android.util.Log.i("PlaybackVM", "Auth token received")
+        repository.tryConnect()
+    }
+
     private fun startClock() {
         viewModelScope.launch {
             launch {
                 repository.currentTrack.collect { track ->
-                    // Skip empty initial state to avoid resetting to 0
                     if (track.trackId.isNotEmpty()) {
                         clock.update(
                             positionMs = track.playbackPositionMs,
@@ -85,10 +94,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private fun observeTrackChanges() {
         viewModelScope.launch {
             repository.currentTrack.collect { track ->
-                android.util.Log.i("LyricsVM", "Track changed: id=${track.trackId}, title=${track.title}, artist=${track.artist}")
                 if (track.trackId.isNotEmpty() && track.trackId != lastFetchedTrackId) {
                     LyricsForegroundService.start(getApplication())
-                    android.util.Log.i("LyricsVM", "Fetching lyrics for: ${track.title} - ${track.artist}")
                     lastFetchedTrackId = track.trackId
                     lyricsRepo.reset()
                     lyricsRepo.fetchLyrics(
@@ -104,11 +111,14 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun authorize(activity: Activity) {
-        repository.authorize(activity)
-    }
-
-    fun onAuthResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        return repository.handleAuthResponse(requestCode, resultCode, data)
+        val request = AuthorizationRequest.Builder(
+            clientId,
+            AuthorizationResponse.Type.TOKEN,
+            redirectUri
+        )
+            .setScopes(arrayOf("app-remote-control"))
+            .build()
+        SpotifyAuthHolder.startAuth?.invoke(request)
     }
 
     fun disconnect() {

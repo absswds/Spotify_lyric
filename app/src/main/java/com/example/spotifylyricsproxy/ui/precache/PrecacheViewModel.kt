@@ -2,8 +2,10 @@ package com.example.spotifylyricsproxy.ui.precache
 
 import android.app.Activity
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
+import com.example.spotifylyricsproxy.SpotifyAuthHolder
+import com.spotify.sdk.android.auth.AuthorizationRequest
+import com.spotify.sdk.android.auth.AuthorizationResponse
 import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -12,7 +14,6 @@ import androidx.work.workDataOf
 import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.database.entity.PlaylistCacheJobEntity
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
-import com.example.spotifylyricsproxy.spotify.webapi.SpotifyWebApiAuth
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyWebApiClient
 import com.example.spotifylyricsproxy.worker.PlaylistPrecacheWorker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,8 +26,8 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
     private val clientId = com.example.spotifylyricsproxy.BuildConfig.SPOTIFY_CLIENT_ID
     private val redirectUri = "spotifylyricsproxy://callback"
 
-    private val webApiAuth = SpotifyWebApiAuth(clientId, redirectUri)
     private val db = AppDatabase.getInstance(application)
+    private var accessToken: String? = null
 
     private val _isAuthorized = MutableStateFlow(false)
     val isAuthorized: StateFlow<Boolean> = _isAuthorized.asStateFlow()
@@ -48,29 +49,41 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun authorize(activity: Activity) {
-        webApiAuth.authorize(activity)
-    }
-
-    fun onAuthResult(resultCode: Int, data: Intent?): Boolean {
-        val handled = webApiAuth.handleResponse(resultCode, data)
-        if (handled) {
+    fun handleAuthResponse(response: AuthorizationResponse) {
+        if (response.type == AuthorizationResponse.Type.TOKEN) {
+            android.util.Log.i("PrecacheVM", "Web API token received")
+            accessToken = response.accessToken
             _isAuthorized.value = true
             loadPlaylists()
         }
-        return handled
+    }
+
+    fun authorize(activity: Activity) {
+        val request = AuthorizationRequest.Builder(
+            clientId,
+            AuthorizationResponse.Type.TOKEN,
+            redirectUri
+        )
+            .setScopes(arrayOf("playlist-read-private", "playlist-read-collaborative"))
+            .build()
+        SpotifyAuthHolder.startAuth?.invoke(request)
     }
 
     fun loadPlaylists() {
-        val token = webApiAuth.getAccessToken() ?: return
+        val token = accessToken ?: return
         _isLoading.value = true
         viewModelScope.launch {
             try {
                 val response = SpotifyWebApiClient.api.getPlaylists(
                     auth = "Bearer $token"
                 )
+                android.util.Log.i("PrecacheVM", "Got ${response.items.size} playlists")
+                response.items.forEachIndexed { i, p ->
+                    android.util.Log.i("PrecacheVM", "  [$i] name=${p.name} id=${p.id} tracksTotal=${p.tracks.total}")
+                }
                 _playlists.value = response.items
             } catch (e: Exception) {
+                android.util.Log.e("PrecacheVM", "Failed to load playlists", e)
                 _playlists.value = emptyList()
             } finally {
                 _isLoading.value = false
@@ -79,7 +92,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun precachePlaylist(playlist: SpotifyPlaylistItem) {
-        val token = webApiAuth.getAccessToken() ?: return
+        val token = accessToken ?: return
         val workRequest = OneTimeWorkRequestBuilder<PlaylistPrecacheWorker>()
             .setInputData(
                 workDataOf(
@@ -98,14 +111,8 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
             )
     }
 
-    fun isPrecaching(playlistId: String): Boolean {
-        val workInfos = WorkManager.getInstance(getApplication())
-            .getWorkInfosByTag("precache_$playlistId")
-        return workInfos.get().any { !it.state.isFinished }
-    }
-
     fun logout() {
-        webApiAuth.clearToken()
+        accessToken = null
         _isAuthorized.value = false
         _playlists.value = emptyList()
     }

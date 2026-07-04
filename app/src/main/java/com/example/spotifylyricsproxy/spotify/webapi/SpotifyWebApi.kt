@@ -1,5 +1,6 @@
 package com.example.spotifylyricsproxy.spotify.webapi
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
@@ -38,6 +39,7 @@ data class SpotifyPlaylistItem(
     val id: String = "",
     val name: String = "",
     val description: String? = null,
+    @SerializedName("items")
     val tracks: SpotifyPlaylistTracksInfo = SpotifyPlaylistTracksInfo(),
     val images: List<SpotifyImage> = emptyList()
 )

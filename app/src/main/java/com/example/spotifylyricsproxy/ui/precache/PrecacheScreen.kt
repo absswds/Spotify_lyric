@@ -101,27 +101,28 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
                     }
                 }
 
-                if (isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                } else if (playlists.isEmpty()) {
-                    EmptyPlaylistsState(onRefresh = { viewModel.loadPlaylists() })
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(playlists) { playlist ->
-                            PlaylistCard(
-                                playlist = playlist,
-                                job = cachedJobs.find { it.playlistId == playlist.id },
-                                onPrecache = { viewModel.precachePlaylist(playlist) }
-                            )
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    } else if (playlists.isEmpty()) {
+                        EmptyPlaylistsState(onRefresh = { viewModel.loadPlaylists() })
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(playlists) { playlist ->
+                                PlaylistCard(
+                                    playlist = playlist,
+                                    job = cachedJobs.find { it.playlistId == playlist.id },
+                                    onPrecache = { viewModel.precachePlaylist(playlist) }
+                                )
+                            }
                         }
                     }
                 }
