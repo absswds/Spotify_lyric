@@ -109,6 +109,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         loadPlaylists()
     }
 
+    /** Called when a persisted token is restored on app startup. */
+    fun handleRestoredToken(token: String) {
+        android.util.Log.i("PlaybackVM", "Restored token, reconnecting and loading playlists")
+        repository.tryConnect()
+        loadPlaylists()
+    }
+
     private fun startClock() {
         viewModelScope.launch {
             launch {

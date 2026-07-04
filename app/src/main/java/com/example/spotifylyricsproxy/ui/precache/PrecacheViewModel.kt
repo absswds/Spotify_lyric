@@ -15,6 +15,7 @@ import com.example.spotifylyricsproxy.lyrics.lrclib.LrclibLyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyWebApiClient
+import com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
 import kotlinx.coroutines.Dispatchers
@@ -113,6 +114,13 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** Called when a persisted token is restored on app startup. */
+    fun handleRestoredToken(token: String) {
+        Log.i("PrecacheVM", "Restored token, checking authorization")
+        _isAuthorized.value = true
+        loadPlaylists()
+    }
+
     fun authorize(activity: Activity) {
         // Generate PKCE parameters
         val codeVerifier = generateCodeVerifier()
@@ -145,6 +153,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
             val token = exchangeCodeForToken(code, verifier)
             if (token != null) {
                 SpotifyAuthHolder.accessToken = token
+                SpotifyTokenStore.save(token)
                 _isAuthorized.value = true
                 loadPlaylists()
                 Log.i("PrecacheVM", "PKCE auth successful, token with playlist scopes obtained")

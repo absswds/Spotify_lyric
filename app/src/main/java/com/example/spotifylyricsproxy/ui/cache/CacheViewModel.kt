@@ -8,6 +8,7 @@ import com.example.spotifylyricsproxy.database.entity.LyricCacheEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 data class CacheSummary(
@@ -22,6 +23,12 @@ class CacheViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
 
+    private val _allEntries = MutableStateFlow<List<LyricCacheEntity>>(emptyList())
+
+    /** Currently active filter status, null = show all */
+    private val _filterStatus = MutableStateFlow<String?>(null)
+    val filterStatus: StateFlow<String?> = _filterStatus.asStateFlow()
+
     private val _entries = MutableStateFlow<List<LyricCacheEntity>>(emptyList())
     val entries: StateFlow<List<LyricCacheEntity>> = _entries.asStateFlow()
 
@@ -31,10 +38,26 @@ class CacheViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             db.lyricCacheDao().observeAll().collect { rows ->
-                _entries.value = rows
+                _allEntries.value = rows
                 _summary.value = summarizeCacheEntries(rows)
+                applyFilter()
             }
         }
+        // Re-filter whenever filterStatus changes
+        viewModelScope.launch {
+            _filterStatus.collect { applyFilter() }
+        }
+    }
+
+    private fun applyFilter() {
+        val filter = _filterStatus.value
+        val all = _allEntries.value
+        _entries.value = if (filter == null) all
+        else all.filter { it.fetchStatus == filter }
+    }
+
+    fun setFilter(status: String?) {
+        _filterStatus.value = status
     }
 }
 

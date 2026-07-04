@@ -22,10 +22,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -50,6 +50,8 @@ fun CacheScreen(viewModel: CacheViewModel) {
     val entries by viewModel.entries.collectAsState()
     val summary by viewModel.summary.collectAsState()
 
+    val filterStatus by viewModel.filterStatus.collectAsState()
+
     Scaffold(
         topBar = { TopAppBar(title = { Text("缓存管理") }) },
         containerColor = Color(0xFFF7F8FC)
@@ -62,7 +64,11 @@ fun CacheScreen(viewModel: CacheViewModel) {
         ) {
             SearchPlaceholder()
             Spacer(modifier = Modifier.height(12.dp))
-            FilterRow(summary)
+            FilterRow(
+                summary = summary,
+                selectedFilter = filterStatus,
+                onSelectFilter = viewModel::setFilter
+            )
             Spacer(modifier = Modifier.height(12.dp))
             if (entries.isEmpty()) {
                 EmptyCacheState()
@@ -106,20 +112,30 @@ private fun SearchPlaceholder() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FilterRow(summary: CacheSummary) {
+private fun FilterRow(
+    summary: CacheSummary,
+    selectedFilter: String?,
+    onSelectFilter: (String?) -> Unit
+) {
+    val filters = listOf(
+        null to "全部 ${summary.total}",
+        "success" to "已缓存 ${summary.success}",
+        "plain_only" to "仅文本 ${summary.plainOnly}",
+        "not_found" to "未找到 ${summary.notFound}",
+        "failed" to "失败 ${summary.failed}"
+    )
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        listOf(
-            "全部 ${summary.total}",
-            "已缓存 ${summary.success}",
-            "仅文本 ${summary.plainOnly}",
-            "未找到 ${summary.notFound}",
-            "失败 ${summary.failed}"
-        ).forEach {
-            AssistChip(onClick = {}, label = { Text(it) })
+        filters.forEach { (status, label) ->
+            FilterChip(
+                selected = selectedFilter == status,
+                onClick = { onSelectFilter(status) },
+                label = { Text(label) }
+            )
         }
     }
 }

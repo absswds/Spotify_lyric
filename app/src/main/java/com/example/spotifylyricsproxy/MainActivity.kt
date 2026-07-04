@@ -13,6 +13,7 @@ import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.spotifylyricsproxy.notification.NotificationPermissionPolicy
+import com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore
 import com.example.spotifylyricsproxy.ui.navigation.AppNavigation
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
 import kotlinx.coroutines.launch
@@ -37,6 +38,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded()
+
+        // Restore persisted Web API access token so process-kill / re-launch
+        // doesn't force the user to re-authorize
+        SpotifyTokenStore.init(this)
+        val savedToken = SpotifyTokenStore.getAccessToken()
+        if (!savedToken.isNullOrBlank()) {
+            android.util.Log.i("MainActivity", "Restored saved access token (len=${savedToken.length})")
+            SpotifyAuthHolder.accessToken = savedToken
+            // Tell ViewModels that a token is available so they can try to
+            // load playlists without waiting for a fresh auth flow.
+            playbackViewModel.handleRestoredToken(savedToken)
+            precacheViewModel.handleRestoredToken(savedToken)
+        }
 
         // Check if launched from OAuth redirect
         intent?.data?.let { uri ->
@@ -75,6 +89,7 @@ class MainActivity : ComponentActivity() {
             if (response.type == AuthorizationResponse.Type.TOKEN) {
                 // Save token for Web API access (shared between ViewModels)
                 SpotifyAuthHolder.accessToken = response.accessToken
+                SpotifyTokenStore.save(response.accessToken)
                 playbackViewModel.handleAuthResponse(response)
                 precacheViewModel.handleAuthResponse(response)
             }
@@ -105,6 +120,7 @@ class MainActivity : ComponentActivity() {
             AuthorizationResponse.Type.TOKEN -> {
                 // Save token for Web API access (shared between ViewModels)
                 SpotifyAuthHolder.accessToken = authResponse.accessToken
+                SpotifyTokenStore.save(authResponse.accessToken)
                 playbackViewModel.handleAuthResponse(authResponse)
                 precacheViewModel.handleAuthResponse(authResponse)
             }
