@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,9 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -69,6 +73,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -83,6 +88,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
+import com.example.spotifylyricsproxy.spotify.remote.PlaybackOptions
+import com.example.spotifylyricsproxy.spotify.remote.RepeatMode
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import kotlinx.coroutines.launch
@@ -94,6 +101,7 @@ fun PlaybackScreen(
     onOpenLyricsCorrection: () -> Unit = {}
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
+    val playbackOptions by viewModel.playbackOptions.collectAsState()
     val trackInfo by viewModel.currentTrack.collectAsState()
     val albumArt by viewModel.albumArt.collectAsState()
     val estimatedPositionMs by viewModel.estimatedPositionMs.collectAsState()
@@ -158,8 +166,11 @@ fun PlaybackScreen(
                     durationMs = trackInfo.durationMs,
                     isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
                     accent = palette.accent,
+                    playbackOptions = playbackOptions,
                     onSeek = viewModel::seekTo,
                     onPlayPause = viewModel::togglePlayPause,
+                    onToggleShuffle = viewModel::toggleShuffle,
+                    onCycleRepeat = viewModel::cycleRepeat,
                     onCollapse = { lyricsExpanded = false }
                 )
             } else if (isLandscape) {
@@ -175,6 +186,7 @@ fun PlaybackScreen(
                     parsedLyrics = parsedLyrics,
                     currentLyricLine = currentLyricLine,
                     lyricStatus = lyricStatus,
+                    playbackOptions = playbackOptions,
                     isSpotifyInstalled = isSpotifyInstalled,
                     onSeek = viewModel::seekTo,
                     onPlayPause = viewModel::togglePlayPause,
@@ -185,6 +197,8 @@ fun PlaybackScreen(
                     onOpenPlaylist = onOpenPlaylist,
                     onOpenLyricsCorrection = onOpenLyricsCorrection,
                     onDisconnect = viewModel::disconnect,
+                    onToggleShuffle = viewModel::toggleShuffle,
+                    onCycleRepeat = viewModel::cycleRepeat,
                     onLyricDisplaySettings = { showLyricDisplaySettings = true }
                 )
             } else {
@@ -246,10 +260,13 @@ fun PlaybackScreen(
                         accent = palette.accent,
                         isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
                         isConnected = connectionState is SpotifyConnectionState.Connected,
+                        playbackOptions = playbackOptions,
                         onSeek = viewModel::seekTo,
                         onPlayPause = viewModel::togglePlayPause,
                         onSkipNext = viewModel::skipNext,
-                        onSkipPrevious = viewModel::skipPrevious
+                        onSkipPrevious = viewModel::skipPrevious,
+                        onToggleShuffle = viewModel::toggleShuffle,
+                        onCycleRepeat = viewModel::cycleRepeat
                     )
                 }
             }
@@ -267,7 +284,8 @@ private fun CompactTopBar(
     onOpenPlaylist: () -> Unit,
     onCorrection: () -> Unit,
     onLyricDisplaySettings: () -> Unit,
-    onDisconnect: () -> Unit
+    onDisconnect: () -> Unit,
+    showStatus: Boolean = true
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -276,21 +294,26 @@ private fun CompactTopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        // Connection indicator — compact
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val connected = state is SpotifyConnectionState.Connected
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(if (connected) Color(0xFF34C759) else Color(0xFFFF3B30).copy(alpha = 0.6f))
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stateLabel(state),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.72f)
-            )
+        if (showStatus) {
+            // Connection indicator — compact
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val connected = state is SpotifyConnectionState.Connected
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(if (connected) Color(0xFF34C759) else Color(0xFFFF3B30).copy(alpha = 0.6f))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stateLabel(state),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.72f)
+                )
+            }
+        } else {
+            // Minimal spacer in landscape to keep menu right-aligned
+            Spacer(modifier = Modifier.width(1.dp))
         }
 
         // Menu with options
@@ -669,10 +692,13 @@ private fun BottomPlaybackPane(
     accent: Color,
     isPlaying: Boolean,
     isConnected: Boolean,
+    playbackOptions: PlaybackOptions,
     onSeek: (Long) -> Unit,
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
-    onSkipPrevious: () -> Unit
+    onSkipPrevious: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeat: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -691,9 +717,12 @@ private fun BottomPlaybackPane(
             isPlaying = isPlaying,
             isConnected = isConnected,
             accent = accent,
+            playbackOptions = playbackOptions,
             onPlayPause = onPlayPause,
             onSkipNext = onSkipNext,
-            onSkipPrevious = onSkipPrevious
+            onSkipPrevious = onSkipPrevious,
+            onToggleShuffle = onToggleShuffle,
+            onCycleRepeat = onCycleRepeat
         )
     }
 }
@@ -753,15 +782,40 @@ private fun PlaybackControls(
     isPlaying: Boolean,
     isConnected: Boolean,
     accent: Color,
+    playbackOptions: PlaybackOptions,
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
-    onSkipPrevious: () -> Unit
+    onSkipPrevious: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeat: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Shuffle
+        val shuffleEnabled = isConnected && playbackOptions.canToggleShuffle
+        IconButton(
+            onClick = onToggleShuffle,
+            enabled = shuffleEnabled
+        ) {
+            val shuffleTint = if (playbackOptions.isShuffling) {
+                accent
+            } else {
+                Color.White.copy(alpha = if (isConnected) 0.56f else 0.20f)
+            }
+            Icon(
+                imageVector = Icons.Filled.Shuffle,
+                contentDescription = "随机播放",
+                modifier = Modifier.size(26.dp),
+                tint = shuffleTint
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Previous
         IconButton(onClick = onSkipPrevious, enabled = isConnected) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -770,7 +824,9 @@ private fun PlaybackControls(
                 tint = Color.White.copy(alpha = if (isConnected) 0.86f else 0.28f)
             )
         }
-        Spacer(modifier = Modifier.width(28.dp))
+        Spacer(modifier = Modifier.width(24.dp))
+
+        // Play/Pause
         val buttonBg = if (isConnected) accent else Color.White.copy(alpha = 0.14f)
         val buttonContent = if (buttonBg.let { c ->
                 0.299f * c.red + 0.587f * c.green + 0.114f * c.blue
@@ -795,13 +851,39 @@ private fun PlaybackControls(
                 }
             }
         }
-        Spacer(modifier = Modifier.width(28.dp))
+
+        Spacer(modifier = Modifier.width(24.dp))
+
+        // Next
         IconButton(onClick = onSkipNext, enabled = isConnected) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "下一首",
                 modifier = Modifier.size(34.dp),
                 tint = Color.White.copy(alpha = if (isConnected) 0.86f else 0.28f)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Repeat
+        val repeatEnabled = isConnected && (playbackOptions.canRepeatTrack || playbackOptions.canRepeatContext)
+        IconButton(
+            onClick = onCycleRepeat,
+            enabled = repeatEnabled
+        ) {
+            val isRepeatOn = playbackOptions.repeatMode != RepeatMode.OFF
+            val repeatTint = if (isRepeatOn) {
+                accent
+            } else {
+                Color.White.copy(alpha = if (isConnected) 0.56f else 0.20f)
+            }
+            Icon(
+                imageVector = if (playbackOptions.repeatMode == RepeatMode.TRACK)
+                    Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                contentDescription = "循环模式",
+                modifier = Modifier.size(26.dp),
+                tint = repeatTint
             )
         }
     }
@@ -889,8 +971,11 @@ private fun ExpandedLyricsView(
     durationMs: Long,
     isPlaying: Boolean,
     accent: Color,
+    playbackOptions: PlaybackOptions,
     onSeek: (Long) -> Unit,
     onPlayPause: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeat: () -> Unit,
     onCollapse: () -> Unit
 ) {
     val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
@@ -1059,6 +1144,45 @@ private fun ExpandedLyricsView(
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+
+                // Shuffle + Repeat — smaller buttons in expanded view
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val shuffleTint = if (playbackOptions.isShuffling) accent
+                        else Color.White.copy(alpha = 0.50f)
+                    IconButton(
+                        onClick = onToggleShuffle,
+                        enabled = playbackOptions.canToggleShuffle
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Shuffle,
+                            contentDescription = "随机播放",
+                            modifier = Modifier.size(22.dp),
+                            tint = shuffleTint
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(24.dp))
+                    val isRepeatOn = playbackOptions.repeatMode != RepeatMode.OFF
+                    val repeatTint = if (isRepeatOn) accent
+                        else Color.White.copy(alpha = 0.50f)
+                    IconButton(
+                        onClick = onCycleRepeat,
+                        enabled = playbackOptions.canRepeatTrack || playbackOptions.canRepeatContext
+                    ) {
+                        Icon(
+                            imageVector = if (playbackOptions.repeatMode == RepeatMode.TRACK)
+                                Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                            contentDescription = "循环模式",
+                            modifier = Modifier.size(22.dp),
+                            tint = repeatTint
+                        )
+                    }
                 }
             }
         }
@@ -1116,17 +1240,20 @@ private fun LandscapePlaybackLayout(
     parsedLyrics: List<LrcLine>,
     currentLyricLine: LrcLine?,
     lyricStatus: LyricStatus,
+    playbackOptions: PlaybackOptions,
+    isSpotifyInstalled: Boolean,
     onSeek: (Long) -> Unit,
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
-    isSpotifyInstalled: Boolean,
     onConnect: () -> Unit,
     onOpenSpotify: () -> Unit,
     onOpenPlaylist: () -> Unit,
     onOpenLyricsCorrection: () -> Unit,
-    onLyricDisplaySettings: () -> Unit,
-    onDisconnect: () -> Unit
+    onDisconnect: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeat: () -> Unit,
+    onLyricDisplaySettings: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -1144,58 +1271,54 @@ private fun LandscapePlaybackLayout(
                 onOpenPlaylist = onOpenPlaylist,
                 onCorrection = onOpenLyricsCorrection,
                 onLyricDisplaySettings = onLyricDisplaySettings,
-                onDisconnect = onDisconnect
+                onDisconnect = onDisconnect,
+                showStatus = false
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // Album art — compact and proportional in landscape
+                Box(
+                    modifier = Modifier.fillMaxWidth(0.48f),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(0.78f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AlbumArtHero(albumArt = albumArt, accent = palette.accent)
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
+                    AlbumArtHero(albumArt = albumArt, accent = palette.accent)
                 }
 
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    ProgressBlock(
-                        estimatedPositionMs = estimatedPositionMs,
-                        durationMs = durationMs,
-                        accent = palette.accent,
-                        onSeek = onSeek
-                    )
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
 
-                    PlaybackControls(
-                        isPlaying = isPlaying,
-                        isConnected = isConnected,
-                        accent = palette.accent,
-                        onPlayPause = onPlayPause,
-                        onSkipNext = onSkipNext,
-                        onSkipPrevious = onSkipPrevious
-                    )
-                }
+                // Flexible spacer — absorbs extra space on large screens,
+                // collapses on small screens to prevent overlap
+                Spacer(modifier = Modifier.weight(1f))
+
+                ProgressBlock(
+                    estimatedPositionMs = estimatedPositionMs,
+                    durationMs = durationMs,
+                    accent = palette.accent,
+                    onSeek = onSeek
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                PlaybackControls(
+                    isPlaying = isPlaying,
+                    isConnected = isConnected,
+                    accent = palette.accent,
+                    playbackOptions = playbackOptions,
+                    onPlayPause = onPlayPause,
+                    onSkipNext = onSkipNext,
+                    onSkipPrevious = onSkipPrevious,
+                    onToggleShuffle = onToggleShuffle,
+                    onCycleRepeat = onCycleRepeat
+                )
             }
         }
 
@@ -1220,7 +1343,9 @@ private fun LandscapePlaybackLayout(
                     lines = parsedLyrics,
                     currentLine = currentLyricLine,
                     lyricStatus = lyricStatus,
-                    onSeek = onSeek
+                    onSeek = onSeek,
+                    onSkipNext = onSkipNext,
+                    onSkipPrevious = onSkipPrevious
                 )
             }
         }
@@ -1232,31 +1357,56 @@ private fun LandscapeLyricsContent(
     lines: List<LrcLine>,
     currentLine: LrcLine?,
     lyricStatus: LyricStatus,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    onSkipNext: () -> Unit,
+    onSkipPrevious: () -> Unit
 ) {
-    when (lyricStatus) {
-        is LyricStatus.Idle -> LyricMessage("等待播放...")
-        is LyricStatus.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                color = Color.White,
-                strokeWidth = 2.dp
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            LyricMessage("正在查找歌词")
-        }
-        is LyricStatus.Synced -> {
-            if (lines.isNotEmpty()) {
-                LandscapeLyricsList(lines, currentLine, onSeek)
-            } else {
-                LyricMessage("暂无歌词内容")
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(onSkipNext, onSkipPrevious) {
+                val threshold = 70.dp.toPx()
+                var accumulatedX = 0f
+
+                detectHorizontalDragGestures(
+                    onDragStart = { accumulatedX = 0f },
+                    onHorizontalDrag = { _, dragAmount ->
+                        accumulatedX += dragAmount
+                        if (accumulatedX > threshold) {
+                            accumulatedX = 0f
+                            onSkipPrevious()
+                        } else if (accumulatedX < -threshold) {
+                            accumulatedX = 0f
+                            onSkipNext()
+                        }
+                    }
+                )
             }
+    ) {
+        when (lyricStatus) {
+            is LyricStatus.Idle -> LyricMessage("等待播放...")
+            is LyricStatus.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color.White,
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                LyricMessage("正在查找歌词")
+            }
+            is LyricStatus.Synced -> {
+                if (lines.isNotEmpty()) {
+                    LandscapeLyricsList(lines, currentLine, onSeek)
+                } else {
+                    LyricMessage("暂无歌词内容")
+                }
+            }
+            is LyricStatus.PlainOnly -> LyricMessage("当前歌曲暂无同步歌词")
+            is LyricStatus.NotFound -> LyricMessage("暂未找到歌词")
+            is LyricStatus.LowConfidence -> LyricMessage("找到疑似歌词，需要手动确认")
+            is LyricStatus.ParseError -> LyricMessage("歌词解析失败")
+            is LyricStatus.Error -> LyricMessage("歌词加载失败")
         }
-        is LyricStatus.PlainOnly -> LyricMessage("当前歌曲暂无同步歌词")
-        is LyricStatus.NotFound -> LyricMessage("暂未找到歌词")
-        is LyricStatus.LowConfidence -> LyricMessage("找到疑似歌词，需要手动确认")
-        is LyricStatus.ParseError -> LyricMessage("歌词解析失败")
-        is LyricStatus.Error -> LyricMessage("歌词加载失败")
     }
 }
 

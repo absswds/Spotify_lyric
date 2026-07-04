@@ -12,6 +12,8 @@ import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.SpotifyAppRemote
 import com.spotify.protocol.types.Image
 import com.spotify.protocol.types.ImageUri
+import com.spotify.protocol.types.PlayerOptions
+import com.spotify.protocol.types.PlayerRestrictions
 import com.spotify.protocol.types.PlayerState
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
@@ -29,6 +31,24 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlin.coroutines.resume
+
+/** Repeat mode constants matching Spotify's PlayerOptions.repeatMode */
+object RepeatMode {
+    const val OFF = 0
+    const val TRACK = 1
+    const val CONTEXT = 2
+}
+
+data class PlaybackOptions(
+    val isShuffling: Boolean = false,
+    val repeatMode: Int = RepeatMode.OFF,
+    val canToggleShuffle: Boolean = true,
+    val canRepeatTrack: Boolean = true,
+    val canRepeatContext: Boolean = true,
+    val canSkipNext: Boolean = true,
+    val canSkipPrev: Boolean = true,
+    val canSeek: Boolean = true
+)
 
 class SpotifyRemoteRepository(
     private val context: Context,
@@ -58,6 +78,9 @@ class SpotifyRemoteRepository(
 
     private val _albumArt = MutableStateFlow<Bitmap?>(null)
     val albumArt: StateFlow<Bitmap?> = _albumArt.asStateFlow()
+
+    private val _playbackOptions = MutableStateFlow(PlaybackOptions())
+    val playbackOptions: StateFlow<PlaybackOptions> = _playbackOptions.asStateFlow()
 
     fun authorize(activity: Activity) {
         val request = AuthorizationRequest.Builder(
@@ -176,6 +199,22 @@ class SpotifyRemoteRepository(
                 )
                 _currentTrack.value = track
 
+                // Extract playback options (shuffle / repeat) and restrictions
+                val opts = playerState.playbackOptions
+                val restrictions = playerState.playbackRestrictions
+                if (opts != null || restrictions != null) {
+                    _playbackOptions.value = PlaybackOptions(
+                        isShuffling = opts?.isShuffling ?: _playbackOptions.value.isShuffling,
+                        repeatMode = opts?.repeatMode ?: _playbackOptions.value.repeatMode,
+                        canToggleShuffle = restrictions?.canToggleShuffle ?: true,
+                        canRepeatTrack = restrictions?.canRepeatTrack ?: true,
+                        canRepeatContext = restrictions?.canRepeatContext ?: true,
+                        canSkipNext = restrictions?.canSkipNext ?: true,
+                        canSkipPrev = restrictions?.canSkipPrev ?: true,
+                        canSeek = restrictions?.canSeek ?: true
+                    )
+                }
+
                 if (rawUri != lastImageUri) {
                     lastImageUri = rawUri
                     loadAlbumArt(
@@ -224,6 +263,21 @@ class SpotifyRemoteRepository(
 
     fun seekTo(positionMs: Long) {
         spotifyAppRemote?.playerApi?.seekTo(positionMs)
+    }
+
+    fun toggleShuffle() {
+        spotifyAppRemote?.playerApi?.toggleShuffle()
+    }
+
+    /** Cycle repeat: OFF → CONTEXT → TRACK → OFF → ... */
+    fun cycleRepeat() {
+        val current = _playbackOptions.value.repeatMode
+        val next = when (current) {
+            RepeatMode.OFF -> RepeatMode.CONTEXT
+            RepeatMode.CONTEXT -> RepeatMode.TRACK
+            else -> RepeatMode.OFF
+        }
+        spotifyAppRemote?.playerApi?.setRepeat(next)
     }
 
     fun isConnected(): Boolean =

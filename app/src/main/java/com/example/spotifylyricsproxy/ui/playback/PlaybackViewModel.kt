@@ -14,6 +14,7 @@ import com.example.spotifylyricsproxy.lyrics.LyricsRepository
 import com.example.spotifylyricsproxy.notification.LyricsForegroundService
 import com.example.spotifylyricsproxy.SpotifyAuthHolder
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
+import com.example.spotifylyricsproxy.spotify.remote.PlaybackOptions
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
@@ -39,6 +40,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     val connectionState: StateFlow<SpotifyConnectionState>
         get() = repository.connectionState
+
+    val playbackOptions: StateFlow<PlaybackOptions>
+        get() = repository.playbackOptions
 
     val currentTrack: StateFlow<SpotifyTrackInfo>
         get() = repository.currentTrack
@@ -222,6 +226,16 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         )
         _estimatedPositionMs.value = positionMs
         lyricsRepo.updatePosition(positionMs)
+    }
+
+    // ---- Playback mode controls ----
+
+    fun toggleShuffle() {
+        repository.toggleShuffle()
+    }
+
+    fun cycleRepeat() {
+        repository.cycleRepeat()
     }
 
     // ---- Offset controls ----
