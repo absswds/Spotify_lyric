@@ -70,11 +70,13 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
@@ -276,28 +278,28 @@ private fun CompactTopBar(
                 onDismissRequest = { showMenu = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text("Spotify 姝屽崟") },
+                    text = { Text(stringResource(R.string.menu_spotify_playlist)) },
                     onClick = {
                         showMenu = false
                         onOpenPlaylist()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("歌词修正") },
+                    text = { Text(stringResource(R.string.menu_lyrics_correction)) },
                     onClick = {
                         showMenu = false
                         onCorrection()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("歌词显示") },
+                    text = { Text(stringResource(R.string.menu_lyrics_display)) },
                     onClick = {
                         showMenu = false
                         onLyricDisplaySettings()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("断开连接") },
+                    text = { Text(stringResource(R.string.menu_disconnect)) },
                     onClick = {
                         showMenu = false
                         onDisconnect()

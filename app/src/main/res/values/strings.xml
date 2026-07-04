@@ -1,4 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Lyrics Card</string>
+
+    <!-- Menu items for playback screen -->
+    <string name="menu_spotify_playlist">Spotify 歌单</string>
+    <string name="menu_lyrics_correction">歌词修正</string>
+    <string name="menu_lyrics_display">歌词显示</string>
+    <string name="menu_disconnect">断开连接</string>
+
+    <!-- Notification channel -->
+    <string name="notification_channel_name">歌词通知</string>
+    <string name="notification_channel_description">显示当前 Spotify 歌词行和播放控制</string>
+
+    <!-- Waiting state -->
+    <string name="waiting_for_playback">等待 Spotify 播放</string>
+    <string name="waiting_subtitle">连接后显示当前歌词</string>
 </resources>

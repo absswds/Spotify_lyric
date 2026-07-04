@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.core.content.ContextCompat
 import com.example.spotifylyricsproxy.BuildConfig
 import com.example.spotifylyricsproxy.MainActivity
@@ -54,7 +55,7 @@ class LyricsForegroundService : Service() {
             context = applicationContext,
             clientId = BuildConfig.SPOTIFY_CLIENT_ID,
             redirectUri = REDIRECT_URI,
-            albumArtDimension = com.spotify.protocol.types.Image.Dimension.SMALL
+            albumArtDimension = com.spotify.protocol.types.Image.Dimension.LARGE
         )
         lyricsRepository = LyricsRepository(AppDatabase.getInstance(applicationContext))
         playbackClock = PlaybackClock()
@@ -208,7 +209,12 @@ class LyricsForegroundService : Service() {
         .setOngoing(snapshot.isPlaying)
         .setOnlyAlertOnce(true)
         .setSilent(true)
-        .setPriority(NotificationCompat.PRIORITY_LOW)
+        .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+        .setStyle(MediaStyle().setMediaSession(mediaSessionController.getSessionToken()))
+        .setPriority(
+            if (snapshot.isPlaying) NotificationCompat.PRIORITY_HIGH
+            else NotificationCompat.PRIORITY_DEFAULT
+        )
         .addAction(android.R.drawable.ic_media_previous, "上一首", serviceIntent(ACTION_PREVIOUS))
         .addAction(
             if (snapshot.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
@@ -243,10 +249,10 @@ class LyricsForegroundService : Service() {
 
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "歌词通知",
+            getString(R.string.notification_channel_name),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "显示当前 Spotify 歌词行和播放控制"
+            description = getString(R.string.notification_channel_description)
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -254,8 +260,8 @@ class LyricsForegroundService : Service() {
 
     private fun waitingSnapshot() = LyricsNotificationSnapshot(
         trackId = "",
-        title = "等待 Spotify 播放",
-        subtitle = "连接后显示当前歌词",
+        title = getString(R.string.waiting_for_playback),
+        subtitle = getString(R.string.waiting_subtitle),
         isPlaying = false
     )
 
@@ -270,6 +276,7 @@ class LyricsForegroundService : Service() {
         const val ACTION_PREVIOUS = "com.example.spotifylyricsproxy.notification.PREVIOUS"
         const val ACTION_NEXT = "com.example.spotifylyricsproxy.notification.NEXT"
         const val ACTION_STOP = "com.example.spotifylyricsproxy.notification.STOP"
+        const val EXTRA_FROM_MEDIA_BUTTON = "from_media_button"
 
         fun start(context: Context) {
             val intent = Intent(context, LyricsForegroundService::class.java)
