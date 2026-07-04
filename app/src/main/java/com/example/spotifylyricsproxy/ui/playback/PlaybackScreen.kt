@@ -44,6 +44,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -375,11 +378,19 @@ private fun ProgressBlock(
     if (durationMs <= 0) return
 
     val progress = (estimatedPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+    var draggingProgress by remember { mutableStateOf<Float?>(null) }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
-            value = progress,
+            value = draggingProgress ?: progress,
             onValueChange = { fraction ->
-                onSeek(fractionToSeekPosition(fraction, durationMs))
+                draggingProgress = fraction
+            },
+            onValueChangeFinished = {
+                draggingProgress?.let {
+                    onSeek(fractionToSeekPosition(it, durationMs))
+                }
+                draggingProgress = null
             },
             modifier = Modifier.fillMaxWidth(),
             colors = SliderDefaults.colors(
@@ -392,8 +403,9 @@ private fun ProgressBlock(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            val displayMs = draggingProgress?.let { (it * durationMs).toLong() } ?: estimatedPositionMs
             Text(
-                text = formatMs(estimatedPositionMs),
+                text = formatMs(displayMs),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.56f)
             )
