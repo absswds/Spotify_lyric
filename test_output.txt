@@ -1,0 +1,3 @@
+24 actionable tasks: 1 executed, 23 up-to-date
+BUILD FAILED in 1s
+[full output: ~/AppData\Local\rtk\tee\1783153886_gradlew_test.log]

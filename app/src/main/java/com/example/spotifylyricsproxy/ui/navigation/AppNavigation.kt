@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -47,6 +48,8 @@ import com.example.spotifylyricsproxy.ui.cache.CacheScreen
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
 import com.example.spotifylyricsproxy.ui.playback.PlaybackScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
+import com.example.spotifylyricsproxy.ui.playlist.PlaylistScreen
+import com.example.spotifylyricsproxy.ui.playlist.PlaylistViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheScreen
 import com.example.spotifylyricsproxy.ui.precache.PrecacheViewModel
 import com.example.spotifylyricsproxy.ui.settings.SettingsScreen
@@ -60,6 +63,7 @@ sealed class NavRoute(
     data object Cache : NavRoute("cache", "缓存", Icons.Filled.Star)
     data object Precache : NavRoute("precache", "预缓存", Icons.Filled.Refresh)
     data object Settings : NavRoute("settings", "设置", Icons.Filled.Settings)
+    data object Playlist : NavRoute("playlist", "歌单", Icons.Filled.Home)
 }
 
 val bottomNavItems = listOf(
@@ -79,24 +83,27 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val isPlayback = currentRoute == NavRoute.Playback.route
+    val showBottomBar = currentRoute in bottomNavItems.map { it.route }
 
     SystemBarsForRoute(isPlayback = isPlayback)
 
     Scaffold(
         containerColor = if (isPlayback) Color(0xFF080D16) else Color(0xFFF7F8FC),
         bottomBar = {
-            CompactBottomBar(
-                currentRoute = currentRoute,
-                onSelect = { item ->
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+            if (showBottomBar) {
+                CompactBottomBar(
+                    currentRoute = currentRoute,
+                    onSelect = { item ->
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-            )
+                    },
+                )
+            }
         }
     ) { innerPadding ->
         NavHost(
@@ -105,7 +112,12 @@ fun AppNavigation(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(NavRoute.Playback.route) {
-                PlaybackScreen(viewModel = playbackViewModel)
+                PlaybackScreen(
+                    viewModel = playbackViewModel,
+                    onOpenPlaylist = {
+                        navController.navigate(NavRoute.Playlist.route)
+                    }
+                )
             }
             composable(NavRoute.Cache.route) {
                 CacheScreen(viewModel = cacheViewModel)
@@ -115,6 +127,13 @@ fun AppNavigation(
             }
             composable(NavRoute.Settings.route) {
                 SettingsScreen()
+            }
+            composable(NavRoute.Playlist.route) {
+                val playlistViewModel: PlaylistViewModel = viewModel()
+                PlaylistScreen(
+                    viewModel = playlistViewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
