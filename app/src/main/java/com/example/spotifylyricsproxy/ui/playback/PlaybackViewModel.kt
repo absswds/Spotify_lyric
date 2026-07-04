@@ -63,11 +63,14 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             launch {
                 repository.currentTrack.collect { track ->
-                    clock.update(
-                        positionMs = track.playbackPositionMs,
-                        paused = track.isPaused,
-                        duration = track.durationMs
-                    )
+                    // Skip empty initial state to avoid resetting to 0
+                    if (track.trackId.isNotEmpty()) {
+                        clock.update(
+                            positionMs = track.playbackPositionMs,
+                            paused = track.isPaused,
+                            duration = track.durationMs
+                        )
+                    }
                 }
             }
             launch {

@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.media.app.NotificationCompat as MediaNotificationCompat
 import com.example.spotifylyricsproxy.BuildConfig
 import com.example.spotifylyricsproxy.MainActivity
 import com.example.spotifylyricsproxy.R
@@ -183,24 +184,31 @@ class LyricsForegroundService : Service() {
     private fun buildNotification(
         snapshot: LyricsNotificationSnapshot,
         albumArt: Bitmap?
-    ) = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.mipmap.ic_launcher)
-        .setContentTitle(snapshot.title)
-        .setContentText(snapshot.subtitle)
-        .setLargeIcon(albumArt)
-        .setContentIntent(openAppIntent())
-        .setOngoing(snapshot.isPlaying)
-        .setOnlyAlertOnce(true)
-        .setSilent(true)
-        .setPriority(NotificationCompat.PRIORITY_LOW)
-        .addAction(android.R.drawable.ic_media_previous, "上一首", serviceIntent(ACTION_PREVIOUS))
-        .addAction(
-            if (snapshot.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
-            if (snapshot.isPlaying) "暂停" else "播放",
-            serviceIntent(ACTION_PLAY_PAUSE)
-        )
-        .addAction(android.R.drawable.ic_media_next, "下一首", serviceIntent(ACTION_NEXT))
-        .build()
+    ): android.app.Notification {
+        val sessionToken = mediaSessionController.getSessionToken()
+        val mediaStyle = MediaNotificationCompat.MediaStyle()
+            .setMediaSession(sessionToken)
+            .setShowActionsInCompactView(0, 1, 2)
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle(snapshot.title)
+            .setContentText(snapshot.subtitle)
+            .setLargeIcon(albumArt)
+            .setContentIntent(openAppIntent())
+            .setOngoing(snapshot.isPlaying)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setStyle(mediaStyle)
+            .addAction(android.R.drawable.ic_media_previous, "上一首", serviceIntent(ACTION_PREVIOUS))
+            .addAction(
+                if (snapshot.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
+                if (snapshot.isPlaying) "暂停" else "播放",
+                serviceIntent(ACTION_PLAY_PAUSE)
+            )
+            .addAction(android.R.drawable.ic_media_next, "下一首", serviceIntent(ACTION_NEXT))
+            .build()
+    }
 
     private fun openAppIntent(): PendingIntent {
         val intent = Intent(this, MainActivity::class.java).apply {

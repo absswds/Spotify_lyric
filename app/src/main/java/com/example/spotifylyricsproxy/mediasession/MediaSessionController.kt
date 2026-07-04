@@ -34,6 +34,8 @@ class MediaSessionController(
         }
     }
 
+    fun getSessionToken(): MediaSessionCompat.Token? = mediaSession?.sessionToken
+
     fun release() {
         mediaSession?.isActive = false
         mediaSession?.release()
