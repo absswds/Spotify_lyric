@@ -8,6 +8,11 @@ import retrofit2.http.Query
 
 interface SpotifyWebApi {
 
+    @GET("v1/me")
+    suspend fun getMe(
+        @Header("Authorization") auth: String
+    ): SpotifyUserProfile
+
     @GET("v1/me/playlists")
     suspend fun getPlaylists(
         @Header("Authorization") auth: String,
@@ -20,7 +25,8 @@ interface SpotifyWebApi {
         @Header("Authorization") auth: String,
         @Path("id") playlistId: String,
         @Query("limit") limit: Int = 100,
-        @Query("offset") offset: Int = 0
+        @Query("offset") offset: Int = 0,
+        @Query("market") market: String = "from_token"
     ): SpotifyPlaylistTracksResponse
 
     @GET("v1/tracks/{id}")
@@ -39,9 +45,17 @@ data class SpotifyPlaylistItem(
     val id: String = "",
     val name: String = "",
     val description: String? = null,
-    @SerializedName("items")
+    val collaborative: Boolean = false,
+    val owner: SpotifyPlaylistOwner? = null,
+    @SerializedName("tracks")
     val tracks: SpotifyPlaylistTracksInfo = SpotifyPlaylistTracksInfo(),
     val images: List<SpotifyImage> = emptyList()
+)
+
+data class SpotifyPlaylistOwner(
+    val id: String = "",
+    @SerializedName("display_name")
+    val displayName: String? = null
 )
 
 data class SpotifyPlaylistTracksInfo(
@@ -78,4 +92,11 @@ data class SpotifyImage(
     val url: String = "",
     val width: Int? = null,
     val height: Int? = null
+)
+
+data class SpotifyUserProfile(
+    @SerializedName("display_name")
+    val displayName: String? = null,
+    val id: String = "",
+    val email: String? = null
 )

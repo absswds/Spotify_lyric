@@ -50,25 +50,33 @@ class PlaylistPrecacheWorker(
         var notFound = 0
 
         return try {
+            Log.i(TAG, "Starting precache for playlist=$playlistName ($playlistId)")
+            setProgress(workDataOf(KEY_PLAYLIST_ID to playlistId, KEY_PROGRESS to 0))
+
             // Fetch all tracks from playlist
             val allTracks = mutableListOf<Pair<String, String>>() // trackId -> title, artist
             var offset = 0
             var totalTracks = 0
 
             do {
+                Log.i(TAG, "Fetching tracks offset=$offset for playlist=$playlistId")
                 val response = api.getPlaylistTracks(authHeader, playlistId, offset = offset)
                 if (totalTracks == 0) totalTracks = response.total
+                Log.i(TAG, "Got ${response.items.size} items, total=$totalTracks")
 
                 response.items.forEach { item ->
                     item.track?.let { track ->
                         val artistNames = track.artists.joinToString(", ") { it.name }
                         allTracks.add(track.id to "${track.name}||$artistNames||${track.durationMs}")
-                    }
+                    } ?: Log.w(TAG, "Item has null track")
                 }
                 offset += 100
             } while (offset < totalTracks && allTracks.isNotEmpty())
 
+            Log.i(TAG, "Total tracks fetched: ${allTracks.size}")
+
             if (allTracks.isEmpty()) {
+                Log.w(TAG, "No tracks fetched, saving empty job")
                 updatePlaylistJob(playlistDao, playlistId, playlistName, 0, 0, 0, 0)
                 return Result.success()
             }
@@ -144,13 +152,15 @@ class PlaylistPrecacheWorker(
                         KEY_CACHED to cached,
                         KEY_FAILED to failed,
                         KEY_NOT_FOUND to notFound,
-                        KEY_TOTAL to totalTracks
+                        KEY_TOTAL to totalTracks,
+                        KEY_PLAYLIST_ID to playlistId
                     )
                 )
             }
 
             // Save final stats
             updatePlaylistJob(playlistDao, playlistId, playlistName, totalTracks, cached, failed, notFound)
+            Log.i(TAG, "Precache complete: $cached cached, $notFound not found, $failed failed")
             Result.success()
 
         } catch (e: Exception) {

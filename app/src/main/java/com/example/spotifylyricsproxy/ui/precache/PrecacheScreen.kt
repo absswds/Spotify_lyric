@@ -33,6 +33,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -56,12 +58,24 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
     val playlists by viewModel.playlists.collectAsState()
     val cachedJobs by viewModel.cachedJobs.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val progressMap by viewModel.progressMap.collectAsState()
+    val toastMessage by viewModel.toastMessage.collectAsState()
+    val currentUserId by viewModel.currentUserId.collectAsState()
     val activity = LocalContext.current as Activity
+    val snackbarHostState = androidx.compose.material3.SnackbarHostState()
+
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearToast()
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("歌单预缓存") })
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color(0xFFF7F8FC)
     ) { padding ->
         Column(
@@ -120,6 +134,8 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
                                 PlaylistCard(
                                     playlist = playlist,
                                     job = cachedJobs.find { it.playlistId == playlist.id },
+                                    progress = progressMap[playlist.id],
+                                    canPrecache = currentUserId.isNotBlank() && viewModel.isPlaylistCacheable(playlist),
                                     onPrecache = { viewModel.precachePlaylist(playlist) }
                                 )
                             }
@@ -197,56 +213,101 @@ private fun EmptyPlaylistsState(onRefresh: () -> Unit) {
 private fun PlaylistCard(
     playlist: SpotifyPlaylistItem,
     job: PlaylistCacheJobEntity?,
+    progress: PrecacheProgress?,
+    canPrecache: Boolean,
     onPrecache: () -> Unit
 ) {
+    val isRunning = progress?.isRunning == true
+    val hasFinishedJob = job != null && job.lastScanAt != null
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(56.dp)
-                    .background(Color(0xFFEFF1F6), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = Color(0xFF747B89)
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = playlist.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "${playlist.tracks.total} 首歌曲",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF747B89)
-                )
-                if (job != null && job.lastScanAt != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    PrecacheProgressRow(job)
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(Color(0xFFEFF1F6), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isRunning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color(0xFF747B89),
+                            strokeWidth = 3.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            tint = Color(0xFF747B89)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (isRunning && progress!!.totalTracks > 0)
+                            "${progress.cachedTracks}/${progress.totalTracks} 已缓存"
+                        else
+                            playlist.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = when {
+                            isRunning -> "处理中 ${progress!!.progressPercent}%"
+                            !canPrecache -> "${playlist.tracks.total} 首歌曲 · 仅创建者/协作歌单可缓存"
+                            else -> "${playlist.tracks.total} 首歌曲"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF747B89)
+                    )
+                    if (hasFinishedJob) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        PrecacheProgressRow(job)
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = onPrecache,
+                    enabled = canPrecache && !isRunning && (job == null || job.totalTracks == 0)
+                ) {
+                    if (isRunning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(if (hasFinishedJob) "重试" else "缓存")
+                    }
                 }
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(
-                onClick = onPrecache,
-                enabled = job?.totalTracks == 0 || job == null
-            ) {
-                Text(if (job?.lastScanAt != null) "重试" else "缓存")
+
+            // Progress bar during caching
+            if (isRunning && progress!!.totalTracks > 0) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { (progress.cachedTracks + progress.failedTracks + progress.notFoundTracks).toFloat() / progress.totalTracks },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 12.dp),
+                    color = Color(0xFF34C759),
+                    trackColor = Color(0xFFEFF1F6)
+                )
             }
         }
     }

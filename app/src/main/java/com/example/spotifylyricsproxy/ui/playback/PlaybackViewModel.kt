@@ -116,7 +116,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             AuthorizationResponse.Type.TOKEN,
             redirectUri
         )
-            .setScopes(arrayOf("app-remote-control"))
+            .setScopes(arrayOf("app-remote-control", "playlist-read-private", "playlist-read-collaborative", "user-read-private"))
             .build()
         SpotifyAuthHolder.startAuth?.invoke(request)
     }

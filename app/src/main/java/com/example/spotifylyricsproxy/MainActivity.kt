@@ -6,7 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.example.spotifylyricsproxy.ui.navigation.AppNavigation
+import kotlinx.coroutines.launch
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheViewModel
 import com.example.spotifylyricsproxy.ui.theme.SpotifyLyricProxyTheme
@@ -56,6 +58,8 @@ class MainActivity : ComponentActivity() {
             val response = AuthorizationClient.getResponse(resultCode, data)
             android.util.Log.i("MainActivity", "Auth response type=${response.type}")
             if (response.type == AuthorizationResponse.Type.TOKEN) {
+                // Save token for Web API access (shared between ViewModels)
+                SpotifyAuthHolder.accessToken = response.accessToken
                 playbackViewModel.handleAuthResponse(response)
                 precacheViewModel.handleAuthResponse(response)
             }
@@ -67,11 +71,25 @@ class MainActivity : ComponentActivity() {
 
         android.util.Log.i("MainActivity", "handleAuthRedirect: $uriString")
         val uri = android.net.Uri.parse(uriString)
+
+        // PKCE authorization code flow (browser-based, bypasses Spotify App native auth)
+        val authCode = uri.getQueryParameter("code")
+        if (authCode != null) {
+            android.util.Log.i("MainActivity", "PKCE auth code received")
+            lifecycleScope.launch {
+                precacheViewModel.handlePKCEAuthRedirect(uri)
+            }
+            return
+        }
+
+        // Fallback: standard implicit grant token response (from Spotify App native auth)
         val authResponse = AuthorizationResponse.fromUri(uri)
         android.util.Log.i("MainActivity", "AuthResponse type=${authResponse.type} error=${authResponse.error}")
 
         when (authResponse.type) {
             AuthorizationResponse.Type.TOKEN -> {
+                // Save token for Web API access (shared between ViewModels)
+                SpotifyAuthHolder.accessToken = authResponse.accessToken
                 playbackViewModel.handleAuthResponse(authResponse)
                 precacheViewModel.handleAuthResponse(authResponse)
             }
@@ -89,4 +107,6 @@ class MainActivity : ComponentActivity() {
 
 object SpotifyAuthHolder {
     var startAuth: ((com.spotify.sdk.android.auth.AuthorizationRequest) -> Unit)? = null
+    /** Shared Web API token, set by MainActivity when auth succeeds */
+    var accessToken: String? = null
 }
