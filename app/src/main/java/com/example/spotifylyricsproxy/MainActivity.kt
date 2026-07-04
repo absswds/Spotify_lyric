@@ -16,6 +16,7 @@ import com.example.spotifylyricsproxy.notification.NotificationPermissionPolicy
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore
 import com.example.spotifylyricsproxy.ui.navigation.AppNavigation
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
+import com.example.spotifylyricsproxy.ui.playback.LyricDisplayPreferences
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheViewModel
 import com.example.spotifylyricsproxy.ui.theme.SpotifyLyricProxyTheme
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         ThemePreferences.init(this)
+        LyricDisplayPreferences.init(this)
         requestNotificationPermissionIfNeeded()
 
         // Restore persisted Web API access token so process-kill / re-launch

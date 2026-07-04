@@ -33,11 +33,13 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,7 +47,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -92,6 +96,7 @@ fun PlaybackScreen(
     var lyricsExpanded by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var showLyricDisplaySettings by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -144,7 +149,8 @@ fun PlaybackScreen(
                     onOpenSpotify = viewModel::openSpotifyAndConnect,
                     onOpenPlaylist = onOpenPlaylist,
                     onOpenLyricsCorrection = onOpenLyricsCorrection,
-                    onDisconnect = viewModel::disconnect
+                    onDisconnect = viewModel::disconnect,
+                    onLyricDisplaySettings = { showLyricDisplaySettings = true }
                 )
             } else {
                 Column(
@@ -159,6 +165,7 @@ fun PlaybackScreen(
                         state = connectionState,
                         onOpenPlaylist = onOpenPlaylist,
                         onCorrection = onOpenLyricsCorrection,
+                        onLyricDisplaySettings = { showLyricDisplaySettings = true },
                         onDisconnect = viewModel::disconnect
                     )
 
@@ -211,6 +218,10 @@ fun PlaybackScreen(
                 }
             }
         }
+
+        if (showLyricDisplaySettings) {
+            LyricDisplaySettingsDialog(onDismiss = { showLyricDisplaySettings = false })
+        }
     }
 }
 
@@ -219,6 +230,7 @@ private fun CompactTopBar(
     state: SpotifyConnectionState,
     onOpenPlaylist: () -> Unit,
     onCorrection: () -> Unit,
+    onLyricDisplaySettings: () -> Unit,
     onDisconnect: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -270,6 +282,13 @@ private fun CompactTopBar(
                     onClick = {
                         showMenu = false
                         onCorrection()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("歌词显示") },
+                    onClick = {
+                        showMenu = false
+                        onLyricDisplaySettings()
                     }
                 )
                 DropdownMenuItem(
@@ -505,6 +524,7 @@ private fun CompactLyricsBlock(
     val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
     val previous = allLines.getOrNull(currentIndex - 1)?.text
     val next = allLines.getOrNull(currentIndex + 1)?.text
+    val config = LyricDisplayPreferences.resolvedConfig()
 
     Card(
         modifier = Modifier
@@ -542,7 +562,7 @@ private fun CompactLyricsBlock(
                         text = currentLine?.text ?: "...",
                         style = MaterialTheme.typography.headlineSmall,
                         color = Color.White,
-                        textAlign = TextAlign.Center,
+                        textAlign = config.textAlign,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -574,11 +594,12 @@ private fun LyricMessage(text: String) {
 
 @Composable
 private fun ContextLyric(text: String) {
+    val config = LyricDisplayPreferences.resolvedConfig()
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
         color = Color.White.copy(alpha = 0.48f),
-        textAlign = TextAlign.Center,
+        textAlign = config.textAlign,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis
     )
@@ -819,6 +840,7 @@ private fun ExpandedLyricsView(
     val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val config = LyricDisplayPreferences.resolvedConfig()
 
     // Detect if the current line has scrolled out of the viewport
     val isScrolledAway by remember(currentIndex) {
@@ -845,12 +867,12 @@ private fun ExpandedLyricsView(
                     text = line.text,
                     color = when {
                         isCurrent -> Color.White
-                        isPast -> Color.White.copy(alpha = 0.50f)
-                        else -> Color.White.copy(alpha = 0.25f)
+                        isPast -> Color.White.copy(alpha = config.pastLineAlpha)
+                        else -> Color.White.copy(alpha = config.futureLineAlpha)
                     },
-                    fontSize = if (isCurrent) 22.sp else 16.sp,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                    textAlign = TextAlign.Center,
+                    fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
+                    fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
+                    textAlign = config.textAlign,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onSeek(line.startMs) }
@@ -1038,6 +1060,7 @@ private fun LandscapePlaybackLayout(
     onOpenSpotify: () -> Unit,
     onOpenPlaylist: () -> Unit,
     onOpenLyricsCorrection: () -> Unit,
+    onLyricDisplaySettings: () -> Unit,
     onDisconnect: () -> Unit
 ) {
     Row(
@@ -1059,6 +1082,7 @@ private fun LandscapePlaybackLayout(
                 state = connectionState,
                 onOpenPlaylist = onOpenPlaylist,
                 onCorrection = onOpenLyricsCorrection,
+                onLyricDisplaySettings = onLyricDisplaySettings,
                 onDisconnect = onDisconnect
             )
 
@@ -1160,6 +1184,7 @@ private fun LandscapeLyricsList(
 ) {
     val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
     val listState = rememberLazyListState()
+    val config = LyricDisplayPreferences.resolvedConfig()
 
     // Auto-scroll to keep the current line centered
     LaunchedEffect(currentIndex) {
@@ -1180,12 +1205,12 @@ private fun LandscapeLyricsList(
                 text = line.text,
                 color = when {
                     isCurrent -> Color.White
-                    isPast -> Color.White.copy(alpha = 0.48f)
-                    else -> Color.White.copy(alpha = 0.30f)
+                    isPast -> Color.White.copy(alpha = config.pastLineAlpha)
+                    else -> Color.White.copy(alpha = config.futureLineAlpha)
                 },
-                fontSize = if (isCurrent) 20.sp else 14.sp,
-                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                textAlign = TextAlign.Center,
+                fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
+                fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
+                textAlign = config.textAlign,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
@@ -1195,4 +1220,106 @@ private fun LandscapeLyricsList(
             )
         }
     }
+}
+
+@Composable
+private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
+    val currentFontSize by LyricDisplayPreferences.fontSize
+    val currentBold by LyricDisplayPreferences.boldCurrentLine
+    val currentDim by LyricDisplayPreferences.dimLevel
+    val currentAlign by LyricDisplayPreferences.alignment
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("歌词显示设置") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                // Font size
+                Column {
+                    Text(
+                        text = "字体大小",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            "small" to "小",
+                            "default" to "默认",
+                            "large" to "大",
+                            "xlarge" to "超大"
+                        ).forEach { (value, label) ->
+                            FilterChip(
+                                selected = currentFontSize == value,
+                                onClick = { LyricDisplayPreferences.setFontSize(value) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                }
+
+                // Bold toggle
+                Column {
+                    Text(
+                        text = "当前行加粗",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("加粗显示", style = MaterialTheme.typography.bodyMedium)
+                        Switch(
+                            checked = currentBold,
+                            onCheckedChange = { LyricDisplayPreferences.setBoldCurrentLine(it) }
+                        )
+                    }
+                }
+
+                // Dim level
+                Column {
+                    Text(
+                        text = "非当前行透明度",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("low" to "低", "medium" to "中", "high" to "高").forEach { (value, label) ->
+                            FilterChip(
+                                selected = currentDim == value,
+                                onClick = { LyricDisplayPreferences.setDimLevel(value) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                }
+
+                // Alignment
+                Column {
+                    Text(
+                        text = "对齐方式",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("center" to "居中", "start" to "左对齐").forEach { (value, label) ->
+                            FilterChip(
+                                selected = currentAlign == value,
+                                onClick = { LyricDisplayPreferences.setAlignment(value) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("完成") }
+        }
+    )
 }
