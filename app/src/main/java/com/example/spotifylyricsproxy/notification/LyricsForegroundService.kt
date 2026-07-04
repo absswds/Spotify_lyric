@@ -51,7 +51,8 @@ class LyricsForegroundService : Service() {
         spotifyRepository = SpotifyRemoteRepository(
             context = applicationContext,
             clientId = BuildConfig.SPOTIFY_CLIENT_ID,
-            redirectUri = REDIRECT_URI
+            redirectUri = REDIRECT_URI,
+            albumArtDimension = com.spotify.protocol.types.Image.Dimension.SMALL
         )
         lyricsRepository = LyricsRepository(AppDatabase.getInstance(applicationContext))
         playbackClock = PlaybackClock()

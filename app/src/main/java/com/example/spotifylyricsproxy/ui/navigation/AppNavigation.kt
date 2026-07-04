@@ -1,20 +1,35 @@
 package com.example.spotifylyricsproxy.ui.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -52,24 +67,18 @@ fun AppNavigation(playbackViewModel: PlaybackViewModel) {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                bottomNavItems.forEach { item ->
-                    NavigationBarItem(
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) },
-                        selected = currentRoute == item.route,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+            CompactBottomBar(
+                currentRoute = currentRoute,
+                onSelect = { item ->
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
                         }
-                    )
-                }
-            }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+            )
         }
     ) { innerPadding ->
         NavHost(
@@ -90,5 +99,99 @@ fun AppNavigation(playbackViewModel: PlaybackViewModel) {
                 SettingsScreen()
             }
         }
+    }
+}
+
+@Composable
+private fun CompactBottomBar(
+    currentRoute: String?,
+    onSelect: (NavRoute) -> Unit
+) {
+    val isPlayback = currentRoute == NavRoute.Playback.route
+    val outerColor = if (isPlayback) Color(0xFF080D16) else Color(0xFFF7F8FC)
+    val containerColor = if (isPlayback) {
+        Color.White.copy(alpha = 0.08f)
+    } else {
+        Color.White
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(outerColor)
+            .navigationBarsPadding()
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            color = containerColor,
+            tonalElevation = if (isPlayback) 0.dp else 3.dp,
+            shadowElevation = if (isPlayback) 0.dp else 6.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                bottomNavItems.forEach { item ->
+                    CompactBottomBarItem(
+                        item = item,
+                        selected = currentRoute == item.route,
+                        dark = isPlayback,
+                        onClick = { onSelect(item) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactBottomBarItem(
+    item: NavRoute,
+    selected: Boolean,
+    dark: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val selectedColor = if (dark) Color.White else Color(0xFF27314A)
+    val idleColor = if (dark) Color.White.copy(alpha = 0.54f) else Color(0xFF747B89)
+    val pillColor = if (dark) {
+        Color.White.copy(alpha = 0.15f)
+    } else {
+        Color(0xFFECE8FF)
+    }
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(CircleShape)
+                .background(if (selected) pillColor else Color.Transparent)
+                .padding(horizontal = 17.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = item.label,
+                modifier = Modifier.size(23.dp),
+                tint = if (selected) selectedColor else idleColor
+            )
+        }
+        Text(
+            text = item.label,
+            color = if (selected) selectedColor else idleColor,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+        )
     }
 }

@@ -19,7 +19,8 @@ import kotlinx.coroutines.flow.asStateFlow
 class SpotifyRemoteRepository(
     private val context: Context,
     private val clientId: String,
-    private val redirectUri: String
+    private val redirectUri: String,
+    private val albumArtDimension: Image.Dimension = Image.Dimension.LARGE
 ) {
     companion object {
         private const val TAG = "SpotifyRemoteRepo"
@@ -27,6 +28,7 @@ class SpotifyRemoteRepository(
     }
 
     private var spotifyAppRemote: SpotifyAppRemote? = null
+    private var lastImageUri: String = ""
 
     private val _connectionState = MutableStateFlow<SpotifyConnectionState>(
         SpotifyConnectionState.Disconnected
@@ -121,6 +123,7 @@ class SpotifyRemoteRepository(
             SpotifyAppRemote.disconnect(it)
         }
         spotifyAppRemote = null
+        lastImageUri = ""
         _connectionState.value = SpotifyConnectionState.Disconnected
         _currentTrack.value = SpotifyTrackInfo()
         _albumArt.value = null
@@ -142,9 +145,12 @@ class SpotifyRemoteRepository(
                     isPaused = playerState.isPaused,
                     imageUri = rawUri
                 )
-                // Load album art via SDK images API
+                if (rawUri != lastImageUri) {
+                    lastImageUri = rawUri
+                    _albumArt.value = null
+                }
                 playerState.track?.imageUri?.let { uri ->
-                    spotifyAppRemote?.imagesApi?.getImage(uri, Image.Dimension.LARGE)
+                    spotifyAppRemote?.imagesApi?.getImage(uri, albumArtDimension)
                         ?.setResultCallback { bitmap: Bitmap? ->
                             _albumArt.value = bitmap
                         }

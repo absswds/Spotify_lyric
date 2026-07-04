@@ -36,6 +36,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -120,7 +122,8 @@ fun PlaybackScreen(viewModel: PlaybackViewModel) {
                 ProgressBlock(
                     estimatedPositionMs = estimatedPositionMs,
                     durationMs = trackInfo.durationMs,
-                    accent = palette.accent
+                    accent = palette.accent,
+                    onSeek = viewModel::seekTo
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -362,19 +365,25 @@ private fun ContextLyric(text: String) {
 private fun ProgressBlock(
     estimatedPositionMs: Long,
     durationMs: Long,
-    accent: Color
+    accent: Color,
+    onSeek: (Long) -> Unit
 ) {
     if (durationMs <= 0) return
 
     val progress = (estimatedPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
     Column(modifier = Modifier.fillMaxWidth()) {
-        LinearProgressIndicator(
-            progress = { progress },
+        Slider(
+            value = progress,
+            onValueChange = { fraction ->
+                onSeek(fractionToSeekPosition(fraction, durationMs))
+            },
             modifier = Modifier.fillMaxWidth(),
-            color = accent,
-            trackColor = Color.White.copy(alpha = 0.18f)
+            colors = SliderDefaults.colors(
+                thumbColor = accent,
+                activeTrackColor = accent,
+                inactiveTrackColor = Color.White.copy(alpha = 0.18f)
+            )
         )
-        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween

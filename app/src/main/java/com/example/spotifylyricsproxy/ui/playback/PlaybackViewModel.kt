@@ -131,6 +131,17 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         repository.skipPrevious()
     }
 
+    fun seekTo(positionMs: Long) {
+        repository.seekTo(positionMs)
+        clock.update(
+            positionMs = positionMs,
+            paused = repository.currentTrack.value.isPaused,
+            duration = repository.currentTrack.value.durationMs
+        )
+        _estimatedPositionMs.value = positionMs
+        lyricsRepo.updatePosition(positionMs)
+    }
+
     override fun onCleared() {
         super.onCleared()
         repository.disconnect()
