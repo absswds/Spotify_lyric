@@ -18,6 +18,7 @@ import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.lyrics.LyricsRepository
+import com.example.spotifylyricsproxy.mediasession.MediaSessionController
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
@@ -42,6 +43,7 @@ class LyricsForegroundService : Service() {
     private lateinit var spotifyRepository: SpotifyRemoteRepository
     private lateinit var lyricsRepository: LyricsRepository
     private lateinit var playbackClock: PlaybackClock
+    private lateinit var mediaSessionController: MediaSessionController
     private var observerJob: Job? = null
     private var lastFetchedTrackId = ""
 
@@ -56,6 +58,8 @@ class LyricsForegroundService : Service() {
         )
         lyricsRepository = LyricsRepository(AppDatabase.getInstance(applicationContext))
         playbackClock = PlaybackClock()
+        mediaSessionController = MediaSessionController(spotifyRepository)
+        mediaSessionController.create(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -77,6 +81,7 @@ class LyricsForegroundService : Service() {
     override fun onDestroy() {
         observerJob?.cancel()
         serviceScope.cancel()
+        mediaSessionController.release()
         spotifyRepository.disconnect()
         super.onDestroy()
     }
@@ -129,6 +134,12 @@ class LyricsForegroundService : Service() {
                         albumArt
                     )
                 }.collect { (snapshot, albumArt) ->
+                    // Update MediaSession on every track/line/art change
+                    mediaSessionController.updateForTrack(
+                        track = currentTrack.value,
+                        currentLine = currentLine.value,
+                        albumArt = albumArt
+                    )
                     if (notificationGate.shouldPublish(snapshot)) {
                         publishNotification(snapshot, albumArt)
                     }
