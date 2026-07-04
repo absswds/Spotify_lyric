@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -120,19 +121,19 @@ private fun CompactBottomBar(
             .fillMaxWidth()
             .background(outerColor)
             .navigationBarsPadding()
-            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .padding(horizontal = 18.dp, vertical = 6.dp)
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(30.dp),
+            shape = RoundedCornerShape(24.dp),
             color = containerColor,
-            tonalElevation = if (isPlayback) 0.dp else 3.dp,
-            shadowElevation = if (isPlayback) 0.dp else 6.dp
+            tonalElevation = if (isPlayback) 0.dp else 2.dp,
+            shadowElevation = if (isPlayback) 0.dp else 3.dp
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -168,9 +169,9 @@ private fun CompactBottomBarItem(
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
+            .padding(vertical = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -178,20 +179,21 @@ private fun CompactBottomBarItem(
             modifier = Modifier
                 .clip(CircleShape)
                 .background(if (selected) pillColor else Color.Transparent)
-                .padding(horizontal = 17.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 5.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = item.label,
-                modifier = Modifier.size(23.dp),
+                modifier = Modifier.size(19.dp),
                 tint = if (selected) selectedColor else idleColor
             )
         }
         Text(
             text = item.label,
             color = if (selected) selectedColor else idleColor,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            fontSize = 11.sp
         )
     }
 }
