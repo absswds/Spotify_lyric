@@ -46,9 +46,6 @@ import androidx.core.content.ContextCompat
 @Composable
 fun SettingsScreen() {
     val context = LocalContext.current
-    val isDarkTheme = isSystemInDarkTheme()
-    val pageColor = if (isDarkTheme) Color(0xFF0B0F18) else Color(0xFFF7F8FC)
-    val secondaryColor = if (isDarkTheme) Color(0xFF9AA3B2) else Color(0xFF747D8C)
     var permissionGranted by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -64,7 +61,7 @@ fun SettingsScreen() {
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("设置") }) },
-        containerColor = pageColor
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -77,7 +74,7 @@ fun SettingsScreen() {
                 Text(
                     text = "默认从专辑封面提取颜色，也可以改成固定主题。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = secondaryColor
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -104,9 +101,9 @@ fun SettingsScreen() {
                 Text("全局歌词偏移", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Slider(value = 0.5f, onValueChange = {})
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("-2s", color = secondaryColor, style = MaterialTheme.typography.bodySmall)
+                    Text("-2s", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.weight(1f))
-                    Text("+2s", color = secondaryColor, style = MaterialTheme.typography.bodySmall)
+                    Text("+2s", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 }
             }
 
@@ -142,7 +139,6 @@ private fun SettingsGroup(
 ) {
     val isDarkTheme = isSystemInDarkTheme()
     val titleColor = if (isDarkTheme) Color(0xFF9CA7FF) else Color(0xFF4F5EDC)
-    val cardColor = if (isDarkTheme) Color(0xFF151B26) else Color.White
     Column(modifier = Modifier.padding(bottom = 16.dp)) {
         Text(
             text = title,
@@ -153,7 +149,7 @@ private fun SettingsGroup(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = cardColor)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp), content = content)
         }
@@ -162,8 +158,6 @@ private fun SettingsGroup(
 
 @Composable
 private fun ToggleRow(label: String, description: String, checked: Boolean) {
-    val isDarkTheme = isSystemInDarkTheme()
-    val secondaryColor = if (isDarkTheme) Color(0xFF9AA3B2) else Color(0xFF747D8C)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -172,7 +166,7 @@ private fun ToggleRow(label: String, description: String, checked: Boolean) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = secondaryColor)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = {})
     }
@@ -185,8 +179,6 @@ private fun SettingsItemRow(
     enabled: Boolean = false,
     onClick: () -> Unit = {}
 ) {
-    val isDarkTheme = isSystemInDarkTheme()
-    val secondaryColor = if (isDarkTheme) Color(0xFF9AA3B2) else Color(0xFF747D8C)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -202,7 +194,7 @@ private fun SettingsItemRow(
         Text(
             text = description,
             style = MaterialTheme.typography.bodySmall,
-            color = if (enabled) MaterialTheme.colorScheme.primary else secondaryColor
+            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

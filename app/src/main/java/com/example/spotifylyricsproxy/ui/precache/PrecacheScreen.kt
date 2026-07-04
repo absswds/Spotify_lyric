@@ -76,7 +76,7 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
             TopAppBar(title = { Text("歌单预缓存") })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFFF7F8FC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -106,7 +106,7 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
                         onClick = { viewModel.logout() },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color.Transparent,
-                            contentColor = Color(0xFF747B89)
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
                         Icon(Icons.Filled.Home, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -159,13 +159,13 @@ private fun AuthSection(onLogin: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .background(Color(0xFFEFF1F6), CircleShape),
+                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Filled.ArrowForward,
                 contentDescription = null,
-                tint = Color(0xFF747B89),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(36.dp)
             )
         }
@@ -179,7 +179,7 @@ private fun AuthSection(onLogin: () -> Unit) {
         Text(
             text = "登录 Spotify 后选择歌单，App 会自动补齐歌词缓存",
             style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF747B89),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
@@ -223,7 +223,7 @@ private fun PlaylistCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -237,20 +237,20 @@ private fun PlaylistCard(
                 Box(
                     modifier = Modifier
                         .size(56.dp)
-                        .background(Color(0xFFEFF1F6), RoundedCornerShape(12.dp)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isRunning) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = Color(0xFF747B89),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             strokeWidth = 3.dp
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Filled.PlayArrow,
                             contentDescription = null,
-                            tint = Color(0xFF747B89)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -273,7 +273,7 @@ private fun PlaylistCard(
                             else -> "${playlist.tracks.total} 首歌曲"
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF747B89)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (hasFinishedJob) {
                         Spacer(modifier = Modifier.height(4.dp))
@@ -306,7 +306,7 @@ private fun PlaylistCard(
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 12.dp),
                     color = Color(0xFF34C759),
-                    trackColor = Color(0xFFEFF1F6)
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         }

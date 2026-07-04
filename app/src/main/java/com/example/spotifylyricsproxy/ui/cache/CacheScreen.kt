@@ -54,7 +54,7 @@ fun CacheScreen(viewModel: CacheViewModel) {
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("缓存管理") }) },
-        containerColor = Color(0xFFF7F8FC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -91,7 +91,7 @@ private fun SearchPlaceholder() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        color = Color(0xFFEFF1F6)
+        color = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -100,13 +100,13 @@ private fun SearchPlaceholder() {
             Icon(
                 imageVector = Icons.Filled.Search,
                 contentDescription = "搜索",
-                tint = Color(0xFF7A8291)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = "搜索歌曲 / 歌手 / 专辑",
                 modifier = Modifier.padding(start = 8.dp),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF7A8291)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -145,7 +145,7 @@ private fun CacheEntryCard(entry: LyricCacheEntity) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -164,7 +164,7 @@ private fun CacheEntryCard(entry: LyricCacheEntity) {
                 Text(
                     text = entry.artist.ifBlank { "未知歌手" },
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF747B89),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -204,7 +204,7 @@ private fun EmptyCacheState() {
             .fillMaxWidth()
             .padding(top = 6.dp),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
@@ -215,13 +215,13 @@ private fun EmptyCacheState() {
             Box(
                 modifier = Modifier
                     .size(64.dp)
-                    .background(Color(0xFFEFF1F6), CircleShape),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
                     contentDescription = null,
-                    tint = Color(0xFF747B89),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -235,7 +235,7 @@ private fun EmptyCacheState() {
             Text(
                 text = "播放或预缓存歌曲后，歌词缓存状态会显示在这里。",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF747B89),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
         }
@@ -251,11 +251,12 @@ private fun statusLabel(status: String): String =
         else -> status
     }
 
+@Composable
 private fun statusColor(status: String): Color =
     when (status) {
         "success" -> Color(0xFF34C759)
         "plain_only" -> Color(0xFFFF9500)
-        "not_found" -> Color(0xFF747B89)
+        "not_found" -> MaterialTheme.colorScheme.onSurfaceVariant
         "failed" -> Color(0xFFFF3B30)
-        else -> Color(0xFF747B89)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
