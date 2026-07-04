@@ -1,12 +1,18 @@
 package com.example.spotifylyricsproxy
 
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.Manifest
 import android.os.Bundle
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.spotifylyricsproxy.notification.NotificationPermissionPolicy
 import com.example.spotifylyricsproxy.ui.navigation.AppNavigation
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
 import kotlinx.coroutines.launch
@@ -21,10 +27,16 @@ class MainActivity : ComponentActivity() {
     private val playbackViewModel: PlaybackViewModel by viewModels()
     private val cacheViewModel: CacheViewModel by viewModels()
     private val precacheViewModel: PrecacheViewModel by viewModels()
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        android.util.Log.i("MainActivity", "POST_NOTIFICATIONS granted=$granted")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        requestNotificationPermissionIfNeeded()
 
         // Check if launched from OAuth redirect
         intent?.data?.let { uri ->
@@ -100,6 +112,21 @@ class MainActivity : ComponentActivity() {
                 android.util.Log.w("MainActivity", "Auth error: ${authResponse.error}")
             }
             else -> {}
+        }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+
+        if (NotificationPermissionPolicy.shouldRequestPostNotifications(Build.VERSION.SDK_INT, granted)) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 

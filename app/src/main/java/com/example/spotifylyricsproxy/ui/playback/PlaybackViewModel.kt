@@ -15,12 +15,36 @@ import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
+import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
+import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistTrackItem
+import com.example.spotifylyricsproxy.spotify.webapi.SpotifyWebApiClient
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+data class PlaybackPlaylistTrack(
+    val id: String,
+    val uri: String,
+    val title: String,
+    val artist: String,
+    val durationMs: Long
+)
+
+internal fun List<SpotifyPlaylistTrackItem>.toPlaybackPlaylistTracks(): List<PlaybackPlaylistTrack> =
+    mapNotNull { item ->
+        val track = item.track ?: return@mapNotNull null
+        if (track.id.isBlank() || track.uri.isBlank()) return@mapNotNull null
+        PlaybackPlaylistTrack(
+            id = track.id,
+            uri = track.uri,
+            title = track.name,
+            artist = track.artists.joinToString(", ") { it.name },
+            durationMs = track.durationMs
+        )
+    }
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -34,6 +58,21 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private val _estimatedPositionMs = MutableStateFlow(0L)
     val estimatedPositionMs: StateFlow<Long> = _estimatedPositionMs.asStateFlow()
+
+    private val _playlists = MutableStateFlow<List<SpotifyPlaylistItem>>(emptyList())
+    val playlists: StateFlow<List<SpotifyPlaylistItem>> = _playlists.asStateFlow()
+
+    private val _selectedPlaylist = MutableStateFlow<SpotifyPlaylistItem?>(null)
+    val selectedPlaylist: StateFlow<SpotifyPlaylistItem?> = _selectedPlaylist.asStateFlow()
+
+    private val _playlistTracks = MutableStateFlow<List<PlaybackPlaylistTrack>>(emptyList())
+    val playlistTracks: StateFlow<List<PlaybackPlaylistTrack>> = _playlistTracks.asStateFlow()
+
+    private val _playlistLoading = MutableStateFlow(false)
+    val playlistLoading: StateFlow<Boolean> = _playlistLoading.asStateFlow()
+
+    private val _playlistError = MutableStateFlow<String?>(null)
+    val playlistError: StateFlow<String?> = _playlistError.asStateFlow()
 
     val connectionState: StateFlow<SpotifyConnectionState>
         get() = repository.connectionState
@@ -67,6 +106,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         authTokenReceived = true
         android.util.Log.i("PlaybackVM", "Auth token received")
         repository.tryConnect()
+        loadPlaylists()
     }
 
     private fun startClock() {
@@ -153,6 +193,64 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         )
         _estimatedPositionMs.value = positionMs
         lyricsRepo.updatePosition(positionMs)
+    }
+
+    fun loadPlaylists() {
+        val token = SpotifyAuthHolder.accessToken
+        if (token.isNullOrBlank()) {
+            _playlistError.value = "需要先连接 Spotify"
+            return
+        }
+
+        _playlistLoading.value = true
+        _playlistError.value = null
+        viewModelScope.launch {
+            try {
+                val response = SpotifyWebApiClient.api.getPlaylists(
+                    auth = SpotifyWebApiClient.authHeader(token)
+                )
+                _playlists.value = response.items
+                if (_selectedPlaylist.value == null) {
+                    response.items.firstOrNull()?.let { selectPlaylist(it) }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("PlaybackVM", "Failed to load playlists", e)
+                _playlistError.value = "歌单加载失败"
+            } finally {
+                _playlistLoading.value = false
+            }
+        }
+    }
+
+    fun selectPlaylist(playlist: SpotifyPlaylistItem) {
+        val token = SpotifyAuthHolder.accessToken
+        if (token.isNullOrBlank()) {
+            _playlistError.value = "需要先连接 Spotify"
+            return
+        }
+
+        _selectedPlaylist.value = playlist
+        _playlistTracks.value = emptyList()
+        _playlistLoading.value = true
+        _playlistError.value = null
+        viewModelScope.launch {
+            try {
+                val response = SpotifyWebApiClient.api.getPlaylistTracks(
+                    auth = SpotifyWebApiClient.authHeader(token),
+                    playlistId = playlist.id
+                )
+                _playlistTracks.value = response.items.toPlaybackPlaylistTracks()
+            } catch (e: Exception) {
+                android.util.Log.e("PlaybackVM", "Failed to load playlist tracks", e)
+                _playlistError.value = "歌曲加载失败"
+            } finally {
+                _playlistLoading.value = false
+            }
+        }
+    }
+
+    fun playTrack(track: PlaybackPlaylistTrack) {
+        repository.playUri(track.uri)
     }
 
     override fun onCleared() {

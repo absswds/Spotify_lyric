@@ -283,7 +283,7 @@ private fun PlaylistCard(
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = onPrecache,
-                    enabled = canPrecache && !isRunning && (job == null || job.totalTracks == 0)
+                    enabled = canPrecache && !isRunning
                 ) {
                     if (isRunning) {
                         CircularProgressIndicator(

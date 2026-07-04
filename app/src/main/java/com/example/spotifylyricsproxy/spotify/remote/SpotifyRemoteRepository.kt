@@ -165,6 +165,11 @@ class SpotifyRemoteRepository(
         spotifyAppRemote?.playerApi?.resume()
     }
 
+    fun playUri(uri: String) {
+        if (uri.isBlank()) return
+        spotifyAppRemote?.playerApi?.play(uri)
+    }
+
     fun pause() {
         spotifyAppRemote?.playerApi?.pause()
     }

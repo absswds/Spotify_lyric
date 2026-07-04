@@ -4,6 +4,7 @@ import android.app.Activity
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,9 +15,13 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,12 +47,12 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +69,7 @@ import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
+import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
 
 @Composable
 fun PlaybackScreen(viewModel: PlaybackViewModel) {
@@ -74,8 +80,19 @@ fun PlaybackScreen(viewModel: PlaybackViewModel) {
     val currentLyricLine by viewModel.currentLyricLine.collectAsState()
     val parsedLyrics by viewModel.parsedLyrics.collectAsState()
     val lyricStatus by viewModel.lyricStatus.collectAsState()
+    val playlists by viewModel.playlists.collectAsState()
+    val selectedPlaylist by viewModel.selectedPlaylist.collectAsState()
+    val playlistTracks by viewModel.playlistTracks.collectAsState()
+    val playlistLoading by viewModel.playlistLoading.collectAsState()
+    val playlistError by viewModel.playlistError.collectAsState()
     val activity = LocalContext.current as Activity
     val palette = remember(albumArt) { albumPalette(albumArt) }
+
+    LaunchedEffect(connectionState) {
+        if (connectionState is SpotifyConnectionState.Connected && playlists.isEmpty()) {
+            viewModel.loadPlaylists()
+        }
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -142,6 +159,20 @@ fun PlaybackScreen(viewModel: PlaybackViewModel) {
                     onPlayPause = viewModel::togglePlayPause,
                     onSkipNext = viewModel::skipNext,
                     onSkipPrevious = viewModel::skipPrevious
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                PlaylistBrowserBlock(
+                    playlists = playlists,
+                    selectedPlaylist = selectedPlaylist,
+                    tracks = playlistTracks,
+                    isLoading = playlistLoading,
+                    error = playlistError,
+                    accent = palette.accent,
+                    onRefresh = viewModel::loadPlaylists,
+                    onSelectPlaylist = viewModel::selectPlaylist,
+                    onPlayTrack = viewModel::playTrack
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -533,6 +564,176 @@ private fun OffsetButton(text: String) {
     }
 }
 
+@Composable
+private fun PlaylistBrowserBlock(
+    playlists: List<SpotifyPlaylistItem>,
+    selectedPlaylist: SpotifyPlaylistItem?,
+    tracks: List<PlaybackPlaylistTrack>,
+    isLoading: Boolean,
+    error: String?,
+    accent: Color,
+    onRefresh: () -> Unit,
+    onSelectPlaylist: (SpotifyPlaylistItem) -> Unit,
+    onPlayTrack: (PlaybackPlaylistTrack) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.10f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "歌单",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = selectedPlaylist?.name ?: "选择歌单后点歌播放",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.58f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                OutlinedButton(
+                    onClick = onRefresh,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                ) {
+                    Text("刷新")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (error != null) {
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFFFB4AB)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            if (playlists.isEmpty()) {
+                Button(onClick = onRefresh, enabled = !isLoading) {
+                    Text(if (isLoading) "加载中" else "加载歌单")
+                }
+                return@Column
+            }
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(playlists) { playlist ->
+                    val selected = selectedPlaylist?.id == playlist.id
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = if (selected) accent else Color.White.copy(alpha = 0.12f),
+                        contentColor = if (selected && colorLuma(accent) > 0.55f) Color.Black else Color.White,
+                        modifier = Modifier.clickable { onSelectPlaylist(playlist) }
+                    ) {
+                        Text(
+                            text = playlist.name,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (isLoading && tracks.isEmpty()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("正在加载歌曲", color = Color.White.copy(alpha = 0.72f))
+                }
+            } else if (selectedPlaylist != null && tracks.isEmpty()) {
+                Text(
+                    text = "这个歌单暂时没有可播放歌曲",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.58f)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 260.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(tracks) { track ->
+                        PlaylistTrackRow(track = track, onClick = { onPlayTrack(track) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaylistTrackRow(
+    track: PlaybackPlaylistTrack,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .background(Color.White.copy(alpha = 0.08f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Filled.PlayArrow,
+            contentDescription = "播放歌曲",
+            tint = Color.White.copy(alpha = 0.82f),
+            modifier = Modifier.size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = track.artist,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.56f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Text(
+            text = formatMs(track.durationMs),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.50f)
+        )
+    }
+}
+
 private data class AlbumPalette(
     val deep: Color,
     val mid: Color,
@@ -582,6 +783,9 @@ private fun albumPalette(bitmap: Bitmap?): AlbumPalette {
         )
     )
 }
+
+private fun colorLuma(color: Color): Float =
+    0.299f * color.red + 0.587f * color.green + 0.114f * color.blue
 
 private fun stateLabel(state: SpotifyConnectionState): String = when (state) {
     is SpotifyConnectionState.Disconnected -> "未连接 Spotify"

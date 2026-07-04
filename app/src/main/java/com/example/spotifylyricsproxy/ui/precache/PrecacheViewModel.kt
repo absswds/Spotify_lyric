@@ -26,6 +26,25 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
+private const val RETRY_AFTER_MS = 7 * 24 * 60 * 60 * 1000L
+
+internal fun failedCacheEntry(
+    trackId: String,
+    title: String,
+    artist: String,
+    durationMs: Long,
+    now: Long = System.currentTimeMillis()
+): LyricCacheEntity = LyricCacheEntity(
+    spotifyTrackId = trackId,
+    title = title,
+    artist = artist,
+    durationMs = durationMs,
+    fetchStatus = "failed",
+    nextRetryAt = now + RETRY_AFTER_MS,
+    lastTriedAt = now,
+    updatedAt = now
+)
+
 data class PrecacheProgress(
     val isRunning: Boolean = false,
     val progressPercent: Int = 0,
@@ -333,13 +352,21 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
                                         artist = artist,
                                         durationMs = durationMs,
                                         fetchStatus = "not_found",
-                                        nextRetryAt = System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000L
+                                        nextRetryAt = System.currentTimeMillis() + RETRY_AFTER_MS
                                     )
                                 )
                                 notFound++
                             }
                         } catch (e: Exception) {
                             Log.e("PrecacheVM", "Failed for $title", e)
+                            db.lyricCacheDao().upsert(
+                                failedCacheEntry(
+                                    trackId = trackId,
+                                    title = title,
+                                    artist = artist,
+                                    durationMs = durationMs
+                                )
+                            )
                             failed++
                         }
                     }
