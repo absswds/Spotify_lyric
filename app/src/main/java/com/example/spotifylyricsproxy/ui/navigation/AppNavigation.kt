@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.res.Configuration
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +48,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.spotifylyricsproxy.ui.cache.CacheScreen
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
+import com.example.spotifylyricsproxy.ui.theme.ThemePreferences
 import com.example.spotifylyricsproxy.ui.playback.LyricsCorrectionScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
@@ -88,7 +88,7 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val isPlayback = currentRoute == NavRoute.Playback.route
-    val isDarkTheme = isSystemInDarkTheme()
+    val isDarkTheme = ThemePreferences.isDarkTheme()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val showBottomBar = currentRoute in bottomNavItems.map { it.route } && !(isPlayback && isLandscape)

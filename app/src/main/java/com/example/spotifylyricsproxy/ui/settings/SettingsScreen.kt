@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.example.spotifylyricsproxy.ui.theme.ThemePreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,18 +71,23 @@ fun SettingsScreen() {
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            SettingsGroup(title = "播放页主题") {
+            SettingsGroup(title = "全局主题") {
                 Text(
-                    text = "默认从专辑封面提取颜色，也可以改成固定主题。",
+                    text = "选择 App 的主题模式，影响所有页面。",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                    listOf("跟随封面", "深色", "浅色", "自定义").forEachIndexed { index, label ->
+                    val currentMode by ThemePreferences.themeMode
+                    listOf(
+                        Triple("system", "跟随系统", "根据系统设置自动切换"),
+                        Triple("light", "浅色", "始终使用浅色模式"),
+                        Triple("dark", "深色", "始终使用深色模式")
+                    ).forEach { (mode, label, _) ->
                         FilterChip(
-                            selected = index == 0,
-                            onClick = {},
+                            selected = currentMode == mode,
+                            onClick = { ThemePreferences.setThemeMode(mode) },
                             label = { Text(label) },
                             modifier = Modifier.padding(end = 8.dp)
                         )

@@ -16,10 +16,11 @@ import com.example.spotifylyricsproxy.notification.NotificationPermissionPolicy
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore
 import com.example.spotifylyricsproxy.ui.navigation.AppNavigation
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
-import kotlinx.coroutines.launch
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheViewModel
 import com.example.spotifylyricsproxy.ui.theme.SpotifyLyricProxyTheme
+import com.example.spotifylyricsproxy.ui.theme.ThemePreferences
+import kotlinx.coroutines.launch
 import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationResponse
 
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreferences.init(this)
         requestNotificationPermissionIfNeeded()
 
         // Restore persisted Web API access token so process-kill / re-launch
