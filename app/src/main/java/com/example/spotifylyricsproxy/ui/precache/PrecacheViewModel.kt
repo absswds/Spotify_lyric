@@ -395,16 +395,17 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
             Log.w("PrecacheVM", "GET /v1/me failed", e)
         }
 
-        // 2. Fetch tracks with pagination
+        // 2. Fetch tracks with pagination. Spotify's current endpoint is /items;
+        // /tracks is deprecated and can return 403 for newer apps.
         var offset = 0
         var batchTotal = 0
 
         do {
-            val url = "https://api.spotify.com/v1/playlists/$playlistId/tracks?limit=100&offset=$offset"
+            val url = "https://api.spotify.com/v1/playlists/$playlistId/items?limit=100&offset=$offset"
             val req = Request.Builder().url(url).header("Authorization", "Bearer $token").build()
             val resp = client.newCall(req).execute()
             val body = resp.body?.string()
-            Log.i("PrecacheVM", "GET tracks offset=$offset -> HTTP ${resp.code}, body=${body?.take(500)}")
+            Log.i("PrecacheVM", "GET playlist items offset=$offset -> HTTP ${resp.code}, body=${body?.take(500)}")
 
             if (!resp.isSuccessful || body == null) {
                 val errorBody = body?.take(200) ?: "empty body"
@@ -422,7 +423,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
             if (itemsArray != null) {
                 for (i in 0 until itemsArray.length()) {
                     val item = itemsArray.getJSONObject(i)
-                    val trackJson = item.optJSONObject("track") ?: continue
+                    val trackJson = item.optJSONObject("item") ?: item.optJSONObject("track") ?: continue
                     val trackId = trackJson.optString("id", "")
                     val name = trackJson.optString("name", "")
                     val artistsArray = trackJson.optJSONArray("artists")

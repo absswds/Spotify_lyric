@@ -20,7 +20,7 @@ interface SpotifyWebApi {
         @Query("offset") offset: Int = 0
     ): SpotifyPlaylistResponse
 
-    @GET("v1/playlists/{id}/tracks")
+    @GET("v1/playlists/{id}/items")
     suspend fun getPlaylistTracks(
         @Header("Authorization") auth: String,
         @Path("id") playlistId: String,
@@ -68,8 +68,14 @@ data class SpotifyPlaylistTracksResponse(
 )
 
 data class SpotifyPlaylistTrackItem(
-    val track: SpotifyTrack? = null
-)
+    @SerializedName("item")
+    private val item: SpotifyTrack? = null,
+    @SerializedName("track")
+    private val legacyTrack: SpotifyTrack? = null
+) {
+    val track: SpotifyTrack?
+        get() = item ?: legacyTrack
+}
 
 data class SpotifyTrack(
     val id: String = "",
@@ -77,6 +83,7 @@ data class SpotifyTrack(
     val name: String = "",
     val artists: List<SpotifyArtist> = emptyList(),
     val album: SpotifyAlbum? = null,
+    @SerializedName("duration_ms")
     val durationMs: Long = 0
 )
 
