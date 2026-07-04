@@ -55,6 +55,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -70,12 +71,15 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
@@ -102,6 +106,31 @@ fun PlaybackScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var showLyricDisplaySettings by remember { mutableStateOf(false) }
     val isSpotifyInstalled = rememberIsSpotifyInstalled()
+    val activity = LocalContext.current as? android.app.Activity
+
+    DisposableEffect(activity, isLandscape, lyricsExpanded) {
+        val window = activity?.window
+        val decorView = window?.decorView
+        val controller = if (window != null && decorView != null) {
+            WindowInsetsControllerCompat(window, decorView)
+        } else {
+            null
+        }
+
+        if (controller != null) {
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            if (isLandscape || lyricsExpanded) {
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                controller.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+
+        onDispose {
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -1102,17 +1131,13 @@ private fun LandscapePlaybackLayout(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 18.dp, vertical = 8.dp)
     ) {
-        // Left panel: album art, track info, controls (38%)
         Column(
             modifier = Modifier
-                .weight(0.38f)
+                .weight(0.34f)
                 .fillMaxHeight(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.Start
         ) {
             CompactTopBar(
                 state = connectionState,
@@ -1122,43 +1147,65 @@ private fun LandscapePlaybackLayout(
                 onDisconnect = onDisconnect
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            AlbumArtHero(albumArt = albumArt, accent = palette.accent)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(0.78f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AlbumArtHero(albumArt = albumArt, accent = palette.accent)
+                    }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-            TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
+                    TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
+                }
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ProgressBlock(
+                        estimatedPositionMs = estimatedPositionMs,
+                        durationMs = durationMs,
+                        accent = palette.accent,
+                        onSeek = onSeek
+                    )
 
-            ProgressBlock(
-                estimatedPositionMs = estimatedPositionMs,
-                durationMs = durationMs,
-                accent = palette.accent,
-                onSeek = onSeek
-            )
+                    Spacer(modifier = Modifier.height(10.dp))
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            PlaybackControls(
-                isPlaying = isPlaying,
-                isConnected = isConnected,
-                accent = palette.accent,
-                onPlayPause = onPlayPause,
-                onSkipNext = onSkipNext,
-                onSkipPrevious = onSkipPrevious
-            )
+                    PlaybackControls(
+                        isPlaying = isPlaying,
+                        isConnected = isConnected,
+                        accent = palette.accent,
+                        onPlayPause = onPlayPause,
+                        onSkipNext = onSkipNext,
+                        onSkipPrevious = onSkipPrevious
+                    )
+                }
+            }
         }
 
-        // Right panel: lyrics or connect action (62%)
         Column(
             modifier = Modifier
-                .weight(0.62f)
+                .weight(0.66f)
                 .fillMaxHeight()
-                .padding(start = 16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(start = 22.dp),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.Start
         ) {
             if (!isConnected) {
                 ConnectActionPanel(
