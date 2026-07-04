@@ -441,16 +441,21 @@ private fun PlaybackControls(
             )
         }
         Spacer(modifier = Modifier.width(28.dp))
+        val buttonBg = if (isConnected) accent else Color.White.copy(alpha = 0.14f)
+        val buttonContent = if (buttonBg.let { c ->
+                0.299f * c.red + 0.587f * c.green + 0.114f * c.blue
+            } > 0.55f
+        ) Color.Black else Color.White
         Surface(
             modifier = Modifier.size(72.dp),
             shape = CircleShape,
-            color = if (isConnected) accent else Color.White.copy(alpha = 0.14f),
-            contentColor = Color.White,
+            color = buttonBg,
+            contentColor = buttonContent,
             shadowElevation = 8.dp
         ) {
             IconButton(onClick = onPlayPause, enabled = isConnected) {
                 if (isPlaying) {
-                    PauseGlyph()
+                    PauseGlyph(color = buttonContent)
                 } else {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
@@ -473,26 +478,26 @@ private fun PlaybackControls(
 }
 
 @Composable
-private fun PauseGlyph() {
+private fun PauseGlyph(color: Color = Color.White) {
     Row(
         modifier = Modifier.size(42.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        PauseBar()
+        PauseBar(color = color)
         Spacer(modifier = Modifier.width(7.dp))
-        PauseBar()
+        PauseBar(color = color)
     }
 }
 
 @Composable
-private fun PauseBar() {
+private fun PauseBar(color: Color) {
     Box(
         modifier = Modifier
             .width(7.dp)
             .height(28.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(Color.White)
+            .background(color)
     )
 }
 
