@@ -8,7 +8,7 @@ import org.junit.Test
 class SpotifyPlaylistModelTest {
 
     @Test
-    fun playlistItem_mapsTracksOwnerAndCollaborativeFields() {
+    fun playlistItem_mapsItemsOwnerAndCollaborativeFields() {
         val json = """
             {
               "id": "playlist-1",
@@ -18,8 +18,11 @@ class SpotifyPlaylistModelTest {
                 "id": "user-1",
                 "display_name": "Binbi"
               },
+              "items": {
+                "total": 183
+              },
               "tracks": {
-                "total": 42
+                "total": 0
               }
             }
         """.trimIndent()
@@ -31,6 +34,6 @@ class SpotifyPlaylistModelTest {
         assertTrue(playlist.collaborative)
         assertEquals("user-1", playlist.owner?.id)
         assertEquals("Binbi", playlist.owner?.displayName)
-        assertEquals(42, playlist.tracks.total)
+        assertEquals(183, playlist.tracks.total)
     }
 }

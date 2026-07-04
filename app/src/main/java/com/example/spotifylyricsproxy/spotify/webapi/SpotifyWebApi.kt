@@ -47,7 +47,7 @@ data class SpotifyPlaylistItem(
     val description: String? = null,
     val collaborative: Boolean = false,
     val owner: SpotifyPlaylistOwner? = null,
-    @SerializedName("tracks")
+    @SerializedName("items")
     val tracks: SpotifyPlaylistTracksInfo = SpotifyPlaylistTracksInfo(),
     val images: List<SpotifyImage> = emptyList()
 )
