@@ -1,6 +1,7 @@
 package com.example.spotifylyricsproxy.ui.navigation
 
 import android.app.Activity
+import android.content.res.Configuration
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -34,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -87,7 +89,9 @@ fun AppNavigation(
     val currentRoute = navBackStackEntry?.destination?.route
     val isPlayback = currentRoute == NavRoute.Playback.route
     val isDarkTheme = isSystemInDarkTheme()
-    val showBottomBar = currentRoute in bottomNavItems.map { it.route }
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val showBottomBar = currentRoute in bottomNavItems.map { it.route } && !(isPlayback && isLandscape)
     val appBackground = when {
         isPlayback -> Color(0xFF080D16)
         isDarkTheme -> Color(0xFF0B0F18)

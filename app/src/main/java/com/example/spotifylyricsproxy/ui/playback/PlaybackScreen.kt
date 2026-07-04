@@ -1,5 +1,6 @@
 package com.example.spotifylyricsproxy.ui.playback
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -48,6 +50,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,6 +90,8 @@ fun PlaybackScreen(
     val lyricStatus by viewModel.lyricStatus.collectAsState()
     val palette = remember(albumArt) { albumPalette(albumArt) }
     var lyricsExpanded by remember { mutableStateOf(false) }
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -116,6 +122,29 @@ fun PlaybackScreen(
                     onSeek = viewModel::seekTo,
                     onPlayPause = viewModel::togglePlayPause,
                     onCollapse = { lyricsExpanded = false }
+                )
+            } else if (isLandscape) {
+                LandscapePlaybackLayout(
+                    albumArt = albumArt,
+                    trackInfo = trackInfo,
+                    connectionState = connectionState,
+                    palette = palette,
+                    estimatedPositionMs = estimatedPositionMs,
+                    durationMs = trackInfo.durationMs,
+                    isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
+                    isConnected = connectionState is SpotifyConnectionState.Connected,
+                    parsedLyrics = parsedLyrics,
+                    currentLyricLine = currentLyricLine,
+                    lyricStatus = lyricStatus,
+                    onSeek = viewModel::seekTo,
+                    onPlayPause = viewModel::togglePlayPause,
+                    onSkipNext = viewModel::skipNext,
+                    onSkipPrevious = viewModel::skipPrevious,
+                    onConnect = viewModel::connect,
+                    onOpenSpotify = viewModel::openSpotifyAndConnect,
+                    onOpenPlaylist = onOpenPlaylist,
+                    onOpenLyricsCorrection = onOpenLyricsCorrection,
+                    onDisconnect = viewModel::disconnect
                 )
             } else {
                 Column(
@@ -986,4 +1015,184 @@ private fun formatMs(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
+}
+
+@Composable
+private fun LandscapePlaybackLayout(
+    albumArt: Bitmap?,
+    trackInfo: SpotifyTrackInfo,
+    connectionState: SpotifyConnectionState,
+    palette: AlbumPalette,
+    estimatedPositionMs: Long,
+    durationMs: Long,
+    isPlaying: Boolean,
+    isConnected: Boolean,
+    parsedLyrics: List<LrcLine>,
+    currentLyricLine: LrcLine?,
+    lyricStatus: LyricStatus,
+    onSeek: (Long) -> Unit,
+    onPlayPause: () -> Unit,
+    onSkipNext: () -> Unit,
+    onSkipPrevious: () -> Unit,
+    onConnect: () -> Unit,
+    onOpenSpotify: () -> Unit,
+    onOpenPlaylist: () -> Unit,
+    onOpenLyricsCorrection: () -> Unit,
+    onDisconnect: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    ) {
+        // Left panel: album art, track info, controls (38%)
+        Column(
+            modifier = Modifier
+                .weight(0.38f)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CompactTopBar(
+                state = connectionState,
+                onOpenPlaylist = onOpenPlaylist,
+                onCorrection = onOpenLyricsCorrection,
+                onDisconnect = onDisconnect
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            AlbumArtHero(albumArt = albumArt, accent = palette.accent)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ProgressBlock(
+                estimatedPositionMs = estimatedPositionMs,
+                durationMs = durationMs,
+                accent = palette.accent,
+                onSeek = onSeek
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            PlaybackControls(
+                isPlaying = isPlaying,
+                isConnected = isConnected,
+                accent = palette.accent,
+                onPlayPause = onPlayPause,
+                onSkipNext = onSkipNext,
+                onSkipPrevious = onSkipPrevious
+            )
+        }
+
+        // Right panel: lyrics or connect action (62%)
+        Column(
+            modifier = Modifier
+                .weight(0.62f)
+                .fillMaxHeight()
+                .padding(start = 16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (!isConnected) {
+                ConnectActionPanel(
+                    state = connectionState,
+                    accent = palette.accent,
+                    onConnect = onConnect,
+                    onOpenSpotify = onOpenSpotify
+                )
+            } else {
+                LandscapeLyricsContent(
+                    lines = parsedLyrics,
+                    currentLine = currentLyricLine,
+                    lyricStatus = lyricStatus,
+                    onSeek = onSeek
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LandscapeLyricsContent(
+    lines: List<LrcLine>,
+    currentLine: LrcLine?,
+    lyricStatus: LyricStatus,
+    onSeek: (Long) -> Unit
+) {
+    when (lyricStatus) {
+        is LyricStatus.Idle -> LyricMessage("等待播放...")
+        is LyricStatus.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = Color.White,
+                strokeWidth = 2.dp
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            LyricMessage("正在查找歌词")
+        }
+        is LyricStatus.Synced -> {
+            if (lines.isNotEmpty()) {
+                LandscapeLyricsList(lines, currentLine, onSeek)
+            } else {
+                LyricMessage("暂无歌词内容")
+            }
+        }
+        is LyricStatus.PlainOnly -> LyricMessage("当前歌曲暂无同步歌词")
+        is LyricStatus.NotFound -> LyricMessage("暂未找到歌词")
+        is LyricStatus.LowConfidence -> LyricMessage("找到疑似歌词，需要手动确认")
+        is LyricStatus.ParseError -> LyricMessage("歌词解析失败")
+        is LyricStatus.Error -> LyricMessage("歌词加载失败")
+    }
+}
+
+@Composable
+private fun LandscapeLyricsList(
+    lines: List<LrcLine>,
+    currentLine: LrcLine?,
+    onSeek: (Long) -> Unit
+) {
+    val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to keep the current line centered
+    LaunchedEffect(currentIndex) {
+        if (currentIndex >= 0) {
+            listState.animateScrollToItem((currentIndex - 2).coerceAtLeast(0))
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        itemsIndexed(lines) { index, line ->
+            val isCurrent = index == currentIndex
+            val isPast = index < currentIndex
+            Text(
+                text = line.text,
+                color = when {
+                    isCurrent -> Color.White
+                    isPast -> Color.White.copy(alpha = 0.48f)
+                    else -> Color.White.copy(alpha = 0.30f)
+                },
+                fontSize = if (isCurrent) 20.sp else 14.sp,
+                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        if (line.startMs >= 0) onSeek(line.startMs)
+                    }
+                    .padding(horizontal = 8.dp, vertical = 5.dp)
+            )
+        }
+    }
 }
