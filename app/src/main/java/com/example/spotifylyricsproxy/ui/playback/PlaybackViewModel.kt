@@ -19,7 +19,6 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -68,6 +67,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private var lastFetchedTrackId: String = ""
     private var authTokenReceived: Boolean = false
+    private var pendingConnectionOnResume: Boolean = false
 
     init {
         repository.tryConnect()
@@ -170,10 +170,22 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         if (launchIntent != null) {
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             app.startActivity(launchIntent)
+            pendingConnectionOnResume = true
+            android.util.Log.i("PlaybackVM", "Launched Spotify, will retry connection on resume")
         }
-        repository.tryConnect()
-        viewModelScope.launch {
-            delay(1200)
+        // Don't try connecting now — when the user returns from Spotify,
+        // onResume() will pick up the pending flag and attempt a fresh connection.
+    }
+
+    /** Called from MainActivity.onResume — gentle auto-reconnect when returning
+     *  to foreground (e.g. after opening Spotify). */
+    fun onResume() {
+        if (pendingConnectionOnResume) {
+            pendingConnectionOnResume = false
+            android.util.Log.i("PlaybackVM", "onResume: retrying connection after opening Spotify")
+            repository.tryConnect()
+        } else if (repository.connectionState.value is SpotifyConnectionState.Disconnected) {
+            android.util.Log.i("PlaybackVM", "onResume: gentle reconnect attempt")
             repository.tryConnect()
         }
     }

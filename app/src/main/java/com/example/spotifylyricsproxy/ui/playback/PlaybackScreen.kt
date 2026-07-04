@@ -97,6 +97,7 @@ fun PlaybackScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var showLyricDisplaySettings by remember { mutableStateOf(false) }
+    val isSpotifyInstalled = rememberIsSpotifyInstalled()
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -141,6 +142,7 @@ fun PlaybackScreen(
                     parsedLyrics = parsedLyrics,
                     currentLyricLine = currentLyricLine,
                     lyricStatus = lyricStatus,
+                    isSpotifyInstalled = isSpotifyInstalled,
                     onSeek = viewModel::seekTo,
                     onPlayPause = viewModel::togglePlayPause,
                     onSkipNext = viewModel::skipNext,
@@ -196,6 +198,7 @@ fun PlaybackScreen(
                             ConnectActionPanel(
                                 state = connectionState,
                                 accent = palette.accent,
+                                isSpotifyInstalled = isSpotifyInstalled,
                                 onConnect = viewModel::connect,
                                 onOpenSpotify = viewModel::openSpotifyAndConnect
                             )
@@ -354,6 +357,7 @@ private fun PlaylistEntryButton(
 private fun ConnectActionPanel(
     state: SpotifyConnectionState,
     accent: Color,
+    isSpotifyInstalled: Boolean,
     onConnect: () -> Unit,
     onOpenSpotify: () -> Unit
 ) {
@@ -377,26 +381,36 @@ private fun ConnectActionPanel(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ActionPill(
-                    text = "重新连接",
-                    accent = Color.White.copy(alpha = 0.14f),
-                    contentColor = Color.White,
-                    enabled = state !is SpotifyConnectionState.Connecting,
-                    onClick = onConnect,
-                    modifier = Modifier.weight(1f)
+            if (state is SpotifyConnectionState.Connecting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    color = Color.White,
+                    strokeWidth = 2.5.dp
                 )
-                ActionPill(
-                    text = "打开 Spotify",
-                    accent = accent,
-                    contentColor = readableOn(accent),
-                    enabled = state !is SpotifyConnectionState.Connecting,
-                    onClick = onOpenSpotify,
-                    modifier = Modifier.weight(1f)
-                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    ActionPill(
+                        text = "重新连接",
+                        accent = Color.White.copy(alpha = 0.14f),
+                        contentColor = Color.White,
+                        enabled = true,
+                        onClick = onConnect,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (isSpotifyInstalled) {
+                        ActionPill(
+                            text = "打开 Spotify 后连接",
+                            accent = accent,
+                            contentColor = readableOn(accent),
+                            enabled = true,
+                            onClick = onOpenSpotify,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
             }
         }
     }
@@ -1009,6 +1023,14 @@ private fun ExpandedLyricsView(
     }
 }
 
+@Composable
+private fun rememberIsSpotifyInstalled(): Boolean {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    return remember {
+        context.packageManager.getLaunchIntentForPackage("com.spotify.music") != null
+    }
+}
+
 private fun stateLabel(state: SpotifyConnectionState): String = when (state) {
     is SpotifyConnectionState.Disconnected -> "未连接"
     is SpotifyConnectionState.Connecting -> "连接中..."
@@ -1056,6 +1078,7 @@ private fun LandscapePlaybackLayout(
     onPlayPause: () -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit,
+    isSpotifyInstalled: Boolean,
     onConnect: () -> Unit,
     onOpenSpotify: () -> Unit,
     onOpenPlaylist: () -> Unit,
@@ -1128,6 +1151,7 @@ private fun LandscapePlaybackLayout(
                 ConnectActionPanel(
                     state = connectionState,
                     accent = palette.accent,
+                    isSpotifyInstalled = isSpotifyInstalled,
                     onConnect = onConnect,
                     onOpenSpotify = onOpenSpotify
                 )

@@ -66,6 +66,13 @@ class MainActivity : ComponentActivity() {
             AuthorizationClient.openLoginActivity(this@MainActivity, AUTH_REQ_CODE, request)
         }
 
+        // Resume lifecycle hook for gentle auto-reconnect
+        lifecycle.addObserver(androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                playbackViewModel.onResume()
+            }
+        })
+
         setContent {
             SpotifyLyricProxyTheme {
                 AppNavigation(
