@@ -47,6 +47,7 @@ import com.example.spotifylyricsproxy.ui.cache.CacheScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheScreen
+import com.example.spotifylyricsproxy.ui.precache.PrecacheViewModel
 import com.example.spotifylyricsproxy.ui.settings.SettingsScreen
 
 sealed class NavRoute(
@@ -68,7 +69,10 @@ val bottomNavItems = listOf(
 )
 
 @Composable
-fun AppNavigation(playbackViewModel: PlaybackViewModel) {
+fun AppNavigation(
+    playbackViewModel: PlaybackViewModel,
+    precacheViewModel: PrecacheViewModel
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -105,7 +109,7 @@ fun AppNavigation(playbackViewModel: PlaybackViewModel) {
                 CacheScreen()
             }
             composable(NavRoute.Precache.route) {
-                PrecacheScreen()
+                PrecacheScreen(viewModel = precacheViewModel)
             }
             composable(NavRoute.Settings.route) {
                 SettingsScreen()
