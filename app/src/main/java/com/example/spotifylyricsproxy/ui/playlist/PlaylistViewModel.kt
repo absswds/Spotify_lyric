@@ -132,13 +132,15 @@ class PlaylistViewModel : ViewModel() {
         }
     }
 
-    fun playTrack(track: PlaylistTrack, playlistId: String) {
+    /** @param trackIndex 0-based index of [track] within the playlist. */
+    fun playTrack(track: PlaylistTrack, playlistId: String, trackIndex: Int) {
         val playlistUri = "spotify:playlist:$playlistId"
-        Log.i(TAG, "Requesting play: ${track.title} (context=$playlistUri, offsetUri=${track.uri})")
+        Log.i(TAG, "Requesting play: ${track.title} (context=$playlistUri, index=$trackIndex)")
         PlayRequestHolder.send(
             com.example.spotifylyricsproxy.ui.playback.PlayRequest(
                 uri = playlistUri,
-                contextOffsetTrackUri = track.uri
+                contextTrackIndex = trackIndex,
+                trackUri = track.uri
             )
         )
     }

@@ -7,8 +7,10 @@ import kotlinx.coroutines.flow.asStateFlow
 data class PlayRequest(
     /** The URI to play — either a track URI or a context URI (playlist/album). */
     val uri: String,
-    /** When non-null, plays [uri] as a context starting at this track. */
-    val contextOffsetTrackUri: String? = null
+    /** When non-null, plays [uri] as a context starting at this track index. */
+    val contextTrackIndex: Int = -1,
+    /** The track URI, for reference / logging. */
+    val trackUri: String = ""
 )
 
 /**

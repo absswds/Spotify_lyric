@@ -80,10 +80,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             PlayRequestHolder.request.collect { req ->
                 if (req != null && req.uri.isNotBlank()) {
-                    if (req.contextOffsetTrackUri != null) {
-                        // Play context (playlist/album) — App Remote plays the
-                        // full playlist/album queue rather than a single track.
-                        repository.playContext(req.uri)
+                    if (req.contextTrackIndex >= 0) {
+                        // Play context (playlist/album) starting at this track.
+                        // App Remote queues the full playlist then skips to the
+                        // selected track index.
+                        repository.playContext(req.uri, req.contextTrackIndex)
                     } else {
                         repository.playUri(req.uri)
                     }

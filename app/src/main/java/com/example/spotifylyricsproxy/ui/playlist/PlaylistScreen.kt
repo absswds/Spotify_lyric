@@ -140,11 +140,12 @@ fun PlaylistScreen(
                         }
                     }
                     items(tracks, key = { it.id }) { track ->
+                        val trackIndex = tracks.indexOf(track)
                         TrackRow(
                             track = track,
                             onClick = {
                                 selectedPlaylist?.let { playlist ->
-                                    viewModel.playTrack(track, playlist.id)
+                                    viewModel.playTrack(track, playlist.id, trackIndex)
                                 }
                             }
                         )
