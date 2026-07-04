@@ -1,5 +1,8 @@
 package com.example.spotifylyricsproxy.ui.navigation
 
+import android.app.Activity
+import android.os.Build
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,15 +25,19 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -65,8 +72,12 @@ fun AppNavigation(playbackViewModel: PlaybackViewModel) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val isPlayback = currentRoute == NavRoute.Playback.route
+
+    SystemBarsForRoute(isPlayback = isPlayback)
 
     Scaffold(
+        containerColor = if (isPlayback) Color(0xFF080D16) else Color(0xFFF7F8FC),
         bottomBar = {
             CompactBottomBar(
                 currentRoute = currentRoute,
@@ -104,17 +115,34 @@ fun AppNavigation(playbackViewModel: PlaybackViewModel) {
 }
 
 @Composable
+@Suppress("DEPRECATION")
+private fun SystemBarsForRoute(isPlayback: Boolean) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+
+    SideEffect {
+        val window = (view.context as Activity).window
+        window.statusBarColor = Color.Transparent.toArgb()
+        window.navigationBarColor = (if (isPlayback) Color(0xFF080D16) else Color(0xFFF7F8FC)).toArgb()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !isPlayback
+            isAppearanceLightNavigationBars = !isPlayback
+        }
+    }
+}
+
+@Composable
 private fun CompactBottomBar(
     currentRoute: String?,
     onSelect: (NavRoute) -> Unit
 ) {
     val isPlayback = currentRoute == NavRoute.Playback.route
     val outerColor = if (isPlayback) Color(0xFF080D16) else Color(0xFFF7F8FC)
-    val containerColor = if (isPlayback) {
-        Color.White.copy(alpha = 0.08f)
-    } else {
-        Color.White
-    }
+    val containerColor = if (isPlayback) Color.White.copy(alpha = 0.08f) else Color(0xFFF7F8FC)
 
     Box(
         modifier = Modifier
@@ -127,8 +155,9 @@ private fun CompactBottomBar(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             color = containerColor,
-            tonalElevation = if (isPlayback) 0.dp else 2.dp,
-            shadowElevation = if (isPlayback) 0.dp else 3.dp
+            border = if (isPlayback) null else BorderStroke(1.dp, Color(0xFFE8EBF2)),
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier
