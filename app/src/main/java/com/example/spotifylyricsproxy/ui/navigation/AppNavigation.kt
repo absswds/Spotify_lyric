@@ -46,6 +46,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.spotifylyricsproxy.ui.cache.CacheScreen
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
+import com.example.spotifylyricsproxy.ui.playback.LyricsCorrectionScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.playlist.PlaylistScreen
@@ -64,6 +65,7 @@ sealed class NavRoute(
     data object Precache : NavRoute("precache", "预缓存", Icons.Filled.Refresh)
     data object Settings : NavRoute("settings", "设置", Icons.Filled.Settings)
     data object Playlist : NavRoute("playlist", "歌单", Icons.Filled.Home)
+    data object LyricsCorrection : NavRoute("lyrics_correction", "修正", Icons.Filled.Home)
 }
 
 val bottomNavItems = listOf(
@@ -116,6 +118,9 @@ fun AppNavigation(
                     viewModel = playbackViewModel,
                     onOpenPlaylist = {
                         navController.navigate(NavRoute.Playlist.route)
+                    },
+                    onOpenLyricsCorrection = {
+                        navController.navigate(NavRoute.LyricsCorrection.route)
                     }
                 )
             }
@@ -132,6 +137,12 @@ fun AppNavigation(
                 val playlistViewModel: PlaylistViewModel = viewModel()
                 PlaylistScreen(
                     viewModel = playlistViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(NavRoute.LyricsCorrection.route) {
+                LyricsCorrectionScreen(
+                    viewModel = playbackViewModel,
                     onBack = { navController.popBackStack() }
                 )
             }

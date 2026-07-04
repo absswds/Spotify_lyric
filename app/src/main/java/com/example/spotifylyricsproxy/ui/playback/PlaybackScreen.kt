@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,11 +33,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -70,7 +69,8 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 @Composable
 fun PlaybackScreen(
     viewModel: PlaybackViewModel,
-    onOpenPlaylist: () -> Unit = {}
+    onOpenPlaylist: () -> Unit = {},
+    onOpenLyricsCorrection: () -> Unit = {}
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
     val trackInfo by viewModel.currentTrack.collectAsState()
@@ -79,20 +79,8 @@ fun PlaybackScreen(
     val currentLyricLine by viewModel.currentLyricLine.collectAsState()
     val parsedLyrics by viewModel.parsedLyrics.collectAsState()
     val lyricStatus by viewModel.lyricStatus.collectAsState()
-    val candidates by viewModel.candidates.collectAsState()
-    val currentOffsetMs by viewModel.currentOffsetMs.collectAsState()
-    val showCandidatePicker by viewModel.showCandidatePicker.collectAsState()
     val activity = LocalContext.current as Activity
     val palette = remember(albumArt) { albumPalette(albumArt) }
-
-    // Candidate picker dialog
-    if (showCandidatePicker && candidates.size > 1) {
-        CandidatePickerDialog(
-            candidates = candidates,
-            onSelect = viewModel::selectCandidate,
-            onDismiss = viewModel::dismissCandidatePicker
-        )
-    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -119,9 +107,10 @@ fun PlaybackScreen(
                     .padding(horizontal = 20.dp, vertical = 18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                PlaybackTopBar(
+                // Minimal top bar
+                CompactTopBar(
                     state = connectionState,
-                    onConnect = { viewModel.authorize(activity) },
+                    onCorrection = onOpenLyricsCorrection,
                     onDisconnect = viewModel::disconnect
                 )
 
@@ -138,10 +127,7 @@ fun PlaybackScreen(
                 LyricsBlock(
                     currentLine = currentLyricLine,
                     allLines = parsedLyrics,
-                    status = lyricStatus,
-                    onReSearch = viewModel::reSearchLyrics,
-                    onReject = viewModel::rejectCurrentMatch,
-                    onShowCandidates = viewModel::showCandidateSelection
+                    status = lyricStatus
                 )
 
                 Spacer(modifier = Modifier.height(22.dp))
@@ -170,13 +156,67 @@ fun PlaybackScreen(
                     accent = palette.accent,
                     onOpen = onOpenPlaylist
                 )
+            }
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.height(18.dp))
+@Composable
+private fun CompactTopBar(
+    state: SpotifyConnectionState,
+    onCorrection: () -> Unit,
+    onDisconnect: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
 
-                OffsetControls(
-                    offsetMs = currentOffsetMs,
-                    onAdjust = viewModel::adjustOffset,
-                    onReset = viewModel::resetOffset
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Connection indicator — compact
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val connected = state is SpotifyConnectionState.Connected
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(if (connected) Color(0xFF34C759) else Color(0xFFFF3B30).copy(alpha = 0.6f))
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stateLabel(state),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.72f)
+            )
+        }
+
+        // Menu with options
+        Box {
+            IconButton(onClick = { showMenu = true }) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "更多",
+                    tint = Color.White.copy(alpha = 0.78f)
+                )
+            }
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("歌词修正") },
+                    onClick = {
+                        showMenu = false
+                        onCorrection()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("断开连接") },
+                    onClick = {
+                        showMenu = false
+                        onDisconnect()
+                    }
                 )
             }
         }
@@ -226,61 +266,6 @@ private fun PlaylistEntryButton(
                 contentDescription = "打开",
                 tint = Color.White.copy(alpha = 0.48f)
             )
-        }
-    }
-}
-
-@Composable
-private fun PlaybackTopBar(
-    state: SpotifyConnectionState,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column {
-            Text(
-                text = "正在播放",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = stateLabel(state),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.62f)
-            )
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (state !is SpotifyConnectionState.Connected) {
-                Button(
-                    onClick = onConnect,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.16f),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("连接")
-                }
-            } else {
-                OutlinedButton(
-                    onClick = onDisconnect,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                ) {
-                    Text("断开")
-                }
-            }
-            IconButton(onClick = {}) {
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "更多",
-                    tint = Color.White.copy(alpha = 0.78f)
-                )
-            }
         }
     }
 }
@@ -369,18 +354,11 @@ private fun TrackTitleBlock(
 private fun LyricsBlock(
     currentLine: LrcLine?,
     allLines: List<LrcLine>,
-    status: LyricStatus,
-    onReSearch: () -> Unit = {},
-    onReject: () -> Unit = {},
-    onShowCandidates: () -> Unit = {}
+    status: LyricStatus
 ) {
     val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
     val previous = allLines.getOrNull(currentIndex - 1)?.text
     val next = allLines.getOrNull(currentIndex + 1)?.text
-    val hasActions = status is LyricStatus.Synced ||
-        status is LyricStatus.LowConfidence ||
-        status is LyricStatus.NotFound ||
-        status is LyricStatus.PlainOnly
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -425,41 +403,6 @@ private fun LyricsBlock(
                 is LyricStatus.LowConfidence -> LyricMessage("找到疑似歌词，需要手动确认")
                 is LyricStatus.ParseError -> LyricMessage("歌词解析失败")
                 is LyricStatus.Error -> LyricMessage("歌词加载失败")
-            }
-
-            // Action buttons row
-            if (hasActions) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = onReSearch,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                    ) {
-                        Text("重新匹配", style = MaterialTheme.typography.labelMedium)
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    if (status is LyricStatus.Synced) {
-                        OutlinedButton(
-                            onClick = onReject,
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFFB4AB))
-                        ) {
-                            Text("歌曲错误", style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                    if (status is LyricStatus.LowConfidence) {
-                        Spacer(modifier = Modifier.width(12.dp))
-                        OutlinedButton(
-                            onClick = onShowCandidates,
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
-                        ) {
-                            Text("选择候选", style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                }
             }
         }
     }
@@ -508,7 +451,7 @@ private fun ProgressBlock(
             },
             onValueChangeFinished = {
                 draggingProgress?.let {
-                    onSeek(fractionToSeekPosition(it, durationMs))
+                    onSeek((it * durationMs).toLong().coerceIn(0, durationMs))
                 }
                 draggingProgress = null
             },
@@ -621,135 +564,6 @@ private fun PauseBar(color: Color) {
     )
 }
 
-@Composable
-private fun OffsetControls(
-    offsetMs: Long,
-    onAdjust: (Long) -> Unit,
-    onReset: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OffsetButton("-0.5s") { onAdjust(-500) }
-            OffsetButton("-0.2s") { onAdjust(-200) }
-            OffsetButton("-0.1s") { onAdjust(-100) }
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "歌词偏移",
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White.copy(alpha = 0.66f)
-            )
-            if (offsetMs != 0L) {
-                Text(
-                    text = "${offsetMs}ms",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFFFB4AB)
-                )
-            }
-        }
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OffsetButton("+0.1s") { onAdjust(100) }
-            OffsetButton("+0.2s") { onAdjust(200) }
-            OffsetButton("+0.5s") { onAdjust(500) }
-        }
-    }
-    if (offsetMs != 0L) {
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "重置偏移",
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.50f),
-            modifier = Modifier
-                .clickable(onClick = onReset)
-                .padding(vertical = 4.dp)
-        )
-    }
-}
-
-@Composable
-private fun OffsetButton(
-    text: String,
-    onClick: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = Color.White.copy(alpha = 0.12f),
-        contentColor = Color.White,
-        modifier = Modifier.clickable(onClick = onClick)
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium
-        )
-    }
-}
-
-@Composable
-private fun CandidatePickerDialog(
-    candidates: List<com.example.spotifylyricsproxy.core.model.LyricCandidate>,
-    onSelect: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "选择候选歌词",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        },
-        text = {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(candidates.size) { index ->
-                    val candidate = candidates[index]
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(index) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (index == 0)
-                                Color(0xFF4F5EDC).copy(alpha = 0.12f)
-                            else Color.White
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = "候选 ${index + 1}: ${candidate.trackName}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "${candidate.artistName} · 匹配度: ${candidate.score}分",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF747B89)
-                            )
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
-}
-
 private data class AlbumPalette(
     val deep: Color,
     val mid: Color,
@@ -800,16 +614,13 @@ private fun albumPalette(bitmap: Bitmap?): AlbumPalette {
     )
 }
 
-private fun colorLuma(color: Color): Float =
-    0.299f * color.red + 0.587f * color.green + 0.114f * color.blue
-
 private fun stateLabel(state: SpotifyConnectionState): String = when (state) {
-    is SpotifyConnectionState.Disconnected -> "未连接 Spotify"
-    is SpotifyConnectionState.Connecting -> "正在连接..."
-    is SpotifyConnectionState.Connected -> "已连接 · 跟随封面"
+    is SpotifyConnectionState.Disconnected -> "未连接"
+    is SpotifyConnectionState.Connecting -> "连接中..."
+    is SpotifyConnectionState.Connected -> "已连接"
     is SpotifyConnectionState.Error -> "连接失败"
     SpotifyConnectionState.SpotifyNotInstalled -> "未安装 Spotify"
-    SpotifyConnectionState.SpotifyNotLoggedIn -> "Spotify 未登录"
+    SpotifyConnectionState.SpotifyNotLoggedIn -> "未登录"
 }
 
 private fun formatMs(ms: Long): String {
