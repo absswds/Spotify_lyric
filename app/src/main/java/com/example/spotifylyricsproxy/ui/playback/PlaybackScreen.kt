@@ -1,6 +1,5 @@
 package com.example.spotifylyricsproxy.ui.playback
 
-import android.app.Activity
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,21 +14,23 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,9 +46,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,15 +59,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
+import kotlinx.coroutines.launch
 
 @Composable
 fun PlaybackScreen(
@@ -79,8 +83,8 @@ fun PlaybackScreen(
     val currentLyricLine by viewModel.currentLyricLine.collectAsState()
     val parsedLyrics by viewModel.parsedLyrics.collectAsState()
     val lyricStatus by viewModel.lyricStatus.collectAsState()
-    val activity = LocalContext.current as Activity
     val palette = remember(albumArt) { albumPalette(albumArt) }
+    var lyricsExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -100,62 +104,81 @@ fun PlaybackScreen(
                 )
                 .padding(padding)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Minimal top bar
-                CompactTopBar(
-                    state = connectionState,
-                    onCorrection = onOpenLyricsCorrection,
-                    onDisconnect = viewModel::disconnect
-                )
-
-                Spacer(modifier = Modifier.height(22.dp))
-
-                AlbumArtHero(albumArt = albumArt, accent = palette.accent)
-
-                Spacer(modifier = Modifier.height(22.dp))
-
-                TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
-
-                Spacer(modifier = Modifier.height(22.dp))
-
-                LyricsBlock(
+            if (lyricsExpanded && lyricStatus is LyricStatus.Synced) {
+                ExpandedLyricsView(
+                    lines = parsedLyrics,
                     currentLine = currentLyricLine,
-                    allLines = parsedLyrics,
-                    status = lyricStatus
-                )
-
-                Spacer(modifier = Modifier.height(22.dp))
-
-                ProgressBlock(
                     estimatedPositionMs = estimatedPositionMs,
                     durationMs = trackInfo.durationMs,
-                    accent = palette.accent,
-                    onSeek = viewModel::seekTo
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                PlaybackControls(
                     isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
-                    isConnected = connectionState is SpotifyConnectionState.Connected,
                     accent = palette.accent,
+                    onSeek = viewModel::seekTo,
                     onPlayPause = viewModel::togglePlayPause,
-                    onSkipNext = viewModel::skipNext,
-                    onSkipPrevious = viewModel::skipPrevious
+                    onCollapse = { lyricsExpanded = false }
                 )
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CompactTopBar(
+                        state = connectionState,
+                        onOpenPlaylist = onOpenPlaylist,
+                        onCorrection = onOpenLyricsCorrection,
+                        onDisconnect = viewModel::disconnect
+                    )
 
-                Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                PlaylistEntryButton(
-                    accent = palette.accent,
-                    onOpen = onOpenPlaylist
-                )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        AlbumArtHero(albumArt = albumArt, accent = palette.accent)
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        if (connectionState is SpotifyConnectionState.Connected) {
+                            CompactLyricsBlock(
+                                currentLine = currentLyricLine,
+                                allLines = parsedLyrics,
+                                status = lyricStatus,
+                                onExpand = { lyricsExpanded = true }
+                            )
+                        } else {
+                            ConnectActionPanel(
+                                state = connectionState,
+                                accent = palette.accent,
+                                onConnect = viewModel::connect,
+                                onOpenSpotify = viewModel::openSpotifyAndConnect
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+
+                    BottomPlaybackPane(
+                        estimatedPositionMs = estimatedPositionMs,
+                        durationMs = trackInfo.durationMs,
+                        accent = palette.accent,
+                        isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
+                        isConnected = connectionState is SpotifyConnectionState.Connected,
+                        onSeek = viewModel::seekTo,
+                        onPlayPause = viewModel::togglePlayPause,
+                        onSkipNext = viewModel::skipNext,
+                        onSkipPrevious = viewModel::skipPrevious
+                    )
+                }
             }
         }
     }
@@ -164,6 +187,7 @@ fun PlaybackScreen(
 @Composable
 private fun CompactTopBar(
     state: SpotifyConnectionState,
+    onOpenPlaylist: () -> Unit,
     onCorrection: () -> Unit,
     onDisconnect: () -> Unit
 ) {
@@ -204,6 +228,13 @@ private fun CompactTopBar(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
             ) {
+                DropdownMenuItem(
+                    text = { Text("Spotify 姝屽崟") },
+                    onClick = {
+                        showMenu = false
+                        onOpenPlaylist()
+                    }
+                )
                 DropdownMenuItem(
                     text = { Text("歌词修正") },
                     onClick = {
@@ -271,10 +302,93 @@ private fun PlaylistEntryButton(
 }
 
 @Composable
+private fun ConnectActionPanel(
+    state: SpotifyConnectionState,
+    accent: Color,
+    onConnect: () -> Unit,
+    onOpenSpotify: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = connectionHint(state),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.68f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ActionPill(
+                    text = "重新连接",
+                    accent = Color.White.copy(alpha = 0.14f),
+                    contentColor = Color.White,
+                    enabled = state !is SpotifyConnectionState.Connecting,
+                    onClick = onConnect,
+                    modifier = Modifier.weight(1f)
+                )
+                ActionPill(
+                    text = "打开 Spotify",
+                    accent = accent,
+                    contentColor = readableOn(accent),
+                    enabled = state !is SpotifyConnectionState.Connecting,
+                    onClick = onOpenSpotify,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionPill(
+    text: String,
+    accent: Color,
+    contentColor: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .height(44.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = if (enabled) accent else Color.White.copy(alpha = 0.08f),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (enabled) contentColor else Color.White.copy(alpha = 0.36f),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@Composable
 private fun AlbumArtHero(albumArt: Bitmap?, accent: Color) {
     Box(
         modifier = Modifier
-            .fillMaxWidth(0.78f)
+            .fillMaxWidth(0.66f)
             .aspectRatio(1f),
         contentAlignment = Alignment.Center
     ) {
@@ -351,26 +465,33 @@ private fun TrackTitleBlock(
 }
 
 @Composable
-private fun LyricsBlock(
+private fun CompactLyricsBlock(
     currentLine: LrcLine?,
     allLines: List<LrcLine>,
-    status: LyricStatus
+    status: LyricStatus,
+    onExpand: () -> Unit
 ) {
     val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
     val previous = allLines.getOrNull(currentIndex - 1)?.text
     val next = allLines.getOrNull(currentIndex + 1)?.text
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                if (status is LyricStatus.Synced && allLines.isNotEmpty()) {
+                    onExpand()
+                }
+            },
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.11f)
+            containerColor = Color.White.copy(alpha = 0.08f)
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 24.dp),
+                .padding(horizontal = 20.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             when (status) {
@@ -391,10 +512,12 @@ private fun LyricsBlock(
                         style = MaterialTheme.typography.headlineSmall,
                         color = Color.White,
                         textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                     next?.let {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         ContextLyric(it)
                     }
                 }
@@ -429,6 +552,42 @@ private fun ContextLyric(text: String) {
         overflow = TextOverflow.Ellipsis
     )
     Spacer(modifier = Modifier.height(12.dp))
+}
+
+@Composable
+private fun BottomPlaybackPane(
+    estimatedPositionMs: Long,
+    durationMs: Long,
+    accent: Color,
+    isPlaying: Boolean,
+    isConnected: Boolean,
+    onSeek: (Long) -> Unit,
+    onPlayPause: () -> Unit,
+    onSkipNext: () -> Unit,
+    onSkipPrevious: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        ProgressBlock(
+            estimatedPositionMs = estimatedPositionMs,
+            durationMs = durationMs,
+            accent = accent,
+            onSeek = onSeek
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        PlaybackControls(
+            isPlaying = isPlaying,
+            isConnected = isConnected,
+            accent = accent,
+            onPlayPause = onPlayPause,
+            onSkipNext = onSkipNext,
+            onSkipPrevious = onSkipPrevious
+        )
+    }
 }
 
 @Composable
@@ -614,6 +773,189 @@ private fun albumPalette(bitmap: Bitmap?): AlbumPalette {
     )
 }
 
+@Composable
+private fun ExpandedLyricsView(
+    lines: List<LrcLine>,
+    currentLine: LrcLine?,
+    estimatedPositionMs: Long,
+    durationMs: Long,
+    isPlaying: Boolean,
+    accent: Color,
+    onSeek: (Long) -> Unit,
+    onPlayPause: () -> Unit,
+    onCollapse: () -> Unit
+) {
+    val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    // Detect if the current line has scrolled out of the viewport
+    val isScrolledAway by remember(currentIndex) {
+        derivedStateOf {
+            if (currentIndex < 0) false
+            else listState.layoutInfo.visibleItemsInfo.none { it.index == currentIndex }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Lyrics list — leave bottom room for the control bar
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(top = 56.dp, bottom = 72.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            itemsIndexed(lines) { index, line ->
+                val isCurrent = index == currentIndex
+                val isPast = index < currentIndex
+                Text(
+                    text = line.text,
+                    color = when {
+                        isCurrent -> Color.White
+                        isPast -> Color.White.copy(alpha = 0.50f)
+                        else -> Color.White.copy(alpha = 0.25f)
+                    },
+                    fontSize = if (isCurrent) 22.sp else 16.sp,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSeek(line.startMs) }
+                        .padding(horizontal = 28.dp, vertical = 10.dp)
+                )
+            }
+        }
+
+        // Top bar: collapse button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, top = 8.dp, end = 4.dp)
+                .align(Alignment.TopCenter),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onCollapse) {
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = "收起歌词",
+                    tint = Color.White.copy(alpha = 0.72f),
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "全屏歌词",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.48f)
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.size(48.dp))
+        }
+
+        // Jump-to-current-line button — shows only when user scrolls away
+        if (isScrolledAway && currentIndex >= 0) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 90.dp)
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem((currentIndex - 3).coerceAtLeast(0))
+                        }
+                    },
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.16f),
+                tonalElevation = 0.dp,
+                shadowElevation = 4.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        contentDescription = "回到当前行",
+                        tint = Color.White.copy(alpha = 0.82f),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        }
+
+        // Bottom control bar: progress + play/pause
+        if (durationMs > 0) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(start = 20.dp, end = 20.dp)
+                    .padding(bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Compact progress slider
+                val progress = (estimatedPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+                var draggingProgress by remember { mutableStateOf<Float?>(null) }
+                val displayMs = draggingProgress?.let { (it * durationMs).toLong() } ?: estimatedPositionMs
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatMs(displayMs),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.50f),
+                        modifier = Modifier.width(40.dp)
+                    )
+
+                    Slider(
+                        value = draggingProgress ?: progress,
+                        onValueChange = { draggingProgress = it },
+                        onValueChangeFinished = {
+                            draggingProgress?.let {
+                                onSeek((it * durationMs).toLong().coerceIn(0, durationMs))
+                            }
+                            draggingProgress = null
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = SliderDefaults.colors(
+                            thumbColor = accent,
+                            activeTrackColor = accent,
+                            inactiveTrackColor = Color.White.copy(alpha = 0.18f)
+                        )
+                    )
+
+                    Text(
+                        text = formatMs(durationMs),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.50f),
+                        modifier = Modifier.width(40.dp),
+                        textAlign = TextAlign.End
+                    )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // Play / pause — same style as the compact controls
+                    IconButton(onClick = onPlayPause) {
+                        if (isPlaying) {
+                            PauseGlyph(color = Color.White.copy(alpha = 0.78f))
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = "播放",
+                                tint = Color.White.copy(alpha = 0.78f),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 private fun stateLabel(state: SpotifyConnectionState): String = when (state) {
     is SpotifyConnectionState.Disconnected -> "未连接"
     is SpotifyConnectionState.Connecting -> "连接中..."
@@ -621,6 +963,20 @@ private fun stateLabel(state: SpotifyConnectionState): String = when (state) {
     is SpotifyConnectionState.Error -> "连接失败"
     SpotifyConnectionState.SpotifyNotInstalled -> "未安装 Spotify"
     SpotifyConnectionState.SpotifyNotLoggedIn -> "未登录"
+}
+
+private fun connectionHint(state: SpotifyConnectionState): String = when (state) {
+    is SpotifyConnectionState.Connecting -> "正在连接 Spotify..."
+    SpotifyConnectionState.SpotifyNotInstalled -> "没有检测到 Spotify，请先安装后再连接"
+    SpotifyConnectionState.SpotifyNotLoggedIn -> "请先打开 Spotify 登录账号，再回到这里连接"
+    is SpotifyConnectionState.Error -> "Spotify 没有连上：${state.message}"
+    SpotifyConnectionState.Disconnected -> "连接 Spotify 后同步播放状态和歌词"
+    SpotifyConnectionState.Connected -> ""
+}
+
+private fun readableOn(color: Color): Color {
+    val luminance = 0.299f * color.red + 0.587f * color.green + 0.114f * color.blue
+    return if (luminance > 0.55f) Color.Black else Color.White
 }
 
 private fun formatMs(ms: Long): String {

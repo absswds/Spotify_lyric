@@ -2,6 +2,7 @@ package com.example.spotifylyricsproxy.ui.playback
 
 import android.app.Activity
 import android.app.Application
+import android.content.Intent
 import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +19,7 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -156,6 +158,24 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         repository.disconnect()
         lyricsRepo.reset()
         lastFetchedTrackId = ""
+    }
+
+    fun connect() {
+        repository.tryConnect()
+    }
+
+    fun openSpotifyAndConnect() {
+        val app = getApplication<Application>()
+        val launchIntent = app.packageManager.getLaunchIntentForPackage("com.spotify.music")
+        if (launchIntent != null) {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            app.startActivity(launchIntent)
+        }
+        repository.tryConnect()
+        viewModelScope.launch {
+            delay(1200)
+            repository.tryConnect()
+        }
     }
 
     fun togglePlayPause() {
