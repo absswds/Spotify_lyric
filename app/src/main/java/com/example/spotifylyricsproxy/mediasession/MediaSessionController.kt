@@ -10,6 +10,7 @@ import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import com.example.spotifylyricsproxy.MainActivity
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
@@ -48,7 +49,7 @@ class MediaSessionController(
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
             )
-            setQueueTitle("Spotify 歌词")
+            setQueueTitle(context.getString(R.string.mediasession_queue_title))
             isActive = true
         }
     }

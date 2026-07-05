@@ -40,9 +40,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,12 +64,12 @@ fun PlaylistScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Spotify 歌单") },
+                title = { Text(stringResource(R.string.playback_playlist_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
+                            contentDescription = stringResource(R.string.correction_back)
                         )
                     }
                 }
@@ -100,7 +102,7 @@ fun PlaylistScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "正在加载歌曲 $loaded/$total",
+                        text = stringResource(R.string.playlist_loading_tracks_progress, loaded, total),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF747B89)
                     )
@@ -113,7 +115,7 @@ fun PlaylistScreen(
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "正在加载歌曲...",
+                        text = stringResource(R.string.playlist_loading_tracks),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF747B89)
                     )
@@ -132,7 +134,7 @@ fun PlaylistScreen(
                     if (tracks.isEmpty() && !loadingTracks) {
                         item {
                             Text(
-                                text = if (error != null) error!! else "这个歌单暂时没有可播放歌曲",
+                                text = if (error != null) error!! else stringResource(R.string.playlist_no_songs),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color(0xFF747B89),
                                 modifier = Modifier.padding(16.dp)
@@ -171,13 +173,13 @@ private fun PlaylistCarousel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "我的歌单",
+                text = stringResource(R.string.playlist_my_playlists),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
             Text(
-                text = if (isLoading) "加载中" else "刷新",
+                text = if (isLoading) stringResource(R.string.playlist_refresh_loading) else stringResource(R.string.playlist_cd_refresh),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isLoading) Color(0xFF747B89) else Color(0xFF4F5EDC),
                 modifier = Modifier
@@ -203,7 +205,7 @@ private fun PlaylistCarousel(
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "正在加载歌单",
+                        text = stringResource(R.string.playlist_loading),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF747B89)
                     )
@@ -265,7 +267,7 @@ private fun TrackRow(
             ) {
                 Icon(
                     imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = "播放",
+                    contentDescription = stringResource(R.string.playback_cd_play),
                     tint = Color(0xFF4F5EDC),
                     modifier = Modifier.size(22.dp)
                 )

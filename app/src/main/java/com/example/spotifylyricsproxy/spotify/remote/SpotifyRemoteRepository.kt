@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyWebApiClient
 import com.spotify.android.appremote.api.ConnectionParams
 import com.spotify.android.appremote.api.SpotifyAppRemote
@@ -22,6 +23,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,14 +61,17 @@ class SpotifyRemoteRepository(
     companion object {
         private const val TAG = "SpotifyRemoteRepo"
         const val AUTH_REQUEST_CODE = 0x10
+        private const val CONNECTION_TIMEOUT_MS = 15_000L
     }
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val imageHttpClient = OkHttpClient()
+    private val albumArtCache = AlbumArtCache.getInstance(context)
 
     private var spotifyAppRemote: SpotifyAppRemote? = null
     private var albumArtJob: Job? = null
     private var lastImageUri: String = ""
+    private var connectionTimeoutJob: Job? = null
 
     private val _connectionState = MutableStateFlow<SpotifyConnectionState>(
         SpotifyConnectionState.Disconnected
@@ -121,13 +126,30 @@ class SpotifyRemoteRepository(
     }
 
     fun tryConnect() {
-        if (_connectionState.value is SpotifyConnectionState.Connecting ||
-            _connectionState.value is SpotifyConnectionState.Connected
-        ) {
+        // Already connected — nothing to do
+        if (_connectionState.value is SpotifyConnectionState.Connected) {
+            Log.d(TAG, "tryConnect: already connected, skipping")
             return
         }
 
+        Log.i(TAG, "tryConnect: state=${_connectionState.value}, attempting connection")
+
+        // Cancel any pending connection timeout
+        connectionTimeoutJob?.cancel()
+
+        // If already Connecting from a prior call, just let this call
+        // proceed — the SDK's second connect() replaces the first.
         _connectionState.value = SpotifyConnectionState.Connecting
+
+        // Start a timeout — if the SDK never calls back, reset to
+        // Disconnected so the user can tap "reconnect" again.
+        connectionTimeoutJob = repositoryScope.launch {
+            delay(CONNECTION_TIMEOUT_MS)
+            if (_connectionState.value is SpotifyConnectionState.Connecting) {
+                Log.w(TAG, "Connection timed out after ${CONNECTION_TIMEOUT_MS}ms")
+                _connectionState.value = SpotifyConnectionState.Disconnected
+            }
+        }
 
         val connectionParams = ConnectionParams.Builder(clientId)
             .setRedirectUri(redirectUri)
@@ -139,6 +161,7 @@ class SpotifyRemoteRepository(
             connectionParams,
             object : com.spotify.android.appremote.api.Connector.ConnectionListener {
                 override fun onConnected(appRemote: SpotifyAppRemote) {
+                    connectionTimeoutJob?.cancel()
                     Log.i(TAG, "Connected to Spotify")
                     spotifyAppRemote = appRemote
                     _connectionState.value = SpotifyConnectionState.Connected
@@ -146,11 +169,14 @@ class SpotifyRemoteRepository(
                 }
 
                 override fun onFailure(throwable: Throwable) {
+                    connectionTimeoutJob?.cancel()
                     Log.e(TAG, "Connection failed", throwable)
                     val message = throwable.message ?: "Unknown error"
                     _connectionState.value = when {
                         message.contains("not installed", ignoreCase = true) ||
-                            message.contains("unavailable", ignoreCase = true) -> {
+                            message.contains("unavailable", ignoreCase = true) ||
+                            message.contains("Unable to connect", ignoreCase = true) ||
+                            message.contains("Can't connect", ignoreCase = true) -> {
                             SpotifyConnectionState.SpotifyNotInstalled
                         }
 
@@ -160,7 +186,7 @@ class SpotifyRemoteRepository(
 
                         message.contains("UserNotAuthorized") ||
                             message.contains("user is required to use Spotify") -> {
-                            SpotifyConnectionState.Error("需要先授权，请重试")
+                            SpotifyConnectionState.Error(context.getString(R.string.error_auth_required))
                         }
 
                         else -> SpotifyConnectionState.Error(message)
@@ -171,6 +197,7 @@ class SpotifyRemoteRepository(
     }
 
     fun disconnect() {
+        connectionTimeoutJob?.cancel()
         albumArtJob?.cancel()
         spotifyAppRemote?.let {
             SpotifyAppRemote.disconnect(it)
@@ -180,6 +207,20 @@ class SpotifyRemoteRepository(
         _connectionState.value = SpotifyConnectionState.Disconnected
         _currentTrack.value = SpotifyTrackInfo()
         _albumArt.value = null
+    }
+
+    /** Force a fresh connection — disconnect first, then reconnect.
+     *  Use when the user taps the "reconnect" button. */
+    fun forceReconnect() {
+        Log.i(TAG, "forceReconnect: disconnecting then reconnecting")
+        disconnect()
+        // Small delay to let the SDK finish cleanup before reconnecting.
+        // Without this, SpotifyAppRemote.connect() can silently fail.
+        repositoryScope.launch {
+            delay(500)
+            Log.i(TAG, "forceReconnect: attempting connect after delay")
+            tryConnect()
+        }
     }
 
     private fun subscribeToPlayerState() {
@@ -238,14 +279,29 @@ class SpotifyRemoteRepository(
     }
 
     /** Play a context URI (playlist/album) starting at [startIndex].
-     *  Uses play() to load the context then skipToIndex to jump to the
-     *  selected track within that context. */
+     *  When shuffle is active, temporarily disable it so skipToIndex
+     *  uses the original playlist order, then re-enable shuffle after
+     *  the target track starts playing. */
     fun playContext(contextUri: String, startIndex: Int) {
         if (contextUri.isBlank()) return
         val api = spotifyAppRemote?.playerApi ?: return
-        api.play(contextUri)
-        if (startIndex > 0) {
-            api.skipToIndex(contextUri, startIndex)
+        val wasShuffling = _playbackOptions.value.isShuffling
+
+        if (wasShuffling) {
+            api.setShuffle(false).setResultCallback {
+                api.play(contextUri)
+                if (startIndex > 0) {
+                    api.skipToIndex(contextUri, startIndex)
+                }
+                api.setShuffle(true).setResultCallback {
+                    Log.i(TAG, "Shuffle re-enabled after playContext")
+                }
+            }
+        } else {
+            api.play(contextUri)
+            if (startIndex > 0) {
+                api.skipToIndex(contextUri, startIndex)
+            }
         }
     }
 
@@ -266,18 +322,32 @@ class SpotifyRemoteRepository(
     }
 
     fun toggleShuffle() {
-        spotifyAppRemote?.playerApi?.toggleShuffle()
+        // Optimistic UI update — immediately reflect the new state
+        val currentOpts = _playbackOptions.value
+        val newShuffling = !currentOpts.isShuffling
+        _playbackOptions.value = currentOpts.copy(isShuffling = newShuffling)
+        Log.i(TAG, "toggleShuffle → $newShuffling")
+
+        spotifyAppRemote?.playerApi?.setShuffle(newShuffling)
+            ?.setResultCallback { Log.i(TAG, "Shuffle set to $newShuffling succeeded") }
+            ?.setErrorCallback { e -> Log.w(TAG, "Shuffle set to $newShuffling failed", e) }
     }
 
     /** Cycle repeat: OFF → CONTEXT → TRACK → OFF → ... */
     fun cycleRepeat() {
-        val current = _playbackOptions.value.repeatMode
-        val next = when (current) {
+        val current = _playbackOptions.value
+        val next = when (current.repeatMode) {
             RepeatMode.OFF -> RepeatMode.CONTEXT
             RepeatMode.CONTEXT -> RepeatMode.TRACK
             else -> RepeatMode.OFF
         }
+        // Optimistic UI update
+        _playbackOptions.value = current.copy(repeatMode = next)
+        Log.i(TAG, "cycleRepeat → $next")
+
         spotifyAppRemote?.playerApi?.setRepeat(next)
+            ?.setResultCallback { Log.i(TAG, "Repeat set to $next succeeded") }
+            ?.setErrorCallback { e -> Log.w(TAG, "Repeat set to $next failed", e) }
     }
 
     fun isConnected(): Boolean =
@@ -294,21 +364,66 @@ class SpotifyRemoteRepository(
         }
 
         albumArtJob = repositoryScope.launch {
-            val bitmap = fetchHighResAlbumArt(trackId) ?: fetchAppRemoteAlbumArt(imageUri)
+            // 1. Try the in-memory / file cache first — works offline, no network.
+            val cached = albumArtCache.get(trackId)
+            if (cached != null) {
+                if (trackId == _currentTrack.value.trackId) _albumArt.value = cached
+                return@launch
+            }
+
+            // 2. Cache miss: fetch from network. Order is Web API (highest res,
+            //    needs token) → scdn direct URL (no token, original size) →
+            //    App Remote imagesApi (lowest).
+            val bitmap = fetchHighResAlbumArt(trackId)
+                ?: fetchScdnDirectAlbumArt(imageUri)
+                ?: fetchAppRemoteAlbumArt(imageUri)
+            if (bitmap != null) {
+                albumArtCache.put(trackId, bitmap)
+            }
             if (trackId == _currentTrack.value.trackId) {
                 _albumArt.value = bitmap
             }
         }
     }
 
+    /**
+     * Download the original-size artwork directly from Spotify's CDN using
+     * the imageUri hash. No access token needed. Used as a high-res fallback
+     * when the Web API token is expired (401).
+     *
+     * imageUri raw format: "spotify:image:ab67616d0000b273..."
+     * scdn URL:           "https://i.scdn.co/image/ab67616d0000b273..."
+     */
+    private suspend fun fetchScdnDirectAlbumArt(imageUri: ImageUri?): Bitmap? {
+        val raw = imageUri?.raw?.takeIf { it.isNotBlank() } ?: return null
+        val hash = raw.substringAfterLast(":")
+        if (hash.isBlank() || hash == raw) return null
+        val scdnUrl = "https://i.scdn.co/image/$hash"
+
+        return runCatching {
+            withContext(Dispatchers.IO) {
+                val request = Request.Builder().url(scdnUrl).build()
+                imageHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Log.w(TAG, "fetchScdnDirectAlbumArt: HTTP ${response.code}")
+                        return@withContext null
+                    }
+                    response.body?.byteStream()?.use(BitmapFactory::decodeStream)
+                }
+            }
+        }.onFailure {
+            Log.w(TAG, "Unable to download scdn album art", it)
+        }.getOrNull()
+    }
+
     private suspend fun fetchHighResAlbumArt(trackId: String): Bitmap? {
         if (trackId.isBlank()) return null
 
-        val accessToken = SpotifyTokenStore.getAccessToken() ?: return null
+        val accessToken = SpotifyTokenStore.getAccessToken()
         val imageUrl = runCatching {
             withContext(Dispatchers.IO) {
                 SpotifyWebApiClient.api.getTrack(
-                    SpotifyWebApiClient.authHeader(accessToken),
+                    SpotifyWebApiClient.authHeader(accessToken ?: ""),
                     trackId
                 )
             }?.album?.images
@@ -317,13 +432,19 @@ class SpotifyRemoteRepository(
                 ?.url
         }.onFailure {
             Log.w(TAG, "Unable to query Spotify Web API album art", it)
-        }.getOrNull() ?: return null
+        }.getOrNull() ?: run {
+            if (accessToken == null) Log.w(TAG, "fetchHighResAlbumArt: no access token — falling back")
+            return null
+        }
 
         return runCatching {
             withContext(Dispatchers.IO) {
                 val request = Request.Builder().url(imageUrl).build()
                 imageHttpClient.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@withContext null
+                    if (!response.isSuccessful) {
+                        Log.w(TAG, "fetchHighResAlbumArt: HTTP ${response.code}")
+                        return@withContext null
+                    }
                     response.body?.byteStream()?.use(BitmapFactory::decodeStream)
                 }
             }

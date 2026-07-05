@@ -78,6 +78,8 @@ dependencies {
     ksp(libs.room.compiler)
     implementation(libs.androidx.media)
     implementation(libs.work.runtime)
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.langid)
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)

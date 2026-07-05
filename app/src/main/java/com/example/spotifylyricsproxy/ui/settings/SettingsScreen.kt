@@ -3,6 +3,7 @@ package com.example.spotifylyricsproxy.ui.settings
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -37,10 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.ui.theme.ThemePreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,7 +64,7 @@ fun SettingsScreen() {
     ) { granted -> permissionGranted = granted }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("设置") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
@@ -71,9 +74,9 @@ fun SettingsScreen() {
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            SettingsGroup(title = "全局主题") {
+            SettingsGroup(title = stringResource(R.string.settings_group_theme)) {
                 Text(
-                    text = "选择 App 的主题模式，影响所有页面。",
+                    text = stringResource(R.string.settings_theme_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -81,7 +84,7 @@ fun SettingsScreen() {
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                     val currentMode by ThemePreferences.themeMode
                     listOf(
-                        Triple("system", "跟随系统", "根据系统设置自动切换"),
+                        Triple("system", stringResource(R.string.settings_theme_system), "根据系统设置自动切换"),
                         Triple("light", "浅色", "始终使用浅色模式"),
                         Triple("dark", "深色", "始终使用深色模式")
                     ).forEach { (mode, label, _) ->
@@ -95,31 +98,62 @@ fun SettingsScreen() {
                 }
             }
 
-            SettingsGroup(title = "缓存与下载") {
-                ToggleRow("自动缓存新播放的歌曲", "播放时自动补齐同步歌词", true)
-                ToggleRow("仅在 Wi-Fi 下缓存", "避免使用移动数据下载歌词", true)
-                ToggleRow("缓存封面图片", "离线时仍可显示专辑封面", true)
-            }
-
-            SettingsGroup(title = "播放与代理") {
-                ToggleRow("启用 MediaSession 代理", "在系统媒体卡片显示当前歌词", true)
-                ToggleRow("允许通知中显示歌词", "前台服务通知标题使用当前歌词", true)
-                Text("全局歌词偏移", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Slider(value = 0.5f, onValueChange = {})
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("-2s", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text("+2s", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            // Language section
+            SettingsGroup(title = stringResource(R.string.settings_group_language)) {
+                Text(
+                    text = stringResource(R.string.settings_language_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                    val currentLocale by ThemePreferences.locale
+                    listOf(
+                        "system" to stringResource(R.string.settings_language_system),
+                        "zh" to stringResource(R.string.settings_language_zh),
+                        "en" to stringResource(R.string.settings_language_en),
+                        "ja" to stringResource(R.string.settings_language_ja)
+                    ).forEach { (code, label) ->
+                        FilterChip(
+                            selected = currentLocale == code,
+                            onClick = {
+                                val changed = ThemePreferences.setLocale(code)
+                                if (changed) {
+                                    (context as? Activity)?.recreate()
+                                }
+                            },
+                            label = { Text(label) },
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
                 }
             }
 
-            SettingsGroup(title = "权限") {
+            SettingsGroup(title = stringResource(R.string.settings_group_cache)) {
+                ToggleRow(stringResource(R.string.settings_auto_cache), stringResource(R.string.settings_auto_cache_desc), true)
+                ToggleRow(stringResource(R.string.settings_wifi_only), stringResource(R.string.settings_wifi_only_desc), true)
+                ToggleRow(stringResource(R.string.settings_cache_album_art), stringResource(R.string.settings_cache_album_art_desc), true)
+            }
+
+            SettingsGroup(title = stringResource(R.string.settings_group_playback)) {
+                ToggleRow(stringResource(R.string.settings_mediasession_proxy), stringResource(R.string.settings_mediasession_proxy_desc), true)
+                ToggleRow(stringResource(R.string.settings_notification_lyrics), stringResource(R.string.settings_notification_lyrics_desc), true)
+                Text(stringResource(R.string.settings_global_offset), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Slider(value = 0.5f, onValueChange = {})
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.settings_offset_early), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.settings_offset_late), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+
+            SettingsGroup(title = stringResource(R.string.settings_group_permission)) {
                 SettingsItemRow(
-                    label = "通知权限",
+                    label = stringResource(R.string.settings_notification_permission),
                     description = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        if (permissionGranted) "已授权" else "未授权，点击申请"
+                        if (permissionGranted) stringResource(R.string.settings_notification_granted) else stringResource(R.string.settings_notification_denied)
                     } else {
-                        "Android 12 及以下无需额外申请"
+                        stringResource(R.string.settings_notification_legacy)
                     },
                     enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !permissionGranted,
                     onClick = {
@@ -130,9 +164,10 @@ fun SettingsScreen() {
                 )
             }
 
-            SettingsGroup(title = "缓存存储") {
-                SettingsItemRow("清理歌词缓存", "删除所有歌词、封面和失败记录")
-                SettingsItemRow("关于 Lyrics Proxy", "版本 0.1.0")
+            SettingsGroup(title = stringResource(R.string.settings_group_storage)) {
+                SettingsItemRow(stringResource(R.string.settings_clear_cache), stringResource(R.string.settings_clear_cache_desc))
+                SettingsItemRow(stringResource(R.string.scan_lyrics_folder), stringResource(R.string.scan_lyrics_folder_desc))
+                SettingsItemRow(stringResource(R.string.settings_about_app), stringResource(R.string.settings_about_version_detail))
             }
         }
     }

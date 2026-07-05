@@ -3,6 +3,7 @@ package com.example.spotifylyricsproxy.ui.navigation
 import android.app.Activity
 import android.content.res.Configuration
 import android.os.Build
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,6 +37,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +48,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.ui.cache.CacheScreen
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
 import com.example.spotifylyricsproxy.ui.theme.ThemePreferences
@@ -60,15 +63,15 @@ import com.example.spotifylyricsproxy.ui.settings.SettingsScreen
 
 sealed class NavRoute(
     val route: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val icon: ImageVector
 ) {
-    data object Playback : NavRoute("playback", "播放", Icons.Filled.Home)
-    data object Cache : NavRoute("cache", "缓存", Icons.Filled.Star)
-    data object Precache : NavRoute("precache", "预缓存", Icons.Filled.Refresh)
-    data object Settings : NavRoute("settings", "设置", Icons.Filled.Settings)
-    data object Playlist : NavRoute("playlist", "歌单", Icons.Filled.Home)
-    data object LyricsCorrection : NavRoute("lyrics_correction", "修正", Icons.Filled.Home)
+    data object Playback : NavRoute("playback", R.string.nav_playback, Icons.Filled.Home)
+    data object Cache : NavRoute("cache", R.string.nav_cache, Icons.Filled.Star)
+    data object Precache : NavRoute("precache", R.string.nav_precache, Icons.Filled.Refresh)
+    data object Settings : NavRoute("settings", R.string.nav_settings, Icons.Filled.Settings)
+    data object Playlist : NavRoute("playlist", R.string.nav_playlist, Icons.Filled.Home)
+    data object LyricsCorrection : NavRoute("lyrics_correction", R.string.nav_correction, Icons.Filled.Home)
 }
 
 val bottomNavItems = listOf(
@@ -271,13 +274,13 @@ private fun CompactBottomBarItem(
         ) {
             Icon(
                 imageVector = item.icon,
-                contentDescription = item.label,
+                contentDescription = stringResource(item.labelRes),
                 modifier = Modifier.size(19.dp),
                 tint = if (selected) selectedColor else idleColor
             )
         }
         Text(
-            text = item.label,
+            text = stringResource(item.labelRes),
             color = if (selected) selectedColor else idleColor,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             fontSize = 11.sp

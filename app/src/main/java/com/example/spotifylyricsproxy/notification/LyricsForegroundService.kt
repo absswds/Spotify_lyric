@@ -9,6 +9,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
@@ -49,6 +50,7 @@ class LyricsForegroundService : Service() {
     private lateinit var mediaSessionController: MediaSessionController
     private var observerJob: Job? = null
     private var lastFetchedTrackId = ""
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -75,7 +77,7 @@ class LyricsForegroundService : Service() {
                 // Immediately update notification with toggled state
                 val snapshot = LyricsNotificationSnapshot(
                     trackId = track.trackId,
-                    title = lyricsRepository.currentLine.value?.text?.takeIf { it.isNotBlank() } ?: track.title.ifBlank { "等待播放" },
+                    title = lyricsRepository.currentLine.value?.text?.takeIf { it.isNotBlank() } ?: track.title.ifBlank { getString(R.string.playback_title_waiting) },
                     subtitle = if (track.title.isNotBlank() && track.artist.isNotBlank()) "${track.title} - ${track.artist}" else track.title,
                     isPlaying = wasPaused // toggled
                 )
@@ -103,12 +105,14 @@ class LyricsForegroundService : Service() {
         serviceScope.cancel()
         mediaSessionController.release()
         spotifyRepository.disconnect()
+        releaseWakeLock()
         super.onDestroy()
     }
 
     private fun startNotificationLoop() {
         if (observerJob != null) return
 
+        acquireWakeLock()
         startForeground(NOTIFICATION_ID, buildNotification(waitingSnapshot(), null))
         spotifyRepository.tryConnect()
 
@@ -231,13 +235,13 @@ class LyricsForegroundService : Service() {
             if (snapshot.isPlaying) NotificationCompat.PRIORITY_HIGH
             else NotificationCompat.PRIORITY_DEFAULT
         )
-        .addAction(android.R.drawable.ic_media_previous, "上一首", serviceIntent(ACTION_PREVIOUS))
+        .addAction(android.R.drawable.ic_media_previous, getString(R.string.notification_action_previous), serviceIntent(ACTION_PREVIOUS))
         .addAction(
             if (snapshot.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
-            if (snapshot.isPlaying) "暂停" else "播放",
+            if (snapshot.isPlaying) getString(R.string.notification_action_pause) else getString(R.string.notification_action_play),
             serviceIntent(ACTION_PLAY_PAUSE)
         )
-        .addAction(android.R.drawable.ic_media_next, "下一首", serviceIntent(ACTION_NEXT))
+        .addAction(android.R.drawable.ic_media_next, getString(R.string.notification_action_next), serviceIntent(ACTION_NEXT))
         .build()
 
     private fun openAppIntent(): PendingIntent {
@@ -276,16 +280,37 @@ class LyricsForegroundService : Service() {
 
     private fun waitingSnapshot() = LyricsNotificationSnapshot(
         trackId = "",
-        title = getString(R.string.waiting_for_playback),
-        subtitle = getString(R.string.waiting_subtitle),
+        title = getString(R.string.generic_waiting_for_playback),
+        subtitle = getString(R.string.generic_waiting_subtitle),
         isPlaying = false
     )
 
+    private fun acquireWakeLock() {
+        if (wakeLock != null) return
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
+            acquire(12 * 60 * 60 * 1000L) // 12 hours — release earlier via releaseWakeLock()
+        }
+        Log.i(TAG, "WakeLock acquired")
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+                Log.i(TAG, "WakeLock released")
+            }
+        }
+        wakeLock = null
+    }
+
     companion object {
+        private const val TAG = "LyricsForegroundSvc"
         private const val CHANNEL_ID = "lyrics_foreground"
         private const val NOTIFICATION_ID = 4001
         private const val REQUEST_OPEN_APP = 4002
         private const val REDIRECT_URI = "spotifylyricsproxy://callback"
+        private const val WAKE_LOCK_TAG = "SpotifyLyricProxy::WakeLock"
 
         const val ACTION_START = "com.example.spotifylyricsproxy.notification.START"
         const val ACTION_PLAY_PAUSE = "com.example.spotifylyricsproxy.notification.PLAY_PAUSE"

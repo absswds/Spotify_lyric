@@ -44,10 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.database.entity.PlaylistCacheJobEntity
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
 
@@ -73,7 +75,7 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("歌单预缓存") })
+            TopAppBar(title = { Text(stringResource(R.string.precache_screen_title)) })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
@@ -98,7 +100,7 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "你的歌单",
+                        text = stringResource(R.string.precache_your_playlists),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -111,7 +113,7 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
                     ) {
                         Icon(Icons.Filled.Home, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("退出", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.precache_logout), style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
@@ -171,20 +173,20 @@ private fun AuthSection(onLogin: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "歌单预缓存",
+            text = stringResource(R.string.precache_screen_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "登录 Spotify 后选择歌单，App 会自动补齐歌词缓存",
+            text = stringResource(R.string.precache_login_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(onClick = onLogin) {
-            Text("登录 Spotify")
+            Text(stringResource(R.string.precache_login_spotify))
         }
     }
 }
@@ -199,12 +201,12 @@ private fun EmptyPlaylistsState(onRefresh: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "未获取到歌单",
+            text = stringResource(R.string.precache_no_playlists),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(modifier = Modifier.height(12.dp))
         Button(onClick = onRefresh) {
-            Text("重试")
+            Text(stringResource(R.string.precache_retry))
         }
     }
 }
@@ -258,7 +260,7 @@ private fun PlaylistCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = if (isRunning && progress!!.totalTracks > 0)
-                            "${progress.cachedTracks}/${progress.totalTracks} 已缓存"
+                            stringResource(R.string.precache_cached_format, progress.cachedTracks, progress.totalTracks)
                         else
                             playlist.name,
                         style = MaterialTheme.typography.bodyLarge,
@@ -268,9 +270,9 @@ private fun PlaylistCard(
                     )
                     Text(
                         text = when {
-                            isRunning -> "处理中 ${progress!!.progressPercent}%"
-                            !canPrecache -> "${playlist.tracks.total} 首歌曲 · 仅创建者/协作歌单可缓存"
-                            else -> "${playlist.tracks.total} 首歌曲"
+                            isRunning -> stringResource(R.string.precache_processing, progress!!.progressPercent)
+                            !canPrecache -> stringResource(R.string.precache_owner_only, playlist.tracks.total)
+                            else -> stringResource(R.string.precache_tracks_count, playlist.tracks.total)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -292,7 +294,7 @@ private fun PlaylistCard(
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Text(if (hasFinishedJob) "重试" else "缓存")
+                        Text(if (hasFinishedJob) stringResource(R.string.precache_retry) else stringResource(R.string.precache_cache_button))
                     }
                 }
             }

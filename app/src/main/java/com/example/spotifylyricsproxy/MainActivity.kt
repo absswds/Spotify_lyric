@@ -1,5 +1,6 @@
 package com.example.spotifylyricsproxy
 
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.Manifest
@@ -19,6 +20,7 @@ import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
 import com.example.spotifylyricsproxy.ui.playback.LyricDisplayPreferences
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import com.example.spotifylyricsproxy.ui.precache.PrecacheViewModel
+import com.example.spotifylyricsproxy.ui.theme.LocaleHelper
 import com.example.spotifylyricsproxy.ui.theme.SpotifyLyricProxyTheme
 import com.example.spotifylyricsproxy.ui.theme.ThemePreferences
 import kotlinx.coroutines.launch
@@ -26,6 +28,11 @@ import com.spotify.sdk.android.auth.AuthorizationClient
 import com.spotify.sdk.android.auth.AuthorizationResponse
 
 class MainActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: Context) {
+        val wrapped = LocaleHelper.wrap(newBase)
+        super.attachBaseContext(wrapped)
+    }
 
     private val playbackViewModel: PlaybackViewModel by viewModels()
     private val cacheViewModel: CacheViewModel by viewModels()

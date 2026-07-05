@@ -1,8 +1,10 @@
 package com.example.spotifylyricsproxy.ui.playlist
 
+import android.app.Application
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.SpotifyAuthHolder
 import com.example.spotifylyricsproxy.ui.playback.PlayRequestHolder
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
@@ -20,7 +22,7 @@ data class PlaylistTrack(
     val durationMs: Long
 )
 
-class PlaylistViewModel : ViewModel() {
+class PlaylistViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "PlaylistVM"
@@ -73,7 +75,7 @@ class PlaylistViewModel : ViewModel() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load playlists", e)
-                _error.value = "歌单加载失败"
+                _error.value = getApplication<Application>().getString(R.string.playlist_load_failed)
             } finally {
                 _loadingPlaylists.value = false
             }

@@ -45,6 +45,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.spotifylyricsproxy.core.model.LyricCandidate
+import androidx.compose.ui.res.stringResource
+import com.example.spotifylyricsproxy.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +67,7 @@ fun LyricsCorrectionScreen(
         AlertDialog(
             onDismissRequest = viewModel::dismissCandidatePicker,
             title = {
-                Text("选择候选歌词", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.correction_candidate_title), fontWeight = FontWeight.SemiBold)
             },
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -83,13 +85,13 @@ fun LyricsCorrectionScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
-                                    text = "候选 ${index + 1}: ${c.trackName}",
+                                    text = stringResource(R.string.correction_candidate_format, index + 1, c.trackName),
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = "${c.artistName} · ${c.score}分",
+                                    text = stringResource(R.string.correction_candidate_subtitle, c.artistName, c.score),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color(0xFF747B89)
                                 )
@@ -100,7 +102,7 @@ fun LyricsCorrectionScreen(
             },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissCandidatePicker) {
-                    Text("取消")
+                    Text(stringResource(R.string.generic_cancel))
                 }
             }
         )
@@ -109,10 +111,10 @@ fun LyricsCorrectionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("歌词修正") },
+                title = { Text(stringResource(R.string.correction_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.correction_back))
                     }
                 }
             )
@@ -134,7 +136,7 @@ fun LyricsCorrectionScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = currentTrack.title.ifEmpty { "未播放" },
+                        text = currentTrack.title.ifEmpty { stringResource(R.string.correction_no_track) },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -147,15 +149,15 @@ fun LyricsCorrectionScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // Current lyrics
-                    val lineText = currentLine?.text ?: "暂无歌词"
+                    val lineText = currentLine?.text ?: stringResource(R.string.correction_status_no_lyrics)
                     Text(
-                        text = "当前歌词行: $lineText",
+                        text = stringResource(R.string.correction_current_line_label, lineText),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (currentLine != null) Color(0xFF27314A) else Color(0xFF747B89)
                     )
                     if (currentLine != null) {
                         Text(
-                            text = "${parsedLyrics.size} 行同步歌词",
+                            text = stringResource(R.string.correction_line_count_format, parsedLyrics.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF747B89)
                         )
@@ -183,20 +185,20 @@ fun LyricsCorrectionScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "歌词偏移",
+                        text = stringResource(R.string.correction_offset_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold
                     )
 
                     if (currentOffsetMs != 0L) {
                         Text(
-                            text = "当前偏移: ${currentOffsetMs}ms",
+                            text = "${stringResource(R.string.correction_current_offset_label)}: ${currentOffsetMs}ms",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFFFF9500)
                         )
                     } else {
                         Text(
-                            text = "无偏移",
+                            text = stringResource(R.string.correction_no_offset),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF747B89)
                         )
@@ -206,7 +208,7 @@ fun LyricsCorrectionScreen(
 
                     // Offset grid
                     Text(
-                        text = "提前（歌词来得太晚时使用）",
+                        text = stringResource(R.string.correction_advance_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color(0xFF747B89)
                     )
@@ -219,7 +221,7 @@ fun LyricsCorrectionScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "推迟（歌词来得太早时使用）",
+                        text = stringResource(R.string.correction_delay_label),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color(0xFF747B89)
                     )
@@ -233,7 +235,7 @@ fun LyricsCorrectionScreen(
                     if (currentOffsetMs != 0L) {
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "重置偏移",
+                            text = stringResource(R.string.correction_reset_offset),
                             style = MaterialTheme.typography.labelLarge,
                             color = Color(0xFF4F5EDC),
                             modifier = Modifier.clickable { viewModel.resetOffset() }
@@ -252,7 +254,7 @@ fun LyricsCorrectionScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "操作",
+                        text = stringResource(R.string.correction_actions_title),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -263,7 +265,7 @@ fun LyricsCorrectionScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF27314A))
                     ) {
-                        Text("重新搜索歌词")
+                        Text(stringResource(R.string.correction_research))
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -274,7 +276,7 @@ fun LyricsCorrectionScreen(
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF3B30))
                         ) {
-                            Text("标记为错误歌曲")
+                            Text(stringResource(R.string.correction_mark_wrong))
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -285,7 +287,7 @@ fun LyricsCorrectionScreen(
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF27314A))
                         ) {
-                            Text("查看候选列表 (${candidates.size} 个)")
+                            Text(stringResource(R.string.correction_view_candidates, candidates.size))
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                     }
@@ -312,13 +314,14 @@ private fun OffsetChip(text: String, onClick: () -> Unit) {
     }
 }
 
+@Composable
 private fun statusLabel(status: com.example.spotifylyricsproxy.lyrics.LyricStatus): String = when (status) {
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Idle -> "等待播放"
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Searching -> "搜索中..."
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Synced -> "已匹配 (${status.score}分)"
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.PlainOnly -> "仅文本歌词"
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.NotFound -> "未找到歌词"
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.LowConfidence -> "低分匹配 (${status.score}分)"
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.ParseError -> "解析失败"
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Error -> "错误: ${status.message}"
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Idle -> stringResource(R.string.playback_title_waiting)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Searching -> stringResource(R.string.correction_status_searching)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Synced -> stringResource(R.string.correction_status_synced, status.score)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.PlainOnly -> stringResource(R.string.correction_status_plain)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.NotFound -> stringResource(R.string.correction_status_notfound)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.LowConfidence -> stringResource(R.string.correction_status_low, status.score)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.ParseError -> stringResource(R.string.correction_status_parse_error)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Error -> stringResource(R.string.correction_status_error, status.message)
 }

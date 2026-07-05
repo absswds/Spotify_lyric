@@ -58,6 +58,15 @@ desktop.ini
 # Local development instructions (do not commit to public repo)
 AGENTS.md
 CLAUDE.md
+.claude/
+.codex/
+.agents/
+
+# Development notes and plans (internal use only)
+findings.md
+progress.md
+task_plan.md
+test_output.txt
 
 # Environment files
 .env

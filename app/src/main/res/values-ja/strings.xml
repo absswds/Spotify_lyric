@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lyrics Card</string>
+
+    <!-- Navigation -->
+    <string name="nav_playback">再生</string>
+    <string name="nav_cache">キャッシュ</string>
+    <string name="nav_precache">プリキャッシュ</string>
+    <string name="nav_settings">設定</string>
+    <string name="nav_playlist">プレイリスト</string>
+    <string name="nav_correction">修正</string>
+
+    <!-- Notification channel -->
+    <string name="notification_channel_name">歌詞通知</string>
+    <string name="notification_channel_description">現在のSpotify歌詞行と再生コントロールを表示</string>
+    <string name="notification_action_previous">前へ</string>
+    <string name="notification_action_next">次へ</string>
+    <string name="notification_action_play">再生</string>
+    <string name="notification_action_pause">一時停止</string>
+    <string name="notification_action_stop">停止</string>
+
+    <!-- MediaSession -->
+    <string name="mediasession_queue_title">Spotify歌詞</string>
+
+    <!-- Generic / Shared -->
+    <string name="generic_unknown_track">不明な曲</string>
+    <string name="generic_unknown_artist">不明なアーティスト</string>
+    <string name="generic_waiting_for_playback">再生待ち…</string>
+    <string name="generic_waiting_subtitle">接続後に歌詞を表示</string>
+    <string name="generic_ok">OK</string>
+    <string name="generic_cancel">キャンセル</string>
+
+    <!-- Playback Screen - Connection status -->
+    <string name="playback_connected">接続済み</string>
+    <string name="playback_disconnected">未接続</string>
+    <string name="playback_connecting">接続中…</string>
+    <string name="playback_error">接続失敗</string>
+    <string name="playback_not_installed">Spotify未インストール</string>
+    <string name="playback_not_logged_in">未ログイン</string>
+
+    <!-- Playback Screen - Connection hints -->
+    <string name="playback_hint_connecting">Spotifyに接続中…</string>
+    <string name="playback_hint_not_installed">Spotifyが検出されません。先にインストールしてください。</string>
+    <string name="playback_hint_not_logged_in">先にSpotifyを開いてログインし、戻ってから接続してください。</string>
+    <string name="playback_hint_error">Spotify接続失敗: %1$s</string>
+    <string name="playback_hint_disconnected">Spotifyに接続して再生状態と歌詞を同期</string>
+
+    <!-- Playback Screen - Actions -->
+    <string name="playback_action_reconnect">再接続</string>
+    <string name="playback_action_open_spotify">Spotifyを開いて接続</string>
+    <string name="playback_action_disconnect">切断</string>
+
+    <!-- Playback Screen - Track info -->
+    <string name="playback_title_waiting">再生待ち</string>
+    <string name="playback_subtitle_waiting">Spotifyの再生を待っています</string>
+    <string name="playback_subtitle_connect_prompt">Spotifyに接続して再生状態を同期</string>
+    <string name="playback_title_unknown">不明な曲</string>
+
+    <!-- Playback Screen - Spotify playlist entry -->
+    <string name="playback_playlist_title">Spotifyプレイリスト</string>
+    <string name="playback_playlist_subtitle">プレイリストを閲覧 · 曲を選択</string>
+    <string name="playlist_my_playlists">マイプレイリスト</string>
+    <string name="playlist_refresh_loading">読み込み中</string>
+    <string name="playlist_loading_tracks_progress">曲を読み込み中 %1$d/%2$d</string>
+    <string name="playlist_loading_tracks">曲を読み込み中…</string>
+    <string name="playlist_no_songs">このプレイリストに再生可能な曲がありません</string>
+
+    <!-- Playback Screen - Content descriptions -->
+    <string name="playback_cd_more">その他</string>
+    <string name="playback_cd_playlist">プレイリスト</string>
+    <string name="playback_cd_lyrics_correction">歌詞修正</string>
+    <string name="playback_cd_lyrics_display">歌詞表示設定</string>
+    <string name="playback_cd_disconnect">切断</string>
+    <string name="playback_cd_shuffle">シャッフル</string>
+    <string name="playback_cd_previous">前へ</string>
+    <string name="playback_cd_play">再生</string>
+    <string name="playback_cd_next">次へ</string>
+    <string name="playback_cd_repeat">リピート</string>
+    <string name="playback_cd_collapse">歌詞を折りたたむ</string>
+    <string name="playback_cd_jump_to_current">現在の行にスキップ</string>
+    <string name="playback_cd_album_art_placeholder">アルバムアートプレースホルダー</string>
+
+    <!-- Playback Screen - Lyrics status messages -->
+    <string name="playback_lyrics_idle">再生待ち…</string>
+    <string name="playback_lyrics_searching">歌詞を検索中…</string>
+    <string name="playback_lyrics_plain_only">同期歌詞はありません</string>
+    <string name="playback_lyrics_not_found">歌詞が見つかりません</string>
+    <string name="playback_lyrics_low_confidence">歌詞の候補が見つかりました。手動確認が必要です</string>
+    <string name="playback_lyrics_parse_error">歌詞の解析に失敗しました</string>
+    <string name="playback_lyrics_load_error">歌詞の読み込みに失敗しました</string>
+    <string name="playback_lyrics_synced_placeholder">…</string>
+    <string name="playback_lyrics_no_content">歌詞コンテンツがありません</string>
+
+    <!-- Playback Screen - Expanded lyrics -->
+    <string name="playback_fullscreen_lyrics">フルスクリーン歌詞</string>
+
+    <!-- Playback Screen - Lyric display settings dialog -->
+    <string name="lyric_settings_title">歌詞表示設定</string>
+    <string name="lyric_settings_description">これらの設定はフルスクリーン歌詞ビューと横画面エリアに影響します。メイン画面のプレビューはコンパクトなまま表示されます。</string>
+    <string name="lyric_settings_font_size">フォントサイズ</string>
+    <string name="lyric_settings_font_small">小</string>
+    <string name="lyric_settings_font_default">標準</string>
+    <string name="lyric_settings_font_large">大</string>
+    <string name="lyric_settings_font_xlarge">特大</string>
+    <string name="lyric_settings_bold">現在の行を太字</string>
+    <string name="lyric_settings_bold_label">太字</string>
+    <string name="lyric_settings_dim_level">非現在行の透明度</string>
+    <string name="lyric_settings_dim_low">低</string>
+    <string name="lyric_settings_dim_medium">中</string>
+    <string name="lyric_settings_dim_high">高</string>
+    <string name="lyric_settings_alignment">揃え</string>
+    <string name="lyric_settings_align_center">中央揃え</string>
+    <string name="lyric_settings_align_left">左揃え</string>
+    <string name="lyric_settings_done">完了</string>
+
+    <!-- Playback - Translation -->
+    <string name="playback_translate_lyrics">翻訳</string>
+    <string name="playback_translated_line">訳：%1$s</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">設定</string>
+    <string name="settings_group_theme">テーマ</string>
+    <string name="settings_theme_desc">アプリのテーマモードを選択。全ページに適用されます。</string>
+    <string name="settings_theme_system">システムに従う</string>
+    <string name="settings_theme_system_desc">システム設定に合わせて自動切替</string>
+    <string name="settings_theme_light">ライト</string>
+    <string name="settings_theme_light_desc">ライトモードを維持</string>
+    <string name="settings_theme_dark">ダーク</string>
+    <string name="settings_theme_dark_desc">ダークモードを維持</string>
+    <string name="settings_group_language">言語</string>
+    <string name="settings_language_desc">アプリの表示言語を選択</string>
+    <string name="settings_language_system">システムに従う</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_ja">日本語</string>
+    <string name="settings_group_cache">キャッシュとダウンロード</string>
+    <string name="settings_auto_cache">新曲を自動キャッシュ</string>
+    <string name="settings_auto_cache_desc">再生中に同期歌詞を自動取得</string>
+    <string name="settings_wifi_only">Wi-Fiのみ</string>
+    <string name="settings_wifi_only_desc">モバイルデータで歌詞をダウンロードしない</string>
+    <string name="settings_cache_album_art">アルバムアートをキャッシュ</string>
+    <string name="settings_cache_album_art_desc">オフラインでもアルバムアートを表示</string>
+    <string name="settings_group_playback">再生とプロキシ</string>
+    <string name="settings_mediasession_proxy">MediaSessionプロキシを有効化</string>
+    <string name="settings_mediasession_proxy_desc">システムメディアカードに歌詞を表示</string>
+    <string name="settings_notification_lyrics">通知に歌詞を表示</string>
+    <string name="settings_notification_lyrics_desc">通知タイトルに現在の歌詞行を表示</string>
+    <string name="settings_global_offset">グローバル歌詞オフセット</string>
+    <string name="settings_offset_early">-2s</string>
+    <string name="settings_offset_late">+2s</string>
+    <string name="settings_group_permission">権限</string>
+    <string name="settings_notification_permission">通知権限</string>
+    <string name="settings_notification_granted">許可済み</string>
+    <string name="settings_notification_denied">未許可、タップしてリクエスト</string>
+    <string name="settings_notification_legacy">Android 12以下では追加許可不要</string>
+    <string name="settings_group_storage">キャッシュストレージ</string>
+    <string name="settings_clear_cache">歌詞キャッシュをクリア</string>
+    <string name="settings_clear_cache_desc">歌詞、アルバムアート、失敗記録をすべて削除</string>
+    <string name="settings_about_app">Lyrics Proxyについて</string>
+    <string name="settings_about_version_detail">バージョン0.1.0</string>
+    <string name="settings_group_about">バージョン情報</string>
+    <string name="settings_about_version">バージョン</string>
+    <string name="settings_open_source_licenses">オープンソースライセンス</string>
+    <string name="settings_group_translation">歌詞翻訳</string>
+    <string name="settings_translate_lyrics">歌詞翻訳を有効化</string>
+    <string name="settings_translate_lyrics_desc">歌詞言語を自動検出し翻訳</string>
+    <string name="settings_translate_target">対象言語</string>
+    <string name="settings_translate_target_zh">中文</string>
+    <string name="settings_translate_target_en">English</string>
+    <string name="settings_translate_target_ja">日本語</string>
+
+    <!-- Cache Screen -->
+    <string name="cache_title">キャッシュ管理</string>
+    <string name="cache_filter_all">すべて</string>
+    <string name="cache_filter_synced">同期済み</string>
+    <string name="cache_filter_plain">プレーンテキスト</string>
+    <string name="cache_filter_not_found">未検出</string>
+    <string name="cache_search_placeholder">キャッシュされた曲を検索</string>
+    <string name="cache_empty_all">キャッシュされた曲がありません</string>
+    <string name="cache_empty_synced">同期歌詞のキャッシュがありません</string>
+    <string name="cache_empty_plain">プレーンテキスト歌詞のキャッシュがありません</string>
+    <string name="cache_empty_not_found">未検出エントリがありません</string>
+    <string name="cache_cd_delete">削除</string>
+    <string name="cache_cd_open">開く</string>
+    <string name="cache_confirm_delete_title">削除確認</string>
+    <string name="cache_confirm_delete_message">この歌詞キャッシュを削除しますか？</string>
+    <string name="cache_confirm_delete_confirm">削除</string>
+    <string name="cache_confirm_delete_cancel">キャンセル</string>
+    <string name="cache_delete_success">削除しました</string>
+    <string name="cache_delete_failed">削除に失敗しました</string>
+    <string name="cache_cached_lines_format">%1$d行の同期歌詞</string>
+    <string name="cache_updated_format">%1$sに更新</string>
+    <string name="cache_not_found_status">7日間は再検索しません</string>
+
+    <!-- Playlist Screen -->
+    <string name="playlist_loading">プレイリストを読み込み中…</string>
+    <string name="playlist_load_failed">プレイリストの読み込みに失敗しました</string>
+    <string name="playlist_empty">プレイリストが見つかりません</string>
+    <string name="playlist_auth_required">プレイリストの表示にはSpotify認証が必要です</string>
+    <string name="playlist_auth_failed">認証に失敗しました</string>
+    <string name="playlist_cd_refresh">更新</string>
+    <string name="playlist_cd_play_track">この曲を再生</string>
+
+    <!-- Lyrics Correction Screen -->
+    <string name="correction_title">歌詞修正</string>
+    <string name="correction_status_searching">歌詞を検索中…</string>
+    <string name="correction_status_no_lyrics">歌詞がありません</string>
+    <string name="correction_status_ready">歌詞準備完了</string>
+    <string name="correction_offset_label">オフセット</string>
+    <string name="correction_offset_forward">早める</string>
+    <string name="correction_offset_backward">遅らせる</string>
+    <string name="correction_reset_offset">オフセットをリセット</string>
+    <string name="correction_rematch">再マッチ</string>
+    <string name="correction_blacklist">誤りとしてマーク</string>
+    <string name="correction_candidate_title">歌詞を選択</string>
+    <string name="correction_candidate_pick">候補を選択</string>
+    <string name="correction_manual_select">手動選択</string>
+    <string name="correction_toast_reset">オフセットをリセットしました</string>
+    <string name="correction_toast_blacklisted">ブラックリストに追加しました</string>
+    <string name="correction_toast_rematched">再検索しました</string>
+    <string name="correction_toast_candidate_selected">歌詞ソースを選択しました</string>
+    <string name="correction_line_count_format">%1$d行の同期歌詞</string>
+    <string name="correction_candidate_format">候補%1$d：%2$s</string>
+    <string name="correction_offset_ms_format">%1$d ms</string>
+    <string name="correction_current_offset_label">現在のオフセット</string>
+    <string name="correction_instruction">「再マッチ」で他の歌詞ソースを検索、または手動で時間オフセットを調整</string>
+    <string name="correction_classify_failed">歌詞をマッチできません</string>
+    <string name="correction_candidate_subtitle">%1$s · %2$d点</string>
+    <string name="correction_back">戻る</string>
+    <string name="correction_no_track">再生中なし</string>
+    <string name="correction_current_line_label">現在の歌詞行: %1$s</string>
+    <string name="correction_offset_title">歌詞オフセット</string>
+    <string name="correction_no_offset">オフセットなし</string>
+    <string name="correction_advance_label">進める（歌詞が遅い場合）</string>
+    <string name="correction_delay_label">遅らせる（歌詞が早い場合）</string>
+    <string name="correction_actions_title">操作</string>
+    <string name="correction_research">歌詞を再検索</string>
+    <string name="correction_mark_wrong">誤った曲としてマーク</string>
+    <string name="correction_view_candidates">候補リストを表示 (%1$d件)</string>
+    <string name="correction_status_synced">マッチ済み (%1$d点)</string>
+    <string name="correction_status_plain">テキスト歌詞のみ</string>
+    <string name="correction_status_notfound">歌詞が見つかりません</string>
+    <string name="correction_status_low">低信頼度マッチ (%1$d点)</string>
+    <string name="correction_status_parse_error">解析失敗</string>
+    <string name="correction_status_error">エラー: %1$s</string>
+
+    <!-- Precache Screen -->
+    <string name="precache_title">歌詞プリキャッシュ</string>
+    <string name="precache_auth_required">Spotify認証が必要です</string>
+    <string name="precache_auth_button">認証する</string>
+    <string name="precache_select_playlist">プレイリストを選択</string>
+    <string name="precache_progress_format">%1$d/%2$dを処理中…</string>
+    <string name="precache_complete_format">キャッシュ完了：%1$d/%2$d曲</string>
+    <string name="precache_error_fetch">プレイリストの取得に失敗しました</string>
+    <string name="precache_error_cache">歌詞のキャッシュに失敗しました</string>
+    <string name="precache_loading">読み込み中…</string>
+    <string name="precache_empty">プレイリストが見つかりません</string>
+    <string name="precache_cached_label">キャッシュ済み</string>
+    <string name="precache_total_label">合計</string>
+    <string name="precache_cd_start">開始</string>
+    <string name="precache_cd_stop">停止</string>
+    <string name="precache_playlist_progress">%1$d/%2$d曲</string>
+    <string name="precache_auth_prompt">認証してプレイリストを閲覧</string>
+    <string name="precache_screen_title">プレイリストプリキャッシュ</string>
+    <string name="precache_your_playlists">あなたのプレイリスト</string>
+    <string name="precache_logout">ログアウト</string>
+    <string name="precache_login_spotify">Spotifyにログイン</string>
+    <string name="precache_login_description">ログイン後、プレイリストを選択するとアプリが自動的に歌詞をキャッシュします</string>
+    <string name="precache_no_playlists">プレイリストが見つかりません</string>
+    <string name="precache_retry">再試行</string>
+    <string name="precache_cached_format">%1$d/%2$d キャッシュ済み</string>
+    <string name="precache_processing">処理中 %1$d%%</string>
+    <string name="precache_tracks_count">%1$d曲</string>
+    <string name="precache_owner_only">%1$d曲 · 作成者/共同作業者のプレイリストのみキャッシュ可能</string>
+    <string name="precache_cache_button">キャッシュ</string>
+
+    <!-- Toast / Error messages (ViewModel layer) -->
+    <string name="error_auth_required">認証が必要です。再試行してください</string>
+    <string name="error_connect_failed">Spotifyへの接続に失敗しました</string>
+    <string name="error_fetch_playlist">プレイリストの取得に失敗しました</string>
+    <string name="error_fetch_lyrics">歌詞の取得に失敗しました</string>
+    <string name="error_no_network">ネットワークが利用できません</string>
+    <string name="error_not_logged_in">先にSpotifyにログインしてください</string>
+    <string name="error_no_spotify">先にSpotifyをインストールしてください</string>
+    <string name="error_precache_failed">プリキャッシュに失敗しました</string>
+    <string name="error_blacklist_failed">ブラックリストへの追加に失敗しました</string>
+    <string name="error_search_failed">歌詞検索に失敗しました</string>
+    <string name="error_unknown">不明なエラー</string>
+
+    <!-- Manual lyrics import -->
+    <string name="import_lyrics_title">ローカル歌詞をインポート</string>
+    <string name="import_lyrics_button">.lrcファイルをインポート</string>
+    <string name="import_lyrics_success">歌詞をインポートしました</string>
+    <string name="import_lyrics_error">インポートに失敗しました</string>
+    <string name="import_lyrics_empty">ファイルが空または形式が無効です</string>
+
+    <!-- Scan local lyrics folder -->
+    <string name="scan_lyrics_folder">ローカル歌詞フォルダをスキャン</string>
+    <string name="scan_lyrics_folder_desc">.lrcファイルを一括インポート。ファイル名に曲名またはアーティスト名を含めてください。</string>
+    <string name="scan_lyrics_scanning">スキャン中…</string>
+    <string name="scan_lyrics_complete">スキャン完了：%1$d曲の歌詞をインポートしました</string>
+    <string name="scan_lyrics_no_match">一致する歌詞ファイルが見つかりません</string>
+
+    <!-- Cache source labels -->
+    <string name="cache_source_manual">手動</string>
+</resources>

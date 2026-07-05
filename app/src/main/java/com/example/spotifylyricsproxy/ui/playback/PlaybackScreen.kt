@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -27,7 +28,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -45,10 +48,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -78,11 +86,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.spotifylyricsproxy.R
@@ -108,6 +120,9 @@ fun PlaybackScreen(
     val currentLyricLine by viewModel.currentLyricLine.collectAsState()
     val parsedLyrics by viewModel.parsedLyrics.collectAsState()
     val lyricStatus by viewModel.lyricStatus.collectAsState()
+    val translatedLine by viewModel.translatedLine.collectAsState()
+    val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
+    val targetTranslationLang by viewModel.targetTranslationLang.collectAsState()
     val palette = remember(albumArt) { albumPalette(albumArt) }
     var lyricsExpanded by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
@@ -167,6 +182,8 @@ fun PlaybackScreen(
                     isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
                     accent = palette.accent,
                     playbackOptions = playbackOptions,
+                    translatedLine = translatedLine,
+                    isTranslationEnabled = isTranslationEnabled,
                     onSeek = viewModel::seekTo,
                     onPlayPause = viewModel::togglePlayPause,
                     onToggleShuffle = viewModel::toggleShuffle,
@@ -186,6 +203,8 @@ fun PlaybackScreen(
                     parsedLyrics = parsedLyrics,
                     currentLyricLine = currentLyricLine,
                     lyricStatus = lyricStatus,
+                    translatedLine = translatedLine,
+                    isTranslationEnabled = isTranslationEnabled,
                     playbackOptions = playbackOptions,
                     isSpotifyInstalled = isSpotifyInstalled,
                     onSeek = viewModel::seekTo,
@@ -239,7 +258,10 @@ fun PlaybackScreen(
                                 currentLine = currentLyricLine,
                                 allLines = parsedLyrics,
                                 status = lyricStatus,
-                                onExpand = { lyricsExpanded = true }
+                                translatedLine = translatedLine,
+                                isTranslationEnabled = isTranslationEnabled,
+                                onExpand = { lyricsExpanded = true },
+                                onImportLyrics = viewModel::importManualLyrics
                             )
                         } else {
                             ConnectActionPanel(
@@ -273,7 +295,13 @@ fun PlaybackScreen(
         }
 
         if (showLyricDisplaySettings) {
-            LyricDisplaySettingsDialog(onDismiss = { showLyricDisplaySettings = false })
+            LyricDisplaySettingsDialog(
+                isTranslationEnabled = isTranslationEnabled,
+                onSetTranslationEnabled = viewModel::setTranslationEnabled,
+                targetTranslationLang = targetTranslationLang,
+                onSetTargetTranslationLang = viewModel::setTranslationTargetLang,
+                onDismiss = { showLyricDisplaySettings = false }
+            )
         }
     }
 }
@@ -321,7 +349,7 @@ private fun CompactTopBar(
             IconButton(onClick = { showMenu = true }) {
                 Icon(
                     imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "更多",
+                    contentDescription = stringResource(R.string.playback_cd_more),
                     tint = Color.White.copy(alpha = 0.78f)
                 )
             }
@@ -330,28 +358,28 @@ private fun CompactTopBar(
                 onDismissRequest = { showMenu = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_spotify_playlist)) },
+                    text = { Text(stringResource(R.string.playback_playlist_title)) },
                     onClick = {
                         showMenu = false
                         onOpenPlaylist()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_lyrics_correction)) },
+                    text = { Text(stringResource(R.string.playback_cd_lyrics_correction)) },
                     onClick = {
                         showMenu = false
                         onCorrection()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_lyrics_display)) },
+                    text = { Text(stringResource(R.string.playback_cd_lyrics_display)) },
                     onClick = {
                         showMenu = false
                         onLyricDisplaySettings()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_disconnect)) },
+                    text = { Text(stringResource(R.string.playback_action_disconnect)) },
                     onClick = {
                         showMenu = false
                         onDisconnect()
@@ -382,27 +410,27 @@ private fun PlaylistEntryButton(
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.List,
-                contentDescription = "歌单",
+                contentDescription = stringResource(R.string.nav_playlist),
                 tint = accent,
                 modifier = Modifier.size(28.dp)
             )
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Spotify 歌单",
+                    text = stringResource(R.string.playback_playlist_title),
                     style = MaterialTheme.typography.titleSmall,
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "浏览歌单 · 点歌播放",
+                    text = stringResource(R.string.playback_playlist_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.56f)
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "打开",
+                contentDescription = stringResource(R.string.playback_cd_playlist),
                 tint = Color.White.copy(alpha = 0.48f)
             )
         }
@@ -449,7 +477,7 @@ private fun ConnectActionPanel(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     ActionPill(
-                        text = "重新连接",
+                        text = stringResource(R.string.playback_action_reconnect),
                         accent = Color.White.copy(alpha = 0.14f),
                         contentColor = Color.White,
                         enabled = true,
@@ -458,7 +486,7 @@ private fun ConnectActionPanel(
                     )
                     if (isSpotifyInstalled) {
                         ActionPill(
-                            text = "打开 Spotify 后连接",
+                            text = stringResource(R.string.playback_action_open_spotify),
                             accent = accent,
                             contentColor = readableOn(accent),
                             enabled = true,
@@ -548,7 +576,7 @@ private fun AlbumArtHero(albumArt: Bitmap?, accent: Color) {
                 } else {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = "封面占位",
+                        contentDescription = stringResource(R.string.playback_cd_album_art_placeholder),
                         modifier = Modifier.size(86.dp),
                         tint = Color.White.copy(alpha = 0.84f)
                     )
@@ -564,7 +592,7 @@ private fun TrackTitleBlock(
     connectionState: SpotifyConnectionState
 ) {
     Text(
-        text = trackInfo.title.ifEmpty { "等待播放" },
+        text = trackInfo.title.ifEmpty { stringResource(R.string.playback_title_waiting) },
         style = MaterialTheme.typography.headlineSmall,
         color = Color.White,
         textAlign = TextAlign.Center,
@@ -579,7 +607,7 @@ private fun TrackTitleBlock(
                 .filter { it.isNotBlank() }
                 .joinToString(" · ")
         } else {
-            if (connectionState is SpotifyConnectionState.Connected) "正在等待 Spotify 播放" else "连接 Spotify 后同步播放状态"
+            if (connectionState is SpotifyConnectionState.Connected) stringResource(R.string.playback_subtitle_waiting) else stringResource(R.string.playback_subtitle_connect_prompt)
         },
         style = MaterialTheme.typography.bodyMedium,
         color = Color.White.copy(alpha = 0.66f),
@@ -594,7 +622,10 @@ private fun CompactLyricsBlock(
     currentLine: LrcLine?,
     allLines: List<LrcLine>,
     status: LyricStatus,
-    onExpand: () -> Unit
+    translatedLine: String?,
+    isTranslationEnabled: Boolean,
+    onExpand: () -> Unit,
+    onImportLyrics: (String) -> Unit = {}
 ) {
     val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
     val previous = allLines.getOrNull(currentIndex - 1)?.text
@@ -621,7 +652,7 @@ private fun CompactLyricsBlock(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             when (status) {
-                is LyricStatus.Idle -> LyricMessage("等待播放...")
+                is LyricStatus.Idle -> LyricMessage(stringResource(R.string.playback_lyrics_idle))
                 is LyricStatus.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
@@ -629,12 +660,11 @@ private fun CompactLyricsBlock(
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(10.dp))
-                    LyricMessage("正在查找歌词")
+                    LyricMessage(stringResource(R.string.playback_lyrics_searching))
                 }
                 is LyricStatus.Synced -> {
-                    previous?.let { ContextLyric(it, config) }
                     Text(
-                        text = currentLine?.text ?: "...",
+                        text = currentLine?.text ?: stringResource(R.string.playback_lyrics_synced_placeholder),
                         style = MaterialTheme.typography.titleLarge,
                         fontSize = config.currentLineSp,
                         color = Color.White,
@@ -643,16 +673,46 @@ private fun CompactLyricsBlock(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (isTranslationEnabled && !translatedLine.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = translatedLine,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.85f),
+                            textAlign = config.textAlign,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                     next?.let {
                         Spacer(modifier = Modifier.height(10.dp))
                         ContextLyric(it, config)
                     }
                 }
-                is LyricStatus.PlainOnly -> LyricMessage("当前歌曲暂无同步歌词")
-                is LyricStatus.NotFound -> LyricMessage("暂未找到歌词")
-                is LyricStatus.LowConfidence -> LyricMessage("找到疑似歌词，需要手动确认")
-                is LyricStatus.ParseError -> LyricMessage("歌词解析失败")
-                is LyricStatus.Error -> LyricMessage("歌词加载失败")
+                is LyricStatus.PlainOnly -> LyricMessage(stringResource(R.string.playback_lyrics_plain_only))
+                is LyricStatus.NotFound -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        LyricMessage(stringResource(R.string.playback_lyrics_not_found))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        val context = LocalContext.current
+                        val launcher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.OpenDocument()
+                        ) { uri ->
+                            uri?.let {
+                                val text = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText()
+                                if (!text.isNullOrBlank()) {
+                                    onImportLyrics(text)
+                                }
+                            }
+                        }
+                        OutlinedButton(onClick = { launcher.launch(arrayOf("application/octet-stream", "text/plain")) }) {
+                            Text(stringResource(R.string.import_lyrics_button))
+                        }
+                    }
+                }
+                is LyricStatus.LowConfidence -> LyricMessage(stringResource(R.string.playback_lyrics_low_confidence))
+                is LyricStatus.ParseError -> LyricMessage(stringResource(R.string.playback_lyrics_parse_error))
+                is LyricStatus.Error -> LyricMessage(stringResource(R.string.playback_lyrics_load_error))
             }
         }
     }
@@ -795,23 +855,14 @@ private fun PlaybackControls(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Shuffle
-        val shuffleEnabled = isConnected && playbackOptions.canToggleShuffle
-        IconButton(
-            onClick = onToggleShuffle,
-            enabled = shuffleEnabled
-        ) {
-            val shuffleTint = if (playbackOptions.isShuffling) {
-                accent
-            } else {
-                Color.White.copy(alpha = if (isConnected) 0.56f else 0.20f)
-            }
-            Icon(
-                imageVector = Icons.Filled.Shuffle,
-                contentDescription = "随机播放",
-                modifier = Modifier.size(26.dp),
-                tint = shuffleTint
-            )
-        }
+        ModeToggleButton(
+            isActive = playbackOptions.isShuffling,
+            accent = accent,
+            icon = Icons.Filled.Shuffle,
+            contentDescription = stringResource(R.string.playback_cd_shuffle),
+            iconSize = 26.dp,
+            onClick = onToggleShuffle
+        )
 
         Spacer(modifier = Modifier.width(4.dp))
 
@@ -819,7 +870,7 @@ private fun PlaybackControls(
         IconButton(onClick = onSkipPrevious, enabled = isConnected) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "上一首",
+                contentDescription = stringResource(R.string.playback_cd_previous),
                 modifier = Modifier.size(34.dp),
                 tint = Color.White.copy(alpha = if (isConnected) 0.86f else 0.28f)
             )
@@ -845,7 +896,7 @@ private fun PlaybackControls(
                 } else {
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = "播放",
+                        contentDescription = stringResource(R.string.playback_cd_play),
                         modifier = Modifier.size(42.dp)
                     )
                 }
@@ -858,7 +909,7 @@ private fun PlaybackControls(
         IconButton(onClick = onSkipNext, enabled = isConnected) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = "下一首",
+                contentDescription = stringResource(R.string.playback_cd_next),
                 modifier = Modifier.size(34.dp),
                 tint = Color.White.copy(alpha = if (isConnected) 0.86f else 0.28f)
             )
@@ -867,25 +918,15 @@ private fun PlaybackControls(
         Spacer(modifier = Modifier.width(4.dp))
 
         // Repeat
-        val repeatEnabled = isConnected && (playbackOptions.canRepeatTrack || playbackOptions.canRepeatContext)
-        IconButton(
-            onClick = onCycleRepeat,
-            enabled = repeatEnabled
-        ) {
-            val isRepeatOn = playbackOptions.repeatMode != RepeatMode.OFF
-            val repeatTint = if (isRepeatOn) {
-                accent
-            } else {
-                Color.White.copy(alpha = if (isConnected) 0.56f else 0.20f)
-            }
-            Icon(
-                imageVector = if (playbackOptions.repeatMode == RepeatMode.TRACK)
-                    Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                contentDescription = "循环模式",
-                modifier = Modifier.size(26.dp),
-                tint = repeatTint
-            )
-        }
+        ModeToggleButton(
+            isActive = playbackOptions.repeatMode != RepeatMode.OFF,
+            accent = accent,
+            icon = if (playbackOptions.repeatMode == RepeatMode.TRACK)
+                Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+            contentDescription = stringResource(R.string.playback_cd_repeat),
+            iconSize = 26.dp,
+            onClick = onCycleRepeat
+        )
     }
 }
 
@@ -911,6 +952,36 @@ private fun PauseBar(color: Color) {
             .clip(RoundedCornerShape(4.dp))
             .background(color)
     )
+}
+
+/** A compact mode-toggle icon with a visible background circle when active. */
+@Composable
+private fun ModeToggleButton(
+    isActive: Boolean,
+    accent: Color,
+    icon: ImageVector,
+    contentDescription: String,
+    iconSize: Dp = 26.dp,
+    onClick: () -> Unit
+) {
+    Box(contentAlignment = Alignment.Center) {
+        if (isActive) {
+            Box(
+                modifier = Modifier
+                    .size(iconSize + 14.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.18f))
+            )
+        }
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(iconSize),
+                tint = if (isActive) accent else Color.White.copy(alpha = 0.25f)
+            )
+        }
+    }
 }
 
 private data class AlbumPalette(
@@ -972,6 +1043,8 @@ private fun ExpandedLyricsView(
     isPlaying: Boolean,
     accent: Color,
     playbackOptions: PlaybackOptions,
+    translatedLine: String?,
+    isTranslationEnabled: Boolean,
     onSeek: (Long) -> Unit,
     onPlayPause: () -> Unit,
     onToggleShuffle: () -> Unit,
@@ -1004,21 +1077,33 @@ private fun ExpandedLyricsView(
             itemsIndexed(lines) { index, line ->
                 val isCurrent = index == currentIndex
                 val isPast = index < currentIndex
-                Text(
-                    text = line.text,
-                    color = when {
-                        isCurrent -> Color.White
-                        isPast -> Color.White.copy(alpha = config.pastLineAlpha)
-                        else -> Color.White.copy(alpha = config.futureLineAlpha)
-                    },
-                    fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
-                    fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
-                    textAlign = config.textAlign,
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onSeek(line.startMs) }
                         .padding(horizontal = 28.dp, vertical = 10.dp)
-                )
+                ) {
+                    Text(
+                        text = line.text,
+                        color = when {
+                            isCurrent -> Color.White
+                            isPast -> Color.White.copy(alpha = config.pastLineAlpha)
+                            else -> Color.White.copy(alpha = config.futureLineAlpha)
+                        },
+                        fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
+                        fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
+                        textAlign = config.textAlign
+                    )
+                    if (isCurrent && isTranslationEnabled && !translatedLine.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = translatedLine,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontSize = config.otherLineSp,
+                            textAlign = config.textAlign
+                        )
+                    }
+                }
             }
         }
 
@@ -1033,14 +1118,14 @@ private fun ExpandedLyricsView(
             IconButton(onClick = onCollapse) {
                 Icon(
                     imageVector = Icons.Filled.KeyboardArrowDown,
-                    contentDescription = "收起歌词",
+                    contentDescription = stringResource(R.string.playback_cd_collapse),
                     tint = Color.White.copy(alpha = 0.72f),
                     modifier = Modifier.size(32.dp)
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "全屏歌词",
+                text = stringResource(R.string.playback_fullscreen_lyrics),
                 style = MaterialTheme.typography.labelMedium,
                 color = Color.White.copy(alpha = 0.48f)
             )
@@ -1069,7 +1154,7 @@ private fun ExpandedLyricsView(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Filled.KeyboardArrowDown,
-                        contentDescription = "回到当前行",
+                        contentDescription = stringResource(R.string.playback_cd_jump_to_current),
                         tint = Color.White.copy(alpha = 0.82f),
                         modifier = Modifier.size(28.dp)
                     )
@@ -1138,7 +1223,7 @@ private fun ExpandedLyricsView(
                         } else {
                             Icon(
                                 imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = "播放",
+                                contentDescription = stringResource(R.string.playback_cd_play),
                                 tint = Color.White.copy(alpha = 0.78f),
                                 modifier = Modifier.size(32.dp)
                             )
@@ -1154,35 +1239,24 @@ private fun ExpandedLyricsView(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val shuffleTint = if (playbackOptions.isShuffling) accent
-                        else Color.White.copy(alpha = 0.50f)
-                    IconButton(
-                        onClick = onToggleShuffle,
-                        enabled = playbackOptions.canToggleShuffle
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Shuffle,
-                            contentDescription = "随机播放",
-                            modifier = Modifier.size(22.dp),
-                            tint = shuffleTint
-                        )
-                    }
+                    ModeToggleButton(
+                        isActive = playbackOptions.isShuffling,
+                        accent = accent,
+                        icon = Icons.Filled.Shuffle,
+                        contentDescription = stringResource(R.string.playback_cd_shuffle),
+                        iconSize = 22.dp,
+                        onClick = onToggleShuffle
+                    )
                     Spacer(modifier = Modifier.width(24.dp))
-                    val isRepeatOn = playbackOptions.repeatMode != RepeatMode.OFF
-                    val repeatTint = if (isRepeatOn) accent
-                        else Color.White.copy(alpha = 0.50f)
-                    IconButton(
-                        onClick = onCycleRepeat,
-                        enabled = playbackOptions.canRepeatTrack || playbackOptions.canRepeatContext
-                    ) {
-                        Icon(
-                            imageVector = if (playbackOptions.repeatMode == RepeatMode.TRACK)
-                                Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                            contentDescription = "循环模式",
-                            modifier = Modifier.size(22.dp),
-                            tint = repeatTint
-                        )
-                    }
+                    ModeToggleButton(
+                        isActive = playbackOptions.repeatMode != RepeatMode.OFF,
+                        accent = accent,
+                        icon = if (playbackOptions.repeatMode == RepeatMode.TRACK)
+                            Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                        contentDescription = stringResource(R.string.playback_cd_repeat),
+                        iconSize = 22.dp,
+                        onClick = onCycleRepeat
+                    )
                 }
             }
         }
@@ -1197,21 +1271,23 @@ private fun rememberIsSpotifyInstalled(): Boolean {
     }
 }
 
+@Composable
 private fun stateLabel(state: SpotifyConnectionState): String = when (state) {
-    is SpotifyConnectionState.Disconnected -> "未连接"
-    is SpotifyConnectionState.Connecting -> "连接中..."
-    is SpotifyConnectionState.Connected -> "已连接"
-    is SpotifyConnectionState.Error -> "连接失败"
-    SpotifyConnectionState.SpotifyNotInstalled -> "未安装 Spotify"
-    SpotifyConnectionState.SpotifyNotLoggedIn -> "未登录"
+    is SpotifyConnectionState.Disconnected -> stringResource(R.string.playback_disconnected)
+    is SpotifyConnectionState.Connecting -> stringResource(R.string.playback_connecting)
+    is SpotifyConnectionState.Connected -> stringResource(R.string.playback_connected)
+    is SpotifyConnectionState.Error -> stringResource(R.string.playback_error)
+    SpotifyConnectionState.SpotifyNotInstalled -> stringResource(R.string.playback_not_installed)
+    SpotifyConnectionState.SpotifyNotLoggedIn -> stringResource(R.string.playback_not_logged_in)
 }
 
+@Composable
 private fun connectionHint(state: SpotifyConnectionState): String = when (state) {
-    is SpotifyConnectionState.Connecting -> "正在连接 Spotify..."
-    SpotifyConnectionState.SpotifyNotInstalled -> "没有检测到 Spotify，请先安装后再连接"
-    SpotifyConnectionState.SpotifyNotLoggedIn -> "请先打开 Spotify 登录账号，再回到这里连接"
+    is SpotifyConnectionState.Connecting -> stringResource(R.string.playback_hint_connecting)
+    SpotifyConnectionState.SpotifyNotInstalled -> stringResource(R.string.playback_hint_not_installed)
+    SpotifyConnectionState.SpotifyNotLoggedIn -> stringResource(R.string.playback_hint_not_logged_in)
     is SpotifyConnectionState.Error -> "Spotify 没有连上：${state.message}"
-    SpotifyConnectionState.Disconnected -> "连接 Spotify 后同步播放状态和歌词"
+    SpotifyConnectionState.Disconnected -> stringResource(R.string.playback_hint_disconnected)
     SpotifyConnectionState.Connected -> ""
 }
 
@@ -1240,6 +1316,8 @@ private fun LandscapePlaybackLayout(
     parsedLyrics: List<LrcLine>,
     currentLyricLine: LrcLine?,
     lyricStatus: LyricStatus,
+    translatedLine: String?,
+    isTranslationEnabled: Boolean,
     playbackOptions: PlaybackOptions,
     isSpotifyInstalled: Boolean,
     onSeek: (Long) -> Unit,
@@ -1343,6 +1421,8 @@ private fun LandscapePlaybackLayout(
                     lines = parsedLyrics,
                     currentLine = currentLyricLine,
                     lyricStatus = lyricStatus,
+                    translatedLine = translatedLine,
+                    isTranslationEnabled = isTranslationEnabled,
                     onSeek = onSeek,
                     onSkipNext = onSkipNext,
                     onSkipPrevious = onSkipPrevious
@@ -1357,6 +1437,8 @@ private fun LandscapeLyricsContent(
     lines: List<LrcLine>,
     currentLine: LrcLine?,
     lyricStatus: LyricStatus,
+    translatedLine: String?,
+    isTranslationEnabled: Boolean,
     onSeek: (Long) -> Unit,
     onSkipNext: () -> Unit,
     onSkipPrevious: () -> Unit
@@ -1384,7 +1466,7 @@ private fun LandscapeLyricsContent(
             }
     ) {
         when (lyricStatus) {
-            is LyricStatus.Idle -> LyricMessage("等待播放...")
+            is LyricStatus.Idle -> LyricMessage(stringResource(R.string.playback_lyrics_idle))
             is LyricStatus.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
@@ -1392,20 +1474,20 @@ private fun LandscapeLyricsContent(
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                LyricMessage("正在查找歌词")
+                LyricMessage(stringResource(R.string.playback_lyrics_searching))
             }
             is LyricStatus.Synced -> {
                 if (lines.isNotEmpty()) {
-                    LandscapeLyricsList(lines, currentLine, onSeek)
+                    LandscapeLyricsList(lines, currentLine, translatedLine, isTranslationEnabled, onSeek)
                 } else {
-                    LyricMessage("暂无歌词内容")
+                    LyricMessage(stringResource(R.string.playback_lyrics_no_content))
                 }
             }
-            is LyricStatus.PlainOnly -> LyricMessage("当前歌曲暂无同步歌词")
-            is LyricStatus.NotFound -> LyricMessage("暂未找到歌词")
-            is LyricStatus.LowConfidence -> LyricMessage("找到疑似歌词，需要手动确认")
-            is LyricStatus.ParseError -> LyricMessage("歌词解析失败")
-            is LyricStatus.Error -> LyricMessage("歌词加载失败")
+            is LyricStatus.PlainOnly -> LyricMessage(stringResource(R.string.playback_lyrics_plain_only))
+            is LyricStatus.NotFound -> LyricMessage(stringResource(R.string.playback_lyrics_not_found))
+            is LyricStatus.LowConfidence -> LyricMessage(stringResource(R.string.playback_lyrics_low_confidence))
+            is LyricStatus.ParseError -> LyricMessage(stringResource(R.string.playback_lyrics_parse_error))
+            is LyricStatus.Error -> LyricMessage(stringResource(R.string.playback_lyrics_load_error))
         }
     }
 }
@@ -1414,6 +1496,8 @@ private fun LandscapeLyricsContent(
 private fun LandscapeLyricsList(
     lines: List<LrcLine>,
     currentLine: LrcLine?,
+    translatedLine: String?,
+    isTranslationEnabled: Boolean,
     onSeek: (Long) -> Unit
 ) {
     val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
@@ -1435,31 +1519,50 @@ private fun LandscapeLyricsList(
         itemsIndexed(lines) { index, line ->
             val isCurrent = index == currentIndex
             val isPast = index < currentIndex
-            Text(
-                text = line.text,
-                color = when {
-                    isCurrent -> Color.White
-                    isPast -> Color.White.copy(alpha = config.pastLineAlpha)
-                    else -> Color.White.copy(alpha = config.futureLineAlpha)
-                },
-                fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
-                fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
-                textAlign = config.textAlign,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {
-                        if (line.startMs >= 0) onSeek(line.startMs)
-                    }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            )
+                    .clickable { onSeek(line.startMs) }
+                    .padding(horizontal = 28.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = line.text,
+                    color = when {
+                        isCurrent -> Color.White
+                        isPast -> Color.White.copy(alpha = config.pastLineAlpha)
+                        else -> Color.White.copy(alpha = config.futureLineAlpha)
+                    },
+                    fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
+                    fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
+                    textAlign = config.textAlign,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (isCurrent && isTranslationEnabled && !translatedLine.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = translatedLine,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = config.otherLineSp,
+                        textAlign = config.textAlign,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
+private fun LyricDisplaySettingsDialog(
+    isTranslationEnabled: Boolean = false,
+    onSetTranslationEnabled: (Boolean) -> Unit = {},
+    targetTranslationLang: String = "zh",
+    onSetTargetTranslationLang: (String) -> Unit = {},
+    onDismiss: () -> Unit
+) {
     val currentFontSize by LyricDisplayPreferences.fontSize
     val currentBold by LyricDisplayPreferences.boldCurrentLine
     val currentDim by LyricDisplayPreferences.dimLevel
@@ -1467,41 +1570,57 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("歌词显示设置") },
+        title = { Text(stringResource(R.string.lyric_settings_title)) },
+        containerColor = MaterialTheme.colorScheme.surface,
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
                 Text(
-                    text = "这些设置影响展开歌词页和横屏歌词区，主页预览歌词会保持紧凑显示。",
+                    text = stringResource(R.string.lyric_settings_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Column {
                     Text(
-                        text = "字体大小",
+                        text = stringResource(R.string.lyric_settings_font_size),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(
-                            "small" to "小",
-                            "default" to "默认",
-                            "large" to "大",
-                            "xlarge" to "超大"
-                        ).forEach { (value, label) ->
-                            FilterChip(
-                                selected = currentFontSize == value,
-                                onClick = { LyricDisplayPreferences.setFontSize(value) },
-                                label = { Text(label) }
-                            )
+                    val fontLabels = listOf(
+                        "small" to stringResource(R.string.lyric_settings_font_small),
+                        "default" to stringResource(R.string.lyric_settings_font_default),
+                        "large" to stringResource(R.string.lyric_settings_font_large),
+                        "xlarge" to stringResource(R.string.lyric_settings_font_xlarge)
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            fontLabels.take(2).forEach { (value, label) ->
+                                FilterChip(
+                                    selected = currentFontSize == value,
+                                    onClick = { LyricDisplayPreferences.setFontSize(value) },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            fontLabels.drop(2).forEach { (value, label) ->
+                                FilterChip(
+                                    selected = currentFontSize == value,
+                                    onClick = { LyricDisplayPreferences.setFontSize(value) },
+                                    label = { Text(label) }
+                                )
+                            }
                         }
                     }
                 }
 
                 Column {
                     Text(
-                        text = "当前行加粗",
+                        text = stringResource(R.string.lyric_settings_bold),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1511,7 +1630,7 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("加粗显示", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.lyric_settings_bold_label), style = MaterialTheme.typography.bodyMedium)
                         Switch(
                             checked = currentBold,
                             onCheckedChange = { LyricDisplayPreferences.setBoldCurrentLine(it) }
@@ -1521,13 +1640,18 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
 
                 Column {
                     Text(
-                        text = "非当前行透明度",
+                        text = stringResource(R.string.lyric_settings_dim_level),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("low" to "低", "medium" to "中", "high" to "高").forEach { (value, label) ->
+                        val dimLabels = listOf(
+                            "low" to stringResource(R.string.lyric_settings_dim_low),
+                            "medium" to stringResource(R.string.lyric_settings_dim_medium),
+                            "high" to stringResource(R.string.lyric_settings_dim_high)
+                        )
+                        dimLabels.forEach { (value, label) ->
                             FilterChip(
                                 selected = currentDim == value,
                                 onClick = { LyricDisplayPreferences.setDimLevel(value) },
@@ -1539,13 +1663,17 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
 
                 Column {
                     Text(
-                        text = "对齐方式",
+                        text = stringResource(R.string.lyric_settings_alignment),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("center" to "居中", "start" to "左对齐").forEach { (value, label) ->
+                        val alignLabels = listOf(
+                            "center" to stringResource(R.string.lyric_settings_align_center),
+                            "start" to stringResource(R.string.lyric_settings_align_left)
+                        )
+                        alignLabels.forEach { (value, label) ->
                             FilterChip(
                                 selected = currentAlign == value,
                                 onClick = { LyricDisplayPreferences.setAlignment(value) },
@@ -1554,10 +1682,106 @@ private fun LyricDisplaySettingsDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
+
+                // Translation toggle
+                Column {
+                    Text(
+                        text = stringResource(R.string.settings_group_translation),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                stringResource(R.string.settings_translate_lyrics),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                stringResource(R.string.settings_translate_lyrics_desc),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = isTranslationEnabled,
+                            onCheckedChange = onSetTranslationEnabled
+                        )
+                    }
+                    if (isTranslationEnabled) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                stringResource(R.string.settings_translate_target),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            var expanded by remember { mutableStateOf(false) }
+                            Box {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                    modifier = Modifier
+                                        .heightIn(min = 40.dp)
+                                        .clickable { expanded = true }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                                    ) {
+                                        Text(
+                                            when (targetTranslationLang) {
+                                                "zh" -> stringResource(R.string.settings_translate_target_zh)
+                                                "en" -> stringResource(R.string.settings_translate_target_en)
+                                                "ja" -> stringResource(R.string.settings_translate_target_ja)
+                                                else -> targetTranslationLang
+                                            },
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            imageVector = Icons.Filled.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+                                    listOf(
+                                        "zh" to stringResource(R.string.settings_translate_target_zh),
+                                        "en" to stringResource(R.string.settings_translate_target_en),
+                                        "ja" to stringResource(R.string.settings_translate_target_ja)
+                                    ).forEach { (code, label) ->
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                onSetTargetTranslationLang(code)
+                                                expanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("完成") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.lyric_settings_done)) }
         }
     )
 }

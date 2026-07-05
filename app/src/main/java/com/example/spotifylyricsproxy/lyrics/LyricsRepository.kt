@@ -71,8 +71,21 @@ class LyricsRepository(private val database: AppDatabase) {
         if (cached != null) {
             _offsetMs = cached.offsetMs
             _currentOffsetMs.value = _offsetMs
-            Log.i(TAG, "Cache hit: $title (status=${cached.fetchStatus}, offset=${_offsetMs}ms)")
+            Log.i(TAG, "Cache hit: $title (status=${cached.fetchStatus}, source=${cached.source}, offset=${_offsetMs}ms)")
             updatePlayHistory(cached)
+
+            // Manual lyrics always override: never re-search LRCLIB
+            if (cached.source == "manual") {
+                cached.syncedLyrics?.let { synced ->
+                    val lines = LrcParser.parse(synced)
+                    if (lines.isNotEmpty()) {
+                        _parsedLyrics.value = lines
+                        _lyricStatus.value = LyricStatus.Synced(100)
+                        return
+                    }
+                }
+            }
+
             when (cached.fetchStatus) {
                 "success" -> {
                     cached.syncedLyrics?.let { synced ->
@@ -362,6 +375,43 @@ class LyricsRepository(private val database: AppDatabase) {
                 )
             )
         }
+    }
+
+    /**
+     * Save manually imported lyrics for a track.
+     * Once saved, fetchLyrics will always return these lyrics and never re-search LRCLIB.
+     */
+    suspend fun saveManualLyrics(
+        trackId: String,
+        title: String,
+        artist: String,
+        album: String = "",
+        durationMs: Long = 0,
+        lrcText: String
+    ) {
+        val lines = LrcParser.parse(lrcText)
+        if (lines.isEmpty()) {
+            Log.w(TAG, "saveManualLyrics: LRC text produced 0 lines")
+            return
+        }
+        val entity = LyricCacheEntity(
+            spotifyTrackId = trackId,
+            title = title,
+            artist = artist,
+            album = album,
+            durationMs = durationMs,
+            source = "manual",
+            syncedLyrics = lrcText,
+            plainLyrics = null,
+            fetchStatus = "success",
+            confidenceScore = 100,
+            nextRetryAt = null,
+            offsetMs = 0L
+        )
+        withContext(Dispatchers.IO) { cacheDao.upsert(entity) }
+        _parsedLyrics.value = lines
+        _lyricStatus.value = LyricStatus.Synced(100)
+        Log.i(TAG, "Manual lyrics saved: $title (${lines.size} lines)")
     }
 
     fun reset() {

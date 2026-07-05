@@ -11,7 +11,9 @@ import com.example.spotifylyricsproxy.core.model.LyricCandidate
 import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.lyrics.LyricsRepository
+import com.example.spotifylyricsproxy.lyrics.TranslationService
 import com.example.spotifylyricsproxy.notification.LyricsForegroundService
+import com.example.spotifylyricsproxy.ui.theme.TranslationPrefs
 import com.example.spotifylyricsproxy.SpotifyAuthHolder
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.PlaybackOptions
@@ -65,6 +67,24 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     val currentOffsetMs: StateFlow<Long>
         get() = lyricsRepo.currentOffsetMs
 
+    // ---- Translation state ----
+
+    private val translationService = TranslationService(application)
+
+    private val _translatedLine = MutableStateFlow<String?>(null)
+    val translatedLine: StateFlow<String?> = _translatedLine.asStateFlow()
+
+    private var translationJob: kotlinx.coroutines.Job? = null
+
+    private val _isTranslationEnabled = MutableStateFlow(false)
+    val isTranslationEnabled: StateFlow<Boolean> = _isTranslationEnabled.asStateFlow()
+
+    private val _targetTranslationLang = MutableStateFlow(TranslationPrefs.loadTargetLang(application))
+    val targetTranslationLang: StateFlow<String> = _targetTranslationLang.asStateFlow()
+
+    private val _detectedLyricsLang = MutableStateFlow<String?>(null)
+    val detectedLyricsLang: StateFlow<String?> = _detectedLyricsLang.asStateFlow()
+
     /** True when the candidate selection dialog should be shown. */
     private val _showCandidatePicker = MutableStateFlow(false)
     val showCandidatePicker: StateFlow<Boolean> = _showCandidatePicker.asStateFlow()
@@ -78,6 +98,29 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         startClock()
         observeTrackChanges()
         observePlayRequests()
+        observeCurrentLineForTranslation()
+        autoReconnectOnFailure()
+    }
+
+    /**
+     * Watches connection state. If initial connection fails (e.g. Spotify not
+     * running), auto-launches Spotify after a short delay. This covers both
+     * app startup and background-to-foreground transitions.
+     */
+    private fun autoReconnectOnFailure() {
+        viewModelScope.launch {
+            // Wait a moment for the initial connection attempt to resolve
+            kotlinx.coroutines.delay(4000)
+            val state = repository.connectionState.value
+            if (state is SpotifyConnectionState.Error ||
+                state is SpotifyConnectionState.Disconnected ||
+                state is SpotifyConnectionState.SpotifyNotInstalled ||
+                state is SpotifyConnectionState.SpotifyNotLoggedIn
+            ) {
+                android.util.Log.i("PlaybackVM", "autoReconnect: state=$state, launching Spotify")
+                openSpotifyAndConnect()
+            }
+        }
     }
 
     private fun observePlayRequests() {
@@ -172,7 +215,26 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun connect() {
-        repository.tryConnect()
+        android.util.Log.i("PlaybackVM", "connect() called — force reconnecting")
+        // Try a fresh connection. If Spotify isn't running, the SDK will
+        // call onFailure quickly; we also auto-launch Spotify so the user
+        // doesn't have to do it manually.
+        pendingConnectionOnResume = true
+        repository.forceReconnect()
+        // If connection fails (e.g. Spotify not running), auto-open Spotify
+        // so the user doesn't get stuck with "no response".
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(3000)
+            val state = repository.connectionState.value
+            if (state is SpotifyConnectionState.Disconnected ||
+                state is SpotifyConnectionState.Error ||
+                state is SpotifyConnectionState.SpotifyNotInstalled ||
+                state is SpotifyConnectionState.SpotifyNotLoggedIn
+            ) {
+                android.util.Log.i("PlaybackVM", "connect() timed out (state=$state), launching Spotify")
+                openSpotifyAndConnect()
+            }
+        }
     }
 
     fun openSpotifyAndConnect() {
@@ -194,8 +256,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         if (pendingConnectionOnResume) {
             pendingConnectionOnResume = false
             android.util.Log.i("PlaybackVM", "onResume: retrying connection after opening Spotify")
-            repository.tryConnect()
-        } else if (repository.connectionState.value is SpotifyConnectionState.Disconnected) {
+            repository.forceReconnect()
+        } else if (repository.connectionState.value is SpotifyConnectionState.Disconnected ||
+                repository.connectionState.value is SpotifyConnectionState.Error
+        ) {
             android.util.Log.i("PlaybackVM", "onResume: gentle reconnect attempt")
             repository.tryConnect()
         }
@@ -289,8 +353,74 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    // ---- Translation ----
+
+    fun setTranslationEnabled(enabled: Boolean) {
+        _isTranslationEnabled.value = enabled
+        if (!enabled) {
+            _translatedLine.value = null
+            _detectedLyricsLang.value = null
+        }
+    }
+
+    fun setTranslationTargetLang(lang: String) {
+        _targetTranslationLang.value = lang
+        TranslationPrefs.saveTargetLang(getApplication(), lang)
+    }
+
+    // ---- Manual Lyrics Import ----
+
+    /** Import manually provided LRC text for the current track. */
+    fun importManualLyrics(lrcText: String) {
+        val track = currentTrack.value
+        viewModelScope.launch {
+            lyricsRepo.saveManualLyrics(
+                trackId = track.trackId,
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                durationMs = track.durationMs,
+                lrcText = lrcText
+            )
+        }
+    }
+
+    private fun observeCurrentLineForTranslation() {
+        viewModelScope.launch {
+            lyricsRepo.currentLine.collect { line ->
+                if (line == null || !_isTranslationEnabled.value) {
+                    _translatedLine.value = null
+                    return@collect
+                }
+                translationJob?.cancel()
+                _translatedLine.value = null
+                translateCurrentLine(line.text)
+            }
+        }
+    }
+
+    /** Translate a single line of lyrics on the IO dispatcher. */
+    private fun translateCurrentLine(text: String) {
+        translationJob = viewModelScope.launch {
+            val target = _targetTranslationLang.value
+            try {
+                val detected = translationService.detectLanguage(text)
+                _detectedLyricsLang.value = detected
+                if (detected == null || detected == target) {
+                    _translatedLine.value = null
+                    return@launch
+                }
+                val translated = translationService.translate(text, detected, target)
+                _translatedLine.value = translated
+            } catch (_: Exception) {
+                _translatedLine.value = null
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         repository.disconnect()
+        translationService.onCleared()
     }
 }

@@ -40,8 +40,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.database.entity.LyricCacheEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +55,7 @@ fun CacheScreen(viewModel: CacheViewModel) {
     val filterStatus by viewModel.filterStatus.collectAsState()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("缓存管理") }) },
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.cache_title)) }) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
@@ -120,10 +122,10 @@ private fun FilterRow(
     onSelectFilter: (String?) -> Unit
 ) {
     val filters = listOf(
-        null to "全部 ${summary.total}",
+        null to "${stringResource(R.string.cache_filter_all)} ${summary.total}",
         "success" to "已缓存 ${summary.success}",
         "plain_only" to "仅文本 ${summary.plainOnly}",
-        "not_found" to "未找到 ${summary.notFound}",
+        "not_found" to "${stringResource(R.string.cache_filter_not_found)} ${summary.notFound}",
         "failed" to "失败 ${summary.failed}"
     )
     Row(
@@ -154,15 +156,32 @@ private fun CacheEntryCard(entry: LyricCacheEntity) {
             StatusIcon(entry.fetchStatus)
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = entry.title.ifBlank { stringResource(R.string.generic_unknown_track) },
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (entry.source == "manual") {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.cache_source_manual),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    RoundedCornerShape(4.dp)
+                                )
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 Text(
-                    text = entry.title.ifBlank { "未知歌曲" },
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = entry.artist.ifBlank { "未知歌手" },
+                    text = entry.artist.ifBlank { stringResource(R.string.generic_unknown_artist) },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -242,11 +261,12 @@ private fun EmptyCacheState() {
     }
 }
 
+@Composable
 private fun statusLabel(status: String): String =
     when (status) {
         "success" -> "已缓存"
         "plain_only" -> "仅文本"
-        "not_found" -> "未找到"
+        "not_found" -> stringResource(R.string.cache_filter_not_found)
         "failed" -> "失败"
         else -> status
     }

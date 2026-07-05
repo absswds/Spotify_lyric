@@ -2,14 +2,305 @@
 <resources>
     <string name="app_name">Lyrics Card</string>
 
-    <string name="menu_spotify_playlist">Spotify 歌单</string>
-    <string name="menu_lyrics_correction">歌词修正</string>
-    <string name="menu_lyrics_display">歌词显示设置</string>
-    <string name="menu_disconnect">断开连接</string>
+    <!-- Navigation -->
+    <string name="nav_playback">播放</string>
+    <string name="nav_cache">缓存</string>
+    <string name="nav_precache">预缓存</string>
+    <string name="nav_settings">设置</string>
+    <string name="nav_playlist">歌单</string>
+    <string name="nav_correction">修正</string>
 
+    <!-- Notification channel -->
     <string name="notification_channel_name">歌词通知</string>
     <string name="notification_channel_description">显示当前 Spotify 歌词行和播放控制</string>
+    <string name="notification_action_previous">上一首</string>
+    <string name="notification_action_next">下一首</string>
+    <string name="notification_action_play">播放</string>
+    <string name="notification_action_pause">暂停</string>
+    <string name="notification_action_stop">关闭</string>
 
-    <string name="waiting_for_playback">等待 Spotify 播放</string>
-    <string name="waiting_subtitle">连接后显示当前歌词</string>
+    <!-- MediaSession -->
+    <string name="mediasession_queue_title">Spotify 歌词</string>
+
+    <!-- Generic / Shared -->
+    <string name="generic_unknown_track">未知歌曲</string>
+    <string name="generic_unknown_artist">未知艺人</string>
+    <string name="generic_waiting_for_playback">等待播放…</string>
+    <string name="generic_waiting_subtitle">连接后显示当前歌词</string>
+    <string name="generic_ok">确定</string>
+    <string name="generic_cancel">取消</string>
+
+    <!-- Playback Screen - Connection status -->
+    <string name="playback_connected">已连接</string>
+    <string name="playback_disconnected">未连接</string>
+    <string name="playback_connecting">连接中…</string>
+    <string name="playback_error">连接失败</string>
+    <string name="playback_not_installed">未安装 Spotify</string>
+    <string name="playback_not_logged_in">未登录</string>
+
+    <!-- Playback Screen - Connection hints -->
+    <string name="playback_hint_connecting">正在连接 Spotify…</string>
+    <string name="playback_hint_not_installed">没有检测到 Spotify，请先安装后再连接</string>
+    <string name="playback_hint_not_logged_in">请先打开 Spotify 登录账号，再回到这里连接</string>
+    <string name="playback_hint_error">Spotify 没有连上：%1$s</string>
+    <string name="playback_hint_disconnected">连接 Spotify 后同步播放状态和歌词</string>
+
+    <!-- Playback Screen - Actions -->
+    <string name="playback_action_reconnect">重新连接</string>
+    <string name="playback_action_open_spotify">打开 Spotify 后连接</string>
+    <string name="playback_action_disconnect">断开连接</string>
+
+    <!-- Playback Screen - Track info -->
+    <string name="playback_title_waiting">等待播放</string>
+    <string name="playback_subtitle_waiting">正在等待 Spotify 播放</string>
+    <string name="playback_subtitle_connect_prompt">连接 Spotify 后同步播放状态</string>
+    <string name="playback_title_unknown">未知歌曲</string>
+
+    <!-- Playback Screen - Spotify playlist entry -->
+    <string name="playback_playlist_title">Spotify 歌单</string>
+    <string name="playback_playlist_subtitle">浏览歌单 · 点歌播放</string>
+    <string name="playlist_my_playlists">我的歌单</string>
+    <string name="playlist_refresh_loading">加载中</string>
+    <string name="playlist_loading_tracks_progress">正在加载歌曲 %1$d/%2$d</string>
+    <string name="playlist_loading_tracks">正在加载歌曲…</string>
+    <string name="playlist_no_songs">这个歌单暂时没有可播放歌曲</string>
+
+    <!-- Playback Screen - Content descriptions -->
+    <string name="playback_cd_more">更多</string>
+    <string name="playback_cd_playlist">歌单</string>
+    <string name="playback_cd_lyrics_correction">歌词修正</string>
+    <string name="playback_cd_lyrics_display">歌词显示设置</string>
+    <string name="playback_cd_disconnect">断开连接</string>
+    <string name="playback_cd_shuffle">随机播放</string>
+    <string name="playback_cd_previous">上一首</string>
+    <string name="playback_cd_play">播放</string>
+    <string name="playback_cd_next">下一首</string>
+    <string name="playback_cd_repeat">循环模式</string>
+    <string name="playback_cd_collapse">收起歌词</string>
+    <string name="playback_cd_jump_to_current">回到当前行</string>
+    <string name="playback_cd_album_art_placeholder">封面占位</string>
+
+    <!-- Playback Screen - Lyrics status messages -->
+    <string name="playback_lyrics_idle">等待播放…</string>
+    <string name="playback_lyrics_searching">正在查找歌词</string>
+    <string name="playback_lyrics_plain_only">当前歌曲暂无同步歌词</string>
+    <string name="playback_lyrics_not_found">暂未找到歌词</string>
+    <string name="playback_lyrics_low_confidence">找到疑似歌词，需要手动确认</string>
+    <string name="playback_lyrics_parse_error">歌词解析失败</string>
+    <string name="playback_lyrics_load_error">歌词加载失败</string>
+    <string name="playback_lyrics_synced_placeholder">…</string>
+    <string name="playback_lyrics_no_content">暂无歌词内容</string>
+
+    <!-- Playback Screen - Expanded lyrics -->
+    <string name="playback_fullscreen_lyrics">全屏歌词</string>
+
+    <!-- Playback Screen - Lyric display settings dialog -->
+    <string name="lyric_settings_title">歌词显示设置</string>
+    <string name="lyric_settings_description">这些设置影响展开歌词页和横屏歌词区，主页预览歌词会保持紧凑显示。</string>
+    <string name="lyric_settings_font_size">字体大小</string>
+    <string name="lyric_settings_font_small">小</string>
+    <string name="lyric_settings_font_default">默认</string>
+    <string name="lyric_settings_font_large">大</string>
+    <string name="lyric_settings_font_xlarge">超大</string>
+    <string name="lyric_settings_bold">当前行加粗</string>
+    <string name="lyric_settings_bold_label">加粗显示</string>
+    <string name="lyric_settings_dim_level">非当前行透明度</string>
+    <string name="lyric_settings_dim_low">低</string>
+    <string name="lyric_settings_dim_medium">中</string>
+    <string name="lyric_settings_dim_high">高</string>
+    <string name="lyric_settings_alignment">对齐方式</string>
+    <string name="lyric_settings_align_center">居中</string>
+    <string name="lyric_settings_align_left">左对齐</string>
+    <string name="lyric_settings_done">完成</string>
+
+    <!-- Playback - Translation -->
+    <string name="playback_translate_lyrics">翻译</string>
+    <string name="playback_translated_line">译：%1$s</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">设置</string>
+    <string name="settings_group_theme">全局主题</string>
+    <string name="settings_theme_desc">选择 App 的主题模式，影响所有页面。</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_system_desc">根据系统设置自动切换</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_light_desc">始终使用浅色模式</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_theme_dark_desc">始终使用深色模式</string>
+    <string name="settings_group_language">语言</string>
+    <string name="settings_language_desc">选择 App 显示语言</string>
+    <string name="settings_language_system">跟随系统</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_ja">日本語</string>
+    <string name="settings_group_cache">缓存与下载</string>
+    <string name="settings_auto_cache">自动缓存新播放的歌曲</string>
+    <string name="settings_auto_cache_desc">播放时自动补齐同步歌词</string>
+    <string name="settings_wifi_only">仅在 Wi-Fi 下缓存</string>
+    <string name="settings_wifi_only_desc">避免使用移动数据下载歌词</string>
+    <string name="settings_cache_album_art">缓存封面图片</string>
+    <string name="settings_cache_album_art_desc">离线时仍可显示专辑封面</string>
+    <string name="settings_group_playback">播放与代理</string>
+    <string name="settings_mediasession_proxy">启用 MediaSession 代理</string>
+    <string name="settings_mediasession_proxy_desc">在系统媒体卡片显示当前歌词</string>
+    <string name="settings_notification_lyrics">允许通知中显示歌词</string>
+    <string name="settings_notification_lyrics_desc">前台服务通知标题使用当前歌词</string>
+    <string name="settings_global_offset">全局歌词偏移</string>
+    <string name="settings_offset_early">-2s</string>
+    <string name="settings_offset_late">+2s</string>
+    <string name="settings_group_permission">权限</string>
+    <string name="settings_notification_permission">通知权限</string>
+    <string name="settings_notification_granted">已授权</string>
+    <string name="settings_notification_denied">未授权，点击申请</string>
+    <string name="settings_notification_legacy">Android 12 及以下无需额外申请</string>
+    <string name="settings_group_storage">缓存存储</string>
+    <string name="settings_clear_cache">清理歌词缓存</string>
+    <string name="settings_clear_cache_desc">删除所有歌词、封面和失败记录</string>
+    <string name="settings_about_app">关于 Lyrics Proxy</string>
+    <string name="settings_about_version_detail">版本 0.1.0</string>
+    <string name="settings_group_about">关于</string>
+    <string name="settings_about_version">版本</string>
+    <string name="settings_open_source_licenses">开源许可</string>
+    <string name="settings_group_translation">歌词翻译</string>
+    <string name="settings_translate_lyrics">启用歌词翻译</string>
+    <string name="settings_translate_lyrics_desc">自动检测歌词语言并翻译</string>
+    <string name="settings_translate_target">目标语言</string>
+    <string name="settings_translate_target_zh">中文</string>
+    <string name="settings_translate_target_en">English</string>
+    <string name="settings_translate_target_ja">日本語</string>
+
+    <!-- Cache Screen -->
+    <string name="cache_title">缓存管理</string>
+    <string name="cache_filter_all">全部</string>
+    <string name="cache_filter_synced">已同步</string>
+    <string name="cache_filter_plain">纯文本</string>
+    <string name="cache_filter_not_found">未找到</string>
+    <string name="cache_search_placeholder">搜索已缓存的曲目</string>
+    <string name="cache_empty_all">暂无缓存曲目</string>
+    <string name="cache_empty_synced">暂无已同步的歌词缓存</string>
+    <string name="cache_empty_plain">暂无纯文本歌词缓存</string>
+    <string name="cache_empty_not_found">暂无未找到的条目</string>
+    <string name="cache_cd_delete">删除</string>
+    <string name="cache_cd_open">打开</string>
+    <string name="cache_confirm_delete_title">确认删除</string>
+    <string name="cache_confirm_delete_message">确定要删除这首歌词缓存吗？</string>
+    <string name="cache_confirm_delete_confirm">删除</string>
+    <string name="cache_confirm_delete_cancel">取消</string>
+    <string name="cache_delete_success">已删除</string>
+    <string name="cache_delete_failed">删除失败</string>
+    <string name="cache_cached_lines_format">%1$d 行同步歌词</string>
+    <string name="cache_updated_format">更新于 %1$s</string>
+    <string name="cache_not_found_status">7天内不重复搜索</string>
+
+    <!-- Playlist Screen -->
+    <string name="playlist_loading">正在加载歌单…</string>
+    <string name="playlist_load_failed">歌单加载失败</string>
+    <string name="playlist_empty">没有找到歌单</string>
+    <string name="playlist_auth_required">需要 Spotify 授权才能查看歌单</string>
+    <string name="playlist_auth_failed">授权失败</string>
+    <string name="playlist_cd_refresh">刷新</string>
+    <string name="playlist_cd_play_track">播放这首歌</string>
+
+    <!-- Lyrics Correction Screen -->
+    <string name="correction_title">歌词修正</string>
+    <string name="correction_status_searching">正在搜索歌词…</string>
+    <string name="correction_status_no_lyrics">暂无歌词</string>
+    <string name="correction_status_ready">歌词已就绪</string>
+    <string name="correction_offset_label">偏移</string>
+    <string name="correction_offset_forward">提前</string>
+    <string name="correction_offset_backward">延后</string>
+    <string name="correction_reset_offset">重置偏移</string>
+    <string name="correction_rematch">重新匹配</string>
+    <string name="correction_blacklist">标记为错误</string>
+    <string name="correction_candidate_title">选择歌词</string>
+    <string name="correction_candidate_pick">选择匹配项</string>
+    <string name="correction_manual_select">手动选择</string>
+    <string name="correction_toast_reset">偏移已重置</string>
+    <string name="correction_toast_blacklisted">已加入黑名单</string>
+    <string name="correction_toast_rematched">已重新搜索</string>
+    <string name="correction_toast_candidate_selected">已选择歌词来源</string>
+    <string name="correction_line_count_format">%1$d 行同步歌词</string>
+    <string name="correction_candidate_format">候选 %1$d: %2$s</string>
+    <string name="correction_offset_ms_format">%1$d ms</string>
+    <string name="correction_current_offset_label">当前偏移</string>
+    <string name="correction_instruction">点击「重新匹配」搜索其他歌词来源，或手动调整时间偏移</string>
+    <string name="correction_classify_failed">无法匹配歌词</string>
+    <string name="correction_candidate_subtitle">%1$s · %2$d分</string>
+    <string name="correction_back">返回</string>
+    <string name="correction_no_track">未播放</string>
+    <string name="correction_current_line_label">当前歌词行: %1$s</string>
+    <string name="correction_offset_title">歌词偏移</string>
+    <string name="correction_no_offset">无偏移</string>
+    <string name="correction_advance_label">提前（歌词来得太晚时使用）</string>
+    <string name="correction_delay_label">推迟（歌词来得太早时使用）</string>
+    <string name="correction_actions_title">操作</string>
+    <string name="correction_research">重新搜索歌词</string>
+    <string name="correction_mark_wrong">标记为错误歌曲</string>
+    <string name="correction_view_candidates">查看候选列表 (%1$d 个)</string>
+    <string name="correction_status_synced">已匹配 (%1$d分)</string>
+    <string name="correction_status_plain">仅文本歌词</string>
+    <string name="correction_status_notfound">未找到歌词</string>
+    <string name="correction_status_low">低分匹配 (%1$d分)</string>
+    <string name="correction_status_parse_error">解析失败</string>
+    <string name="correction_status_error">错误: %1$s</string>
+
+    <!-- Precache Screen -->
+    <string name="precache_title">预缓存歌词</string>
+    <string name="precache_auth_required">需要 Spotify 授权</string>
+    <string name="precache_auth_button">去授权</string>
+    <string name="precache_select_playlist">选择一个歌单</string>
+    <string name="precache_progress_format">正在处理 %1$d/%2$d…</string>
+    <string name="precache_complete_format">缓存完成: %1$d/%2$d 首歌词</string>
+    <string name="precache_error_fetch">获取歌单失败</string>
+    <string name="precache_error_cache">缓存歌词失败</string>
+    <string name="precache_loading">正在加载…</string>
+    <string name="precache_empty">没有找到歌单</string>
+    <string name="precache_cached_label">已缓存</string>
+    <string name="precache_total_label">总计</string>
+    <string name="precache_cd_start">开始缓存</string>
+    <string name="precache_cd_stop">停止</string>
+    <string name="precache_playlist_progress">%1$d/%2$d 首</string>
+    <string name="precache_auth_prompt">授权后即可选择歌单</string>
+    <string name="precache_screen_title">歌单预缓存</string>
+    <string name="precache_your_playlists">你的歌单</string>
+    <string name="precache_logout">退出</string>
+    <string name="precache_login_spotify">登录 Spotify</string>
+    <string name="precache_login_description">登录 Spotify 后选择歌单，App 会自动补齐歌词缓存</string>
+    <string name="precache_no_playlists">未获取到歌单</string>
+    <string name="precache_retry">重试</string>
+    <string name="precache_cached_format">%1$d/%2$d 已缓存</string>
+    <string name="precache_processing">处理中 %1$d%%</string>
+    <string name="precache_tracks_count">%1$d 首歌曲</string>
+    <string name="precache_owner_only">%1$d 首歌曲 · 仅创建者/协作歌单可缓存</string>
+    <string name="precache_cache_button">缓存</string>
+
+    <!-- Toast / Error messages (ViewModel layer) -->
+    <string name="error_auth_required">需要先授权，请重试</string>
+    <string name="error_connect_failed">连接 Spotify 失败</string>
+    <string name="error_fetch_playlist">获取歌单失败</string>
+    <string name="error_fetch_lyrics">获取歌词失败</string>
+    <string name="error_no_network">网络不可用</string>
+    <string name="error_not_logged_in">请先登录 Spotify</string>
+    <string name="error_no_spotify">请先安装 Spotify</string>
+    <string name="error_precache_failed">预缓存失败</string>
+    <string name="error_blacklist_failed">加入黑名单失败</string>
+    <string name="error_search_failed">搜索歌词失败</string>
+    <string name="error_unknown">未知错误</string>
+
+    <!-- Manual lyrics import -->
+    <string name="import_lyrics_title">导入本地歌词</string>
+    <string name="import_lyrics_button">导入 .lrc 文件</string>
+    <string name="import_lyrics_success">歌词已导入</string>
+    <string name="import_lyrics_error">导入失败</string>
+    <string name="import_lyrics_empty">文件内容为空或格式无效</string>
+
+    <!-- Scan local lyrics folder -->
+    <string name="scan_lyrics_folder">扫描本地歌词文件夹</string>
+    <string name="scan_lyrics_folder_desc">批量导入 .lrc 文件，文件名需包含歌名或艺人名</string>
+    <string name="scan_lyrics_scanning">正在扫描…</string>
+    <string name="scan_lyrics_complete">扫描完成：%1$d 首歌词已导入</string>
+    <string name="scan_lyrics_no_match">未找到匹配的歌词文件</string>
+
+    <!-- Cache source labels -->
+    <string name="cache_source_manual">手动</string>
 </resources>
