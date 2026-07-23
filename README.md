@@ -165,6 +165,16 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 > On **Android 13+**, you need to grant the **notification permission** when prompted, otherwise lyrics won't appear in the notification bar.
 
+### Keep the App Alive in Background
+
+This app runs a foreground service to display lyrics in the notification. Some Android systems (especially OPPO ColorOS, Xiaomi MIUI, Huawei HarmonyOS, vivo OriginOS) aggressively kill background apps to save battery. If the notification disappears after a while, you need to manually allow the app to run in the background:
+
+1. **Disable battery optimization** — Settings → Battery → Battery Optimization → Find this app → Select "Don't optimize"
+2. **Enable auto-start** (if available) — Settings → Apps → Manage Apps → Find this app → Enable "Auto-start"
+3. **Lock the app in recent tasks** — Open recent tasks, swipe down on this app's card to lock it (prevents system from killing it)
+
+> Without these settings, the system may kill the foreground service and lyrics will stop updating.
+
 ### Troubleshooting
 
 | Symptom | Cause | Fix |
@@ -175,6 +185,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 | "Connection failed" on tap | Spotify not logged in | Log in to the Spotify App first |
 | Lyrics not showing in notification | Notification permission denied | Grant permission in Settings → Notifications |
 | Auth redirect closes immediately | Wrong redirect URI in Dashboard | Verify `spotifylyricsproxy://callback` is set |
+| Notification disappears after a while | System killed the background service | Disable battery optimization, enable auto-start, lock in recent tasks (see [Keep the App Alive](#keep-the-app-alive-in-background)) |
 
 ---
 
