@@ -44,6 +44,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
 
@@ -246,6 +250,7 @@ private fun TrackRow(
     track: PlaylistTrack,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -262,15 +267,29 @@ private fun TrackRow(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(Color(0xFFEFF1F6), RoundedCornerShape(10.dp)),
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFEFF1F6)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = stringResource(R.string.playback_cd_play),
-                    tint = Color(0xFF4F5EDC),
-                    modifier = Modifier.size(22.dp)
-                )
+                if (track.imageUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(track.imageUrl)
+                            .crossfade(true)
+                            .size(120)
+                            .build(),
+                        contentDescription = stringResource(R.string.playback_cd_album_art_placeholder),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = stringResource(R.string.playback_cd_play),
+                        tint = Color(0xFF4F5EDC),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {

@@ -19,7 +19,8 @@ data class PlaylistTrack(
     val uri: String,
     val title: String,
     val artist: String,
-    val durationMs: Long
+    val durationMs: Long,
+    val imageUrl: String? = null
 )
 
 class PlaylistViewModel(application: Application) : AndroidViewModel(application) {
@@ -106,13 +107,17 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                     for (item in response.items) {
                         val track = item.track ?: continue
                         if (track.id.isBlank()) continue
+                        val imageUrl = track.album?.images
+                            ?.minByOrNull { it.width ?: Int.MAX_VALUE }
+                            ?.url
                         allTracks.add(
                             PlaylistTrack(
                                 id = track.id,
                                 uri = track.uri,
                                 title = track.name,
                                 artist = track.artists.joinToString(", ") { it.name },
-                                durationMs = track.durationMs
+                                durationMs = track.durationMs,
+                                imageUrl = imageUrl
                             )
                         )
                     }

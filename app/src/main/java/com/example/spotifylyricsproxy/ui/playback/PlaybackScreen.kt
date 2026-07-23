@@ -33,8 +33,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
@@ -532,10 +533,10 @@ private fun ActionPill(
 }
 
 @Composable
-private fun AlbumArtHero(albumArt: Bitmap?, accent: Color) {
+private fun AlbumArtHero(albumArt: Bitmap?, accent: Color, widthFraction: Float = 0.66f) {
     Box(
         modifier = Modifier
-            .fillMaxWidth(0.66f)
+            .fillMaxWidth(widthFraction)
             .aspectRatio(1f),
         contentAlignment = Alignment.Center
     ) {
@@ -589,18 +590,21 @@ private fun AlbumArtHero(albumArt: Bitmap?, accent: Color) {
 @Composable
 private fun TrackTitleBlock(
     trackInfo: SpotifyTrackInfo,
-    connectionState: SpotifyConnectionState
+    connectionState: SpotifyConnectionState,
+    textScale: Float = 1f
 ) {
     Text(
         text = trackInfo.title.ifEmpty { stringResource(R.string.playback_title_waiting) },
-        style = MaterialTheme.typography.headlineSmall,
+        style = MaterialTheme.typography.headlineSmall.copy(
+            fontSize = MaterialTheme.typography.headlineSmall.fontSize * textScale
+        ),
         color = Color.White,
         textAlign = TextAlign.Center,
         fontWeight = FontWeight.Bold,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis
     )
-    Spacer(modifier = Modifier.height(6.dp))
+    Spacer(modifier = Modifier.height((6 * textScale).dp))
     Text(
         text = if (trackInfo.artist.isNotEmpty()) {
             listOf(trackInfo.artist, trackInfo.album)
@@ -609,7 +613,9 @@ private fun TrackTitleBlock(
         } else {
             if (connectionState is SpotifyConnectionState.Connected) stringResource(R.string.playback_subtitle_waiting) else stringResource(R.string.playback_subtitle_connect_prompt)
         },
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.typography.bodyMedium.copy(
+            fontSize = MaterialTheme.typography.bodyMedium.fontSize * textScale
+        ),
         color = Color.White.copy(alpha = 0.66f),
         textAlign = TextAlign.Center,
         maxLines = 1,
@@ -869,7 +875,7 @@ private fun PlaybackControls(
         // Previous
         IconButton(onClick = onSkipPrevious, enabled = isConnected) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = Icons.Filled.SkipPrevious,
                 contentDescription = stringResource(R.string.playback_cd_previous),
                 modifier = Modifier.size(34.dp),
                 tint = Color.White.copy(alpha = if (isConnected) 0.86f else 0.28f)
@@ -908,7 +914,7 @@ private fun PlaybackControls(
         // Next
         IconButton(onClick = onSkipNext, enabled = isConnected) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                imageVector = Icons.Filled.SkipNext,
                 contentDescription = stringResource(R.string.playback_cd_next),
                 modifier = Modifier.size(34.dp),
                 tint = Color.White.copy(alpha = if (isConnected) 0.86f else 0.28f)
@@ -1333,6 +1339,9 @@ private fun LandscapePlaybackLayout(
     onCycleRepeat: () -> Unit,
     onLyricDisplaySettings: () -> Unit
 ) {
+    val landscapeConfig = LocalConfiguration.current
+    val isTablet = landscapeConfig.smallestScreenWidthDp >= 600
+
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -1340,7 +1349,7 @@ private fun LandscapePlaybackLayout(
     ) {
         Column(
             modifier = Modifier
-                .weight(0.34f)
+                .weight(if (isTablet) 0.44f else 0.34f)
                 .fillMaxHeight(),
             horizontalAlignment = Alignment.Start
         ) {
@@ -1363,15 +1372,23 @@ private fun LandscapePlaybackLayout(
             ) {
                 // Album art — compact and proportional in landscape
                 Box(
-                    modifier = Modifier.fillMaxWidth(0.48f),
+                    modifier = Modifier.fillMaxWidth(if (isTablet) 0.88f else 0.48f),
                     contentAlignment = Alignment.Center
                 ) {
-                    AlbumArtHero(albumArt = albumArt, accent = palette.accent)
+                    AlbumArtHero(
+                        albumArt = albumArt,
+                        accent = palette.accent,
+                        widthFraction = if (isTablet) 0.88f else 0.66f
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(if (isTablet) 16.dp else 12.dp))
 
-                TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
+                TrackTitleBlock(
+                    trackInfo = trackInfo,
+                    connectionState = connectionState,
+                    textScale = if (isTablet) 1.28f else 1f
+                )
 
                 // Flexible spacer — absorbs extra space on large screens,
                 // collapses on small screens to prevent overlap
@@ -1402,7 +1419,7 @@ private fun LandscapePlaybackLayout(
 
         Column(
             modifier = Modifier
-                .weight(0.66f)
+                .weight(if (isTablet) 0.56f else 0.66f)
                 .fillMaxHeight()
                 .padding(start = 22.dp),
             verticalArrangement = Arrangement.Top,
