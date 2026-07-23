@@ -6,6 +6,7 @@ captures/
 .externalNativeBuild/
 .cxx/
 local.properties
+*.hprof
 
 # Android Studio / IntelliJ
 .idea/
@@ -13,6 +14,9 @@ local.properties
 *.ipr
 *.iws
 out/
+
+# Kotlin
+.kotlin/
 
 # Signing keys and local secrets
 *.jks
@@ -67,6 +71,7 @@ findings.md
 progress.md
 task_plan.md
 test_output.txt
+last-task-context.md
 
 # Environment files
 .env
