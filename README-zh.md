@@ -95,28 +95,38 @@ Spotify Lyrics Proxy 是一个 Android 应用，在 Spotify 播放状态与第�
 
 ### 获取 Client ID
 
-本应用通过 Spotify Android SDK 连接 Spotify，需要先注册一个应用。
+本应用通过 Spotify Android SDK 连接 Spotify，需要先在 Spotify Developer Dashboard 注册一个应用。
 
 1. 打开 [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)，用你的 Spotify 账号登录
 2. 点击 **Create App**
-3. 任意填写 **App name** 和 **App description**（例如 "Spotify Lyrics Proxy"）
-4. 在 **Redirect URIs** 中添加：
-   ```
-   spotifylyricsproxy://callback
-   ```
-5. 勾选 **Web API**（默认即可）
-6. 同意条款，点击 **Save**
-7. 在应用详情页复制 **Client ID**（32 位十六进制字符串）
+3. 按以下说明填写表单：
 
-> 不需要添加 Android 包名或 SHA 指纹——本应用使用 Spotify Auth SDK，配置 Redirect URI 即足够。
+   | 字段 | 填写内容 |
+   |------|----------|
+   | **App name** | 随便填，只是给你自己看的（例如 "Lyrics Card"） |
+   | **App description** | 例如 "Personal lyrics display app" |
+   | **Website** | 留空 |
+   | **Redirect URIs** | 添加以下地址（**必须完全一致**，不能多斜杠或空格）：`spotifylyricsproxy://callback` |
+   | **Android packages** | **留空**（不需要填写，见下方说明） |
+   | **iOS app bundles** | 留空 |
+   | **Which API/SDKs are you planning to use?** | 勾选 **Web API** |
+
+   > **Redirect URI** 是 App 授权后接收 OAuth token 的回调地址，必须**完全一致**——末尾不能有斜杠或空格。
+
+   > **Android packages** — 不需要填写包名或 SHA 指纹。本应用使用 Spotify Auth SDK（浏览器 OAuth），只需配置 Redirect URI。包名/指纹字段仅在使用 Spotify App Remote SDK 深度链接时才需要，本应用不需要。
+
+4. 点击页面底部的 **Save**
+5. 从页面顶部复制 **Client ID**（32 位十六进制字符串，例如 `81a57006ff4a4d5d96cb72f180aa4ab5`）
+
+> Client ID 不是密钥（会嵌入 APK），但不要提交到公开仓库。
 
 ### 从源码构建
 
 克隆仓库：
 
 ```bash
-git clone https://github.com/your-username/spotify-lyrics-proxy.git
-cd spotify-lyrics-proxy
+git clone https://github.com/absswds/Spotify_lyric.git
+cd Spotify_lyric
 ```
 
 配置 Client ID：
@@ -165,19 +175,6 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 | 点击连接后闪退 | Spotify 未登录 | 先打开 Spotify 登录账号 |
 | 通知栏不显示歌词 | 未授予通知权限 | 在系统设置中开启通知权限 |
 | 授权后瞬间关闭 | Dashboard 中 Redirect URI 配置错误 | 确认已添加 `spotifylyricsproxy://callback` |
-
-构建并安装：
-
-```bash
-./gradlew assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
-
-### 首次使用
-
-1. 打开 App，点击**连接 Spotify**
-2. 在 Spotify App 中授权播放状态访问
-3. 播放任意歌曲——通知栏将显示当前歌词行
 
 ---
 

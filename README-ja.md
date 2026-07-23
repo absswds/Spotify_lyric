@@ -95,28 +95,38 @@ Spotify Lyrics Proxy は、Spotify の再生状態とサードパーティの歌
 
 ### Client ID を取得する
 
-本アプリは Spotify Android SDK を使用して Spotify に接続するため、事前にアプリの登録が必要です。
+本アプリは Spotify Android SDK を使用して Spotify に接続するため、Spotify Developer Dashboard でアプリの登録が必要です。
 
 1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) にアクセスし、Spotify アカウントでログイン
 2. **Create App** をクリック
-3. **App name** と **App description** を任意に入力（例："Spotify Lyrics Proxy"）
-4. **Redirect URIs** に以下を追加：
-   ```
-   spotifylyricsproxy://callback
-   ```
-5. **Web API** にチェック（デフォルトのままで OK）
-6. 利用規約に同意し **Save** をクリック
-7. アプリ詳細ページから **Client ID**（32文字の16進数文字列）をコピー
+3. 以下の通りフォームを記入：
 
-> Android パッケージ名や SHA フィンガープリントの登録は不要です。このアプリは Spotify Auth SDK を使用するため、Redirect URI の設定のみで動作します。
+   | フィールド | 内容 |
+   |-----------|------|
+   | **App name** | 任意の名前（例："Lyrics Card"）。自分用の表示名です |
+   | **App description** | 例："Personal lyrics display app" |
+   | **Website** | 空欄のまま |
+   | **Redirect URIs** | 以下の URI を追加（**完全に一致**にする必要があります）：`spotifylyricsproxy://callback` |
+   | **Android packages** | **空欄のまま**（不要です。下記の説明を参照） |
+   | **iOS app bundles** | 空欄のまま |
+   | **Which API/SDKs are you planning to use?** | **Web API** にチェック |
+
+   > **Redirect URI** は、アプリが OAuth トークンを受け取るためのコールバック URL です。**完全に一致**させる必要があります。末尾のスラッシュやスペースは不可です。
+
+   > **Android packages** — パッケージ名や SHA フィンガープリントの登録は不要です。このアプリは Spotify Auth SDK（ブラウザベースの OAuth）を使用するため、Redirect URI の設定のみで動作します。パッケージ名/フィンガープリントは Spotify App Remote SDK のディープリンクにのみ必要で、このアプリでは使用しません。
+
+4. ページ下部の **Save** をクリック
+5. ページ上部の **Client ID** をコピー（32文字の16進数文字列、例：`81a57006ff4a4d5d96cb72f180aa4ab5`）
+
+> Client ID はシークレットではありません（APK に埋め込まれます）が、公開リポジトリにはコミットしないでください。
 
 ### ソースからビルド
 
 リポジトリをクローン：
 
 ```bash
-git clone https://github.com/your-username/spotify-lyrics-proxy.git
-cd spotify-lyrics-proxy
+git clone https://github.com/absswds/Spotify_lyric.git
+cd Spotify_lyric
 ```
 
 Client ID を設定：
@@ -165,19 +175,6 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 | 接続後にすぐ閉じる | Spotify 未ログイン | Spotify App でログイン |
 | 通知に歌詞が表示されない | 通知権限が拒否されている | システム設定で通知を許可 |
 | 認証後にすぐ閉じる | Dashboard の Redirect URI が間違っている | `spotifylyricsproxy://callback` が設定されているか確認 |
-
-ビルドしてインストール：
-
-```bash
-./gradlew assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
-
-### 初回起動
-
-1. アプリを開き、**Connect Spotify** をタップ
-2. Spotify App で再生状態のアクセスを許可
-3. 任意の曲を再生 — 通知に現在の歌詞行が表示されます
 
 ---
 

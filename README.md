@@ -95,28 +95,38 @@ The app reads the currently playing track via Spotify App Remote, fetches synchr
 
 ### Obtain a Client ID
 
-This app connects to Spotify using Spotify's Android SDK, which requires a registered application.
+This app connects to Spotify using Spotify's Android SDK, which requires a registered application on the Spotify Developer Dashboard.
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and log in with your Spotify account
 2. Click **Create App**
-3. Enter any **App name** and **App description** (e.g., "Spotify Lyrics Proxy")
-4. Under **Redirect URIs**, add:
-   ```
-   spotifylyricsproxy://callback
-   ```
-5. Check **Web API** (the default selection is sufficient)
-6. Accept the terms and click **Save**
-7. On the app dashboard, copy the **Client ID** (a 32-character hex string)
+3. Fill in the form as follows:
 
-> You do not need to add your Android package name or SHA fingerprint — this app uses Spotify's Auth SDK, which only requires the redirect URI.
+   | Field | Value |
+   |-------|-------|
+   | **App name** | Any name you like (e.g. "Lyrics Card") — this is just for your reference |
+   | **App description** | e.g. "Personal lyrics display app" |
+   | **Website** | Leave empty |
+   | **Redirect URIs** | Add exactly: `spotifylyricsproxy://callback` |
+   | **Android packages** | Leave empty (not required — see note below) |
+   | **iOS app bundles** | Leave empty |
+   | **Which API/SDKs are you planning to use?** | Check **Web API** |
+
+   > The **Redirect URI** is the callback URL the app uses to receive the OAuth token after you authorize. It must match **character-for-character** — no trailing slash, no extra spaces.
+
+   > **Android packages** — You do NOT need to add your package name or SHA fingerprint here. This app uses Spotify's Auth SDK (browser-based OAuth), which only requires the redirect URI. The package/SHA fields are only needed if you use Spotify's App Remote SDK with deep links, which this app does not require.
+
+4. Click **Save** at the bottom of the page
+5. Copy the **Client ID** from the top of the page (a 32-character hex string, e.g. `81a57006ff4a4d5d96cb72f180aa4ab5`)
+
+> The Client ID is not a secret (it's embedded in the APK), but do not commit it to a public repo.
 
 ### Build from Source
 
 Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/spotify-lyrics-proxy.git
-cd spotify-lyrics-proxy
+git clone https://github.com/absswds/Spotify_lyric.git
+cd Spotify_lyric
 ```
 
 Configure the Client ID:
@@ -165,10 +175,6 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 | "Connection failed" on tap | Spotify not logged in | Log in to the Spotify App first |
 | Lyrics not showing in notification | Notification permission denied | Grant permission in Settings → Notifications |
 | Auth redirect closes immediately | Wrong redirect URI in Dashboard | Verify `spotifylyricsproxy://callback` is set |
-
-1. Open the app and tap **Connect Spotify**
-2. Authorize playback access in the Spotify App
-3. Play any track — the notification will display the current lyric line
 
 ---
 
