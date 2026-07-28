@@ -87,11 +87,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import com.example.spotifylyricsproxy.ui.playback.ImmersiveAlbumBackground
-import com.example.spotifylyricsproxy.ui.playback.ImmersiveLyricsBlock
-import com.example.spotifylyricsproxy.ui.playback.ImmersiveSeekControl
-import com.example.spotifylyricsproxy.ui.playback.ImmersiveTrackHeader
-import com.example.spotifylyricsproxy.ui.playback.AlbumPalette
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.text.font.FontWeight
@@ -227,68 +222,47 @@ fun PlaybackScreen(
                     onLyricDisplaySettings = { showLyricDisplaySettings = true }
                 )
             } else {
-                // Immersive portrait layout
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(palette.deep)
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Album artwork background (top 32%)
-                    ImmersiveAlbumBackground(
-                        albumArt = albumArt,
-                        palette = palette
+                    CompactTopBar(
+                        state = connectionState,
+                        onOpenPlaylist = onOpenPlaylist,
+                        onCorrection = onOpenLyricsCorrection,
+                        onLyricDisplaySettings = { showLyricDisplaySettings = true },
+                        onDisconnect = viewModel::disconnect
                     )
+
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .statusBarsPadding()
-                            .navigationBarsPadding()
+                            .fillMaxWidth()
+                            .weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Top bar (compact)
-                        CompactTopBar(
-                            state = connectionState,
-                            onOpenPlaylist = onOpenPlaylist,
-                            onCorrection = onOpenLyricsCorrection,
-                            onLyricDisplaySettings = { showLyricDisplaySettings = true },
-                            onDisconnect = viewModel::disconnect,
-                            showStatus = false // Hide status in immersive mode
-                        )
+                        AlbumArtHero(albumArt = albumArt, accent = palette.accent)
 
-                        // Spacer for artwork area
-                        Spacer(
-                            modifier = Modifier.height(
-                                with(LocalConfiguration.current) {
-                                    (screenHeightDp.dp * 0.32f) - 48.dp
-                                }.coerceAtLeast(0.dp)
-                            )
-                        )
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                        // Track header with compact controls
-                        ImmersiveTrackHeader(
-                            trackInfo = trackInfo,
-                            connectionState = connectionState,
-                            isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
-                            isConnected = connectionState is SpotifyConnectionState.Connected,
-                            onPlayPause = viewModel::togglePlayPause,
-                            onSkipNext = viewModel::skipNext,
-                            onSkipPrevious = viewModel::skipPrevious
-                        )
+                        TrackTitleBlock(trackInfo = trackInfo, connectionState = connectionState)
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(18.dp))
 
-                        // Lyrics (fixed anchor, uniform blur)
                         if (connectionState is SpotifyConnectionState.Connected) {
-                            ImmersiveLyricsBlock(
+                            CompactLyricsBlock(
                                 currentLine = currentLyricLine,
                                 allLines = parsedLyrics,
                                 status = lyricStatus,
                                 translatedLine = translatedLine,
                                 isTranslationEnabled = isTranslationEnabled,
-                                onSeek = viewModel::seekTo,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 24.dp)
+                                onExpand = { lyricsExpanded = true },
+                                onImportLyrics = viewModel::importManualLyrics
                             )
                         } else {
                             ConnectActionPanel(
@@ -296,19 +270,27 @@ fun PlaybackScreen(
                                 accent = palette.accent,
                                 isSpotifyInstalled = isSpotifyInstalled,
                                 onConnect = viewModel::connect,
-                                onOpenSpotify = viewModel::openSpotifyAndConnect,
-                                modifier = Modifier.weight(1f)
+                                onOpenSpotify = viewModel::openSpotifyAndConnect
                             )
                         }
 
-                        // Immersive seek control
-                        ImmersiveSeekControl(
-                            estimatedPositionMs = estimatedPositionMs,
-                            durationMs = trackInfo.durationMs,
-                            onSeek = viewModel::seekTo,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
+                        Spacer(modifier = Modifier.weight(1f))
                     }
+
+                    BottomPlaybackPane(
+                        estimatedPositionMs = estimatedPositionMs,
+                        durationMs = trackInfo.durationMs,
+                        accent = palette.accent,
+                        isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
+                        isConnected = connectionState is SpotifyConnectionState.Connected,
+                        playbackOptions = playbackOptions,
+                        onSeek = viewModel::seekTo,
+                        onPlayPause = viewModel::togglePlayPause,
+                        onSkipNext = viewModel::skipNext,
+                        onSkipPrevious = viewModel::skipPrevious,
+                        onToggleShuffle = viewModel::toggleShuffle,
+                        onCycleRepeat = viewModel::cycleRepeat
+                    )
                 }
             }
         }
@@ -462,11 +444,10 @@ private fun ConnectActionPanel(
     accent: Color,
     isSpotifyInstalled: Boolean,
     onConnect: () -> Unit,
-    onOpenSpotify: () -> Unit,
-    modifier: Modifier = Modifier
+    onOpenSpotify: () -> Unit
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f))
     ) {
@@ -1009,13 +990,13 @@ private fun ModeToggleButton(
     }
 }
 
-internal data class AlbumPalette(
+private data class AlbumPalette(
     val deep: Color,
     val mid: Color,
     val accent: Color
 )
 
-internal fun albumPalette(bitmap: Bitmap?): AlbumPalette {
+private fun albumPalette(bitmap: Bitmap?): AlbumPalette {
     if (bitmap == null) {
         return AlbumPalette(
             deep = Color(0xFF111827),
