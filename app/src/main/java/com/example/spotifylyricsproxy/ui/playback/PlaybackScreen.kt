@@ -1503,7 +1503,7 @@ private fun LandscapePlaybackLayout(
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(start = 22.dp, end = 22.dp, bottom = 20.dp),
+                .padding(start = 48.dp, end = 48.dp, bottom = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Left: small cover + title/artist — natural size on the left edge
