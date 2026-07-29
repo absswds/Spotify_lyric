@@ -120,17 +120,8 @@ class LyricsRepository(private val database: AppDatabase) {
                     }
                 }
                 "not_found", "failed" -> {
-                    if (cached.nextRetryAt != null && System.currentTimeMillis() < cached.nextRetryAt) {
-                        // If the cache source is null/empty, it was created by an older version
-                        // without multi-source support. Re-check immediately.
-                        if (cached.source.isNullOrEmpty()) {
-                            Log.i(TAG, "Old not_found cache (no source), re-checking with new sources")
-                        } else {
-                            Log.d(TAG, "Retry not yet due for $title")
-                            _lyricStatus.value = LyricStatus.NotFound
-                            return
-                        }
-                    }
+                    // Always re-search when playing a song, don't wait for retry timer
+                    Log.d(TAG, "not_found/failed cache — re-searching for $title")
                 }
                 "plain_only" -> {
                     cached.syncedLyrics?.let { synced ->
