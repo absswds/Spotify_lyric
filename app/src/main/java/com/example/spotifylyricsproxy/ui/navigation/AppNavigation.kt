@@ -119,7 +119,7 @@ fun AppNavigation(
     // Use smallestScreenWidthDp — stable regardless of rotation.
     // 600dp+ = tablet (show bottom nav in landscape); below = phone (hide it).
     val isTablet = configuration.smallestScreenWidthDp >= 600
-    val showBottomBar = currentRoute in bottomNavItems.map { it.route } && !isPlayback
+    val showBottomBar = false
     val appBackground = when {
         isPlayback -> Color(0xFF080D16)
         isDarkTheme -> Color(0xFF0B0F18)
