@@ -1497,13 +1497,13 @@ private fun LandscapePlaybackLayout(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Center: interactive progress bar (same as portrait)
-            Box(modifier = Modifier.weight(1f)) {
-                ProgressBlock(
+            // Center: glass-style seek control (same as portrait expanded view)
+            Box(modifier = Modifier.weight(1f).height(48.dp)) {
+                ImmersiveSeekControl(
                     estimatedPositionMs = estimatedPositionMs,
                     durationMs = durationMs,
-                    accent = accent,
-                    onSeek = onSeek
+                    onSeek = onSeek,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
