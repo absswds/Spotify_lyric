@@ -72,6 +72,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.ui.cache.CacheScreen
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
+import com.example.spotifylyricsproxy.ui.theme.GlassSurface
 import com.example.spotifylyricsproxy.ui.theme.ThemePreferences
 import com.example.spotifylyricsproxy.ui.playback.LyricsCorrectionScreen
 import com.example.spotifylyricsproxy.ui.playback.PlaybackScreen
@@ -198,58 +199,62 @@ fun AppNavigation(
             enter = slideInHorizontally { it } + fadeIn(animationSpec = tween(220)),
             exit = slideOutHorizontally { it } + fadeOut(animationSpec = tween(180))
         ) {
-            Box(Modifier.fillMaxSize().clickable { showRightDrawer = false }) {
-                Box(
-                    Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(300.dp)
-                        .clip(RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp))
-                        .background(Color(0xFF0B0F18))
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)).clickable { showRightDrawer = false }) {
+                GlassSurface(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(300.dp),
+                    shape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp),
+                    glassAlpha = 0.78f,
+                    borderAlpha = 0.22f
                 ) {
-                    Column(Modifier.fillMaxSize().padding(top = 52.dp, start = 18.dp, end = 18.dp, bottom = 26.dp)) {
-                        Text(text = stringResource(R.string.nav_menu_title), color = Color.White,
-                            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 12.dp, bottom = 16.dp))
-                        listOf(
-                            NavRoute.Playlist, NavRoute.Cache, NavRoute.Precache,
-                            NavRoute.Settings, NavRoute.LyricsCorrection
-                        ).forEach { item ->
+                    Box(Modifier.fillMaxSize().background(Color(0xE60B0F18))) {
+                        Column(Modifier.fillMaxSize().padding(top = 52.dp, start = 18.dp, end = 18.dp, bottom = 26.dp)) {
+                            Text(text = stringResource(R.string.nav_menu_title), color = Color.White,
+                                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 12.dp, bottom = 16.dp))
+                            listOf(
+                                NavRoute.Playlist, NavRoute.Cache, NavRoute.Precache,
+                                NavRoute.Settings, NavRoute.LyricsCorrection
+                            ).forEach { item ->
+                                Row(
+                                    Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                        .clip(RoundedCornerShape(18.dp))
+                                        .clickable {
+                                            showRightDrawer = false
+                                            navController.navigate(item.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                                launchSingleTop = true; restoreState = true
+                                            }
+                                        }
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(item.icon, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = 0.75f))
+                                    Text(stringResource(item.labelRes), color = Color.White.copy(alpha = 0.75f),
+                                        fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp))
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
                             Row(
                                 Modifier.fillMaxWidth().padding(vertical = 4.dp)
                                     .clip(RoundedCornerShape(18.dp))
                                     .clickable {
                                         showRightDrawer = false
-                                        navController.navigate(item.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                            launchSingleTop = true; restoreState = true
-                                        }
+                                        requestLyricSettings = true
                                     }
                                     .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(item.icon, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = 0.75f))
-                                Text(stringResource(item.labelRes), color = Color.White.copy(alpha = 0.75f),
+                                Icon(Icons.Filled.Settings, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = 0.75f))
+                                Text(stringResource(R.string.nav_lyric_display), color = Color.White.copy(alpha = 0.75f),
                                     fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp))
                             }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .clickable {
-                                    showRightDrawer = false
-                                    requestLyricSettings = true
-                                }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Filled.Settings, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = 0.75f))
-                            Text(stringResource(R.string.nav_lyric_display), color = Color.White.copy(alpha = 0.75f),
-                                fontSize = 15.sp, modifier = Modifier.padding(start = 14.dp))
                         }
                     }
                 }
             }
         }
 }
+
 
 @Composable
 @Suppress("DEPRECATION")
