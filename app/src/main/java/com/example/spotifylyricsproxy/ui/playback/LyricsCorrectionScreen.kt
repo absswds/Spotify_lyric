@@ -324,4 +324,5 @@ private fun statusLabel(status: com.example.spotifylyricsproxy.lyrics.LyricStatu
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.LowConfidence -> stringResource(R.string.correction_status_low, status.score)
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.ParseError -> stringResource(R.string.correction_status_parse_error)
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.Error -> stringResource(R.string.correction_status_error, status.message)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.MobileDataRestricted -> "移动数据限制"
 }

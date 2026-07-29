@@ -405,6 +405,13 @@ fun ImmersiveLyricsBlock(
                     }
                 }
             }
+            is LyricStatus.MobileDataRestricted -> {
+                Text(
+                    text = "移动数据已限制在线搜索，请在设置中允许或连接到WiFi",
+                    fontSize = 16.sp,
+                    color = Color.White.copy(alpha = 0.55f)
+                )
+            }
             else -> {
                 Text(
                     text = stringResource(R.string.playback_lyrics_not_found),

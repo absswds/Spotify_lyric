@@ -21,7 +21,7 @@ class LyricsRepository(private val database: AppDatabase) {
 
     companion object {
         private const val TAG = "LyricsRepo"
-        private const val RETRY_DELAY_MS = 60 * 60 * 1000L // 1 hour (was 7 days)
+        private const val RETRY_DELAY_MS = 60 * 60 * 1000L // 1 hour
     }
 
     private val sources: List<LyricsSource> = listOf(
@@ -442,6 +442,11 @@ class LyricsRepository(private val database: AppDatabase) {
         _currentOffsetMs.value = 0L
         currentTrackId = ""
     }
+
+    /** Set status to indicate online search was skipped because of metered connection. */
+    fun setMobileDataRestricted() {
+        _lyricStatus.value = LyricStatus.MobileDataRestricted
+    }
 }
 
 sealed class LyricStatus {
@@ -453,4 +458,5 @@ sealed class LyricStatus {
     data object ParseError : LyricStatus()
     data class LowConfidence(val score: Int) : LyricStatus()
     data class Error(val message: String) : LyricStatus()
+    data object MobileDataRestricted : LyricStatus()
 }

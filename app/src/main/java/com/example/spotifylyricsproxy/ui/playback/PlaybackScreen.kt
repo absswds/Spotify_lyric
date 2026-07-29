@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -61,6 +62,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -146,6 +148,8 @@ fun PlaybackScreen(
     val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
     val targetTranslationLang by viewModel.targetTranslationLang.collectAsState()
     val palette = remember(albumArt) { albumPalette(albumArt) }
+    val showCandidatePicker by viewModel.showCandidatePicker.collectAsState()
+    val showMobileDataDialog by viewModel.showMobileDataDialog.collectAsState()
     var lyricsExpanded by remember { mutableStateOf(false) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -360,6 +364,43 @@ fun PlaybackScreen(
                 targetTranslationLang = targetTranslationLang,
                 onSetTargetTranslationLang = viewModel::setTranslationTargetLang,
                 onDismiss = { showLyricDisplaySettings = false }
+            )
+        }
+
+        if (showMobileDataDialog) {
+            var dontAskAgain by remember { mutableStateOf(false) }
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissMobileDataDialog() },
+                title = { Text("使用移动数据搜索歌词?") },
+                text = {
+                    Column {
+                        Text("当前为移动数据/热点网络。是否使用在线搜索歌词?（将产生流量费用）")
+                        Spacer(modifier = Modifier.height(12.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = dontAskAgain,
+                                    onCheckedChange = { checked -> dontAskAgain = checked }
+                                )
+                            Text("不再询问，始终允许")
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (dontAskAgain) LyricDisplayPreferences.setMobileDataStrategy("allow")
+                        viewModel.confirmMobileDataFetch()
+                    }) {
+                        Text("使用移动数据")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        if (dontAskAgain) LyricDisplayPreferences.setMobileDataStrategy("deny")
+                        viewModel.dismissMobileDataDialog()
+                    }) {
+                        Text("取消")
+                    }
+                }
             )
         }
     }
@@ -623,34 +664,44 @@ private fun TrackTitleBlock(
     connectionState: SpotifyConnectionState,
     textScale: Float = 1f
 ) {
-    Text(
-        text = trackInfo.title.ifEmpty { stringResource(R.string.playback_title_waiting) },
-        style = MaterialTheme.typography.headlineSmall.copy(
-            fontSize = MaterialTheme.typography.headlineSmall.fontSize * textScale
-        ),
-        color = Color.White,
-        textAlign = TextAlign.Center,
-        fontWeight = FontWeight.Bold,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis
-    )
+    Crossfade(
+        targetState = trackInfo.title,
+        animationSpec = tween(durationMillis = 300)
+    ) { title ->
+        Text(
+            text = title.ifEmpty { stringResource(R.string.playback_title_waiting) },
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontSize = MaterialTheme.typography.headlineSmall.fontSize * textScale
+            ),
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
     Spacer(modifier = Modifier.height((6 * textScale).dp))
-    Text(
-        text = if (trackInfo.artist.isNotEmpty()) {
-            listOf(trackInfo.artist, trackInfo.album)
-                .filter { it.isNotBlank() }
-                .joinToString(" · ")
-        } else {
-            if (connectionState is SpotifyConnectionState.Connected) stringResource(R.string.playback_subtitle_waiting) else stringResource(R.string.playback_subtitle_connect_prompt)
-        },
-        style = MaterialTheme.typography.bodyMedium.copy(
-            fontSize = MaterialTheme.typography.bodyMedium.fontSize * textScale
-        ),
-        color = Color.White.copy(alpha = 0.66f),
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
+    Crossfade(
+        targetState = trackInfo.artist,
+        animationSpec = tween(durationMillis = 300)
+    ) { artist ->
+        Text(
+            text = if (artist.isNotEmpty()) {
+                listOf(artist, trackInfo.album)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" · ")
+            } else {
+                if (connectionState is SpotifyConnectionState.Connected) stringResource(R.string.playback_subtitle_waiting) else stringResource(R.string.playback_subtitle_connect_prompt)
+            },
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = MaterialTheme.typography.bodyMedium.fontSize * textScale
+            ),
+            color = Color.White.copy(alpha = 0.66f),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 @Composable
@@ -749,6 +800,7 @@ private fun CompactLyricsBlock(
                 is LyricStatus.LowConfidence -> LyricMessage(stringResource(R.string.playback_lyrics_low_confidence))
                 is LyricStatus.ParseError -> LyricMessage(stringResource(R.string.playback_lyrics_parse_error))
                 is LyricStatus.Error -> LyricMessage(stringResource(R.string.playback_lyrics_load_error))
+                is LyricStatus.MobileDataRestricted -> LyricMessage("移动数据已限制在线搜索")
             }
         }
     }
@@ -927,12 +979,14 @@ private fun PlaybackControls(
             shadowElevation = 8.dp
         ) {
             IconButton(onClick = onPlayPause, enabled = isConnected) {
-                if (isPlaying) {
-                    PauseGlyph(color = buttonContent)
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = stringResource(R.string.playback_cd_play),
+                Crossfade(
+                        targetState = isPlaying,
+                        animationSpec = tween(durationMillis = 250)
+                    ) { playing ->
+                        if (playing) PauseGlyph(color = buttonContent)
+                        else Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = stringResource(R.string.playback_cd_play),
                         modifier = Modifier.size(42.dp)
                     )
                 }
@@ -1442,7 +1496,7 @@ private fun LandscapePlaybackLayout(
             }
         }
 
-        // Bottom bar: left=cover+info, center=progress bar, right=transport
+        // Bottom bar: left=cover+info, center=progress bar (compact), right=transport
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -1452,7 +1506,7 @@ private fun LandscapePlaybackLayout(
                 .padding(start = 22.dp, end = 22.dp, bottom = 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left: small cover + title/artist
+            // Left: small cover + title/artist — natural size on the left edge
             Row(
                 modifier = Modifier.clickable { onOpenPlaylist() },
                 verticalAlignment = Alignment.CenterVertically
@@ -1473,7 +1527,7 @@ private fun LandscapePlaybackLayout(
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.width(140.dp)) {
+                Column(modifier = Modifier.widthIn(max = 300.dp)) {
                     Text(
                         text = trackInfo.title.ifEmpty { stringResource(R.string.playback_title_waiting) },
                         color = Color.White,
@@ -1495,10 +1549,12 @@ private fun LandscapePlaybackLayout(
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            // Center: glass-style seek control (same as portrait expanded view)
-            Box(modifier = Modifier.weight(1f).height(48.dp)) {
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Center: glass-style seek control — compact width, same animation as portrait expanded
+            Box(modifier = Modifier.width(260.dp).height(48.dp)) {
                 ImmersiveSeekControl(
                     estimatedPositionMs = estimatedPositionMs,
                     durationMs = durationMs,
@@ -1507,42 +1563,49 @@ private fun LandscapePlaybackLayout(
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.weight(1f))
+
+            Spacer(modifier = Modifier.width(12.dp))
 
             // Right: transport controls
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 GlassSurface(
-                    modifier = Modifier.size(42.dp),
+                    modifier = Modifier.size(40.dp),
                     shape = CircleShape,
                     glassAlpha = 0.16f,
                     borderAlpha = 0.22f
                 ) {
                     IconButton(onClick = onSkipPrevious, modifier = Modifier.fillMaxSize()) {
-                        Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.playback_cd_previous), tint = Color.White, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.playback_cd_previous), tint = Color.White, modifier = Modifier.size(22.dp))
                     }
                 }
                 GlassSurface(
-                    modifier = Modifier.size(54.dp),
+                    modifier = Modifier.size(50.dp),
                     shape = CircleShape,
                     glassAlpha = 0.20f,
                     borderAlpha = 0.26f
                 ) {
                     IconButton(onClick = onPlayPause, modifier = Modifier.fillMaxSize()) {
-                        if (isPlaying) PauseGlyph(color = Color.White)
-                        else Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.playback_cd_play), tint = Color.White, modifier = Modifier.size(32.dp))
-                    }
+                            Crossfade(
+                                targetState = isPlaying,
+                                animationSpec = tween(durationMillis = 250)
+                            ) { playing ->
+                                if (playing) PauseGlyph(color = Color.White)
+                                else Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.playback_cd_play), tint = Color.White, modifier = Modifier.size(30.dp))
+                            }
+                        }
                 }
                 GlassSurface(
-                    modifier = Modifier.size(42.dp),
+                    modifier = Modifier.size(40.dp),
                     shape = CircleShape,
                     glassAlpha = 0.16f,
                     borderAlpha = 0.22f
                 ) {
                     IconButton(onClick = onSkipNext, modifier = Modifier.fillMaxSize()) {
-                        Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.playback_cd_next), tint = Color.White, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.playback_cd_next), tint = Color.White, modifier = Modifier.size(22.dp))
                     }
                 }
             }
@@ -1786,6 +1849,31 @@ private fun LyricDisplaySettingsDialog(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                // Mobile data strategy
+                val currentStrategy = LyricDisplayPreferences.mobileDataStrategy.value
+                Column {
+                    Text(
+                        text = "移动数据搜索",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val strategies = listOf(
+                            "ask" to "每次询问",
+                            "allow" to "始终允许",
+                            "deny" to "仅缓存"
+                        )
+                        strategies.forEach { (value, label) ->
+                            FilterChip(
+                                selected = currentStrategy == value,
+                                onClick = { LyricDisplayPreferences.setMobileDataStrategy(value) },
+                                label = { Text(label) }
+                            )
                         }
                     }
                 }

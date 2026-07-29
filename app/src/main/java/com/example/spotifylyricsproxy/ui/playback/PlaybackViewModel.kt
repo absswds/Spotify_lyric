@@ -15,6 +15,8 @@ import com.example.spotifylyricsproxy.lyrics.TranslationService
 import com.example.spotifylyricsproxy.notification.LyricsForegroundService
 import com.example.spotifylyricsproxy.ui.theme.TranslationPrefs
 import com.example.spotifylyricsproxy.SpotifyAuthHolder
+import com.example.spotifylyricsproxy.util.ConnectivityObserver
+import com.example.spotifylyricsproxy.util.MeteredState
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.PlaybackOptions
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
@@ -96,6 +98,15 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private var authTokenReceived: Boolean = false
     private var pendingConnectionOnResume: Boolean = false
 
+    // ---- Mobile data / connectivity ----
+
+    private val _showMobileDataDialog = MutableStateFlow(false)
+    val showMobileDataDialog: StateFlow<Boolean> = _showMobileDataDialog.asStateFlow()
+
+    /** Track info saved while the user is being asked about mobile data. */
+    private var pendingFetchTrack: SpotifyTrackInfo? = null
+    private var currentMeteredState: MeteredState = MeteredState.NONE
+
     init {
         repository.tryConnect()
         startClock()
@@ -103,6 +114,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         observePlayRequests()
         observeCurrentLineForTranslation()
         autoReconnectOnFailure()
+        viewModelScope.launch {
+            ConnectivityObserver.observe(getApplication()).collect { state ->
+                currentMeteredState = state
+            }
+        }
     }
 
     /**
@@ -185,14 +201,31 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     LyricsForegroundService.start(getApplication())
                     lastFetchedTrackId = track.trackId
                     lyricsRepo.reset()
-                    viewModelScope.launch {
-                        lyricsRepo.fetchLyrics(
-                            trackId = track.trackId,
-                            title = track.title,
-                            artist = track.artist,
-                            album = track.album,
-                            durationMs = track.durationMs
-                        )
+
+                    val strategy = LyricDisplayPreferences.mobileDataStrategy.value
+                    val isMetered = currentMeteredState == MeteredState.METERED
+
+                    when {
+                        !isMetered || strategy == "allow" -> {
+                            viewModelScope.launch {
+                                lyricsRepo.fetchLyrics(
+                                    trackId = track.trackId,
+                                    title = track.title,
+                                    artist = track.artist,
+                                    album = track.album,
+                                    durationMs = track.durationMs
+                                )
+                            }
+                        }
+                        strategy == "deny" -> {
+                            viewModelScope.launch {
+                                lyricsRepo.setMobileDataRestricted()
+                            }
+                        }
+                        else -> { // "ask"
+                            pendingFetchTrack = track
+                            _showMobileDataDialog.value = true
+                        }
                     }
                 }
             }
@@ -332,6 +365,33 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     /** Dismiss the candidate picker without selecting. */
     fun dismissCandidatePicker() {
         _showCandidatePicker.value = false
+    }
+
+    // ---- Mobile data confirmation ----
+
+    /** User confirmed: fetch lyrics online even on mobile data. */
+    fun confirmMobileDataFetch() {
+        _showMobileDataDialog.value = false
+        val track = pendingFetchTrack ?: return
+        pendingFetchTrack = null
+        viewModelScope.launch {
+            lyricsRepo.fetchLyrics(
+                trackId = track.trackId,
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                durationMs = track.durationMs
+            )
+        }
+    }
+
+    /** User declined: set restricted status, don't fetch. */
+    fun dismissMobileDataDialog() {
+        _showMobileDataDialog.value = false
+        pendingFetchTrack = null
+        viewModelScope.launch {
+            lyricsRepo.setMobileDataRestricted()
+        }
     }
 
     /** Select a candidate by index and apply it. */

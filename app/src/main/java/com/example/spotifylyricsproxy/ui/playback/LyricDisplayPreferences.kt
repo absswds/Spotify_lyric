@@ -17,6 +17,7 @@ object LyricDisplayPreferences {
     private const val KEY_BLUR = "blur_enabled"
     private const val KEY_FONT_SIZE_CURRENT = "font_size_current"
     private const val KEY_FONT_SIZE_OTHER = "font_size_other"
+    private const val KEY_MOBILE_STRATEGY = "mobile_data_strategy"
 
     private var prefs: SharedPreferences? = null
 
@@ -27,6 +28,7 @@ object LyricDisplayPreferences {
     // Font sizes: stored as Float (sp), with min 12sp, max 36sp
     private val _fontSizeCurrent = mutableFloatStateOf(20f)
     private val _fontSizeOther = mutableFloatStateOf(15f)
+    private val _mobileDataStrategy = mutableStateOf("ask")  // "ask" | "allow" | "deny"
 
     val boldCurrentLine: State<Boolean> = _boldCurrentLine
     val dimLevel: State<String> = _dimLevel
@@ -34,6 +36,7 @@ object LyricDisplayPreferences {
     val blurEnabled: State<Boolean> = _blurEnabled
     val fontSizeCurrent: State<Float> = _fontSizeCurrent
     val fontSizeOther: State<Float> = _fontSizeOther
+    val mobileDataStrategy: State<String> = _mobileDataStrategy
 
 
     /** @deprecated Use [fontSizeCurrent] slider instead. Kept for dialog compat. */
@@ -78,6 +81,7 @@ object LyricDisplayPreferences {
         _blurEnabled.value = prefs?.getBoolean(KEY_BLUR, true) ?: true
         _fontSizeCurrent.value = prefs?.getFloat(KEY_FONT_SIZE_CURRENT, 20f) ?: 20f
         _fontSizeOther.value = prefs?.getFloat(KEY_FONT_SIZE_OTHER, 15f) ?: 15f
+        _mobileDataStrategy.value = prefs?.getString(KEY_MOBILE_STRATEGY, "ask") ?: "ask"
     }
 
     fun setBoldCurrentLine(value: Boolean) {
@@ -114,6 +118,13 @@ object LyricDisplayPreferences {
         val clamped = valueSp.coerceIn(12f, 36f)
         prefs?.edit()?.putFloat(KEY_FONT_SIZE_OTHER, clamped)?.apply()
         _fontSizeOther.value = clamped
+    }
+
+    /** Strategy for mobile data: "ask" (default) | "allow" | "deny" */
+    fun setMobileDataStrategy(value: String) {
+        if (value !in listOf("ask", "allow", "deny")) return
+        prefs?.edit()?.putString(KEY_MOBILE_STRATEGY, value)?.apply()
+        _mobileDataStrategy.value = value
     }
 
     @Composable
