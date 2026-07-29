@@ -53,6 +53,8 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
     val trackProgress: StateFlow<Pair<Int, Int>?> = _trackProgress.asStateFlow()
 
     init {
+        // Try to load playlists immediately; if token is null, trigger auth
+        triggerAuthIfNeeded()
         loadPlaylists()
         // Retry when token becomes available after a fresh app start
         viewModelScope.launch {
@@ -61,6 +63,24 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
             }
             loadPlaylists()
         }
+    }
+
+    private fun triggerAuthIfNeeded() {
+        if (SpotifyAuthHolder.accessToken != null) return
+        Log.i(TAG, "Token missing — requesting Spotify auth")
+        val request = com.spotify.sdk.android.auth.AuthorizationRequest.Builder(
+            com.example.spotifylyricsproxy.BuildConfig.SPOTIFY_CLIENT_ID,
+            com.spotify.sdk.android.auth.AuthorizationResponse.Type.TOKEN,
+            "spotifylyricsproxy://callback"
+        )
+            .setScopes(arrayOf(
+                "app-remote-control",
+                "playlist-read-private",
+                "playlist-read-collaborative",
+                "user-read-private"
+            ))
+            .build()
+        SpotifyAuthHolder.startAuth?.invoke(request)
     }
 
     private fun token(): String? {
@@ -86,10 +106,7 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
         val t = token()
         Log.d(TAG, "loadPlaylists: token=${t?.take(10)}...")
         if (t == null) {
-            // Try calling the API anyway — SpotifyAuthHolder may not be set yet
-            // but the underlying OkHttp/Spotify SDK might still have a valid connection.
-            Log.w(TAG, "loadPlaylists: token is null, skipping. Retry when auth completes.")
-            _error.value = "未登录 Spotify，请在播放页重新授权"
+            _error.value = "未登录 Spotify，请先在播放页登录"
             return
         }
         _loadingPlaylists.value = true
