@@ -16,11 +16,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,6 +31,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
@@ -65,6 +71,8 @@ fun PlaylistScreen(
     val loadingPlaylists by viewModel.loadingPlaylists.collectAsState()
     val loadingTracks by viewModel.loadingTracks.collectAsState()
     val error by viewModel.error.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val searchResults by viewModel.searchResults.collectAsState()
     val trackProgress by viewModel.trackProgress.collectAsState()
 
     Scaffold(
@@ -91,15 +99,62 @@ fun PlaylistScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Playlist carousel
-            PlaylistCarousel(
-                playlists = playlists,
-                selectedPlaylist = selectedPlaylist,
-                isLoading = loadingPlaylists,
-                error = error,
-                onSelectPlaylist = viewModel::selectPlaylist,
-                onRefresh = viewModel::loadPlaylists
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = viewModel::onSearchQueryChanged,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("搜索歌单") },
+                leadingIcon = { Icon(Icons.Filled.Search, null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = viewModel::clearSearch) {
+                            Icon(Icons.Filled.Clear, "清空")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color(0xFFF0F0F5),
+                    focusedContainerColor = Color(0xFFF0F0F5)
+                )
             )
+
+            // Search results or normal playlist carousel
+            if (searchQuery.isNotEmpty()) {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    itemsIndexed(searchResults) { _, item ->
+                        PlaylistSearchItem(
+                            playlist = item,
+                            onClick = {
+                                viewModel.selectPlaylist(item)
+                                viewModel.clearSearch()
+                            }
+                        )
+                    }
+                    if (searchResults.isEmpty()) {
+                        item {
+                            Text(
+                                text = if (searchQuery.isNotEmpty()) "未找到相关歌单" else "",
+                                modifier = Modifier.padding(32.dp),
+                                color = Color(0xFF747B89),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Playlist carousel
+                PlaylistCarousel(
+                    playlists = playlists,
+                    selectedPlaylist = selectedPlaylist,
+                    isLoading = loadingPlaylists,
+                    error = error,
+                    onSelectPlaylist = viewModel::selectPlaylist,
+                    onRefresh = viewModel::loadPlaylists
+                )
+            }
 
             // Loading indicator for tracks
             if (loadingTracks && trackProgress != null) {
@@ -328,4 +383,37 @@ private fun formatMs(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
+}
+
+
+@Composable
+private fun PlaylistSearchItem(
+    playlist: SpotifyPlaylistItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val imgUrl = playlist.images.firstOrNull()?.url
+        if (imgUrl != null) {
+            AsyncImage(
+                model = imgUrl,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+            )
+        } else {
+            Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFE8EBF2)))
+        }
+        Column(Modifier.padding(start = 12.dp)) {
+            Text(playlist.name, fontWeight = FontWeight.Medium, fontSize = 15.sp)
+            if (!playlist.description.isNullOrBlank()) {
+                Text(playlist.description!!.take(60), color = Color(0xFF747B89), fontSize = 13.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text("${playlist.tracks.total} tracks", color = Color(0xFF747B89), fontSize = 12.sp)
+        }
+    }
 }
