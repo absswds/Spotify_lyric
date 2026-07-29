@@ -1497,18 +1497,35 @@ private fun LandscapePlaybackLayout(
         }
 
         // Bottom bar: left=cover+info, center=progress bar (compact), right=transport
-        Row(
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(start = 48.dp, end = 48.dp, bottom = 20.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(start = 22.dp, end = 22.dp, bottom = 20.dp)
+                .height(64.dp)
         ) {
-            // Left: small cover + title/artist — natural size on the left edge
+            // Progress bar — geometrically centered on screen
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .width(260.dp)
+                    .height(48.dp)
+            ) {
+                ImmersiveSeekControl(
+                    estimatedPositionMs = estimatedPositionMs,
+                    durationMs = durationMs,
+                    onSeek = onSeek,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Left: small cover + title/artist
             Row(
-                modifier = Modifier.clickable { onOpenPlaylist() },
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .clickable { onOpenPlaylist() },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -1549,26 +1566,10 @@ private fun LandscapePlaybackLayout(
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Center: glass-style seek control — compact width, same animation as portrait expanded
-            Box(modifier = Modifier.width(260.dp).height(48.dp)) {
-                ImmersiveSeekControl(
-                    estimatedPositionMs = estimatedPositionMs,
-                    durationMs = durationMs,
-                    onSeek = onSeek,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Spacer(modifier = Modifier.width(12.dp))
-
             // Right: transport controls
             Row(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -1596,7 +1597,7 @@ private fun LandscapePlaybackLayout(
                                 if (playing) PauseGlyph(color = Color.White)
                                 else Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.playback_cd_play), tint = Color.White, modifier = Modifier.size(30.dp))
                             }
-                        }
+                    }
                 }
                 GlassSurface(
                     modifier = Modifier.size(40.dp),
