@@ -154,7 +154,7 @@ fun AppNavigation(
         NavHost(
             navController = navController,
             startDestination = NavRoute.Playback.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) {
             composable(NavRoute.Playback.route) {
                 PlaybackScreen(

@@ -145,7 +145,7 @@ fun PlaylistScreen(
                             TrackRow(
                                 track = track,
                                 onClick = {
-                                    val idx = tracks.indexOf(track)
+                                    val idx = tracks.indexOfFirst { it.uri == track.uri }
                                     if (idx >= 0) {
                                         selectedPlaylist?.let { p ->
                                             viewModel.playTrack(track, p.id, idx)
