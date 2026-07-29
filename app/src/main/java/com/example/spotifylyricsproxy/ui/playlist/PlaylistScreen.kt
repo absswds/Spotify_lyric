@@ -102,7 +102,7 @@ fun PlaylistScreen(
             // Search bar
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = viewModel::onSearchQueryChanged,
+                onValueChange = { viewModel.onSearchQueryChanged(it) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 placeholder = { Text("搜索歌单") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
@@ -120,6 +120,8 @@ fun PlaylistScreen(
                     focusedContainerColor = Color(0xFFF0F0F5)
                 )
             )
+            Text(text = "query: $searchQuery", fontSize = 12.sp, color = Color.Gray,
+                modifier = Modifier.padding(horizontal = 16.dp))
 
             // Search results or normal playlist carousel
             if (searchQuery.isNotEmpty()) {
@@ -167,7 +169,7 @@ fun PlaylistScreen(
             }
 
             // Loading indicator for tracks
-            if (loadingTracks && trackProgress != null) {
+            if (loadingTracks && trackProgress != null && searchQuery.isEmpty()) {
                 val (loaded, total) = trackProgress!!
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     LinearProgressIndicator(
@@ -181,7 +183,7 @@ fun PlaylistScreen(
                         color = Color(0xFF747B89)
                     )
                 }
-            } else if (loadingTracks) {
+            } else if (loadingTracks && searchQuery.isEmpty()) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -196,8 +198,8 @@ fun PlaylistScreen(
                 }
             }
 
-            // Track list
-            if (selectedPlaylist != null) {
+            // Track list — hidden during search
+            if (selectedPlaylist != null && searchQuery.isEmpty()) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(

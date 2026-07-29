@@ -75,7 +75,6 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
             return
         }
         searchDebounceJob = viewModelScope.launch {
-            delay(400)
             val token = SpotifyAuthHolder.accessToken
             if (token == null) {
                 _searchResults.value = emptyList()
