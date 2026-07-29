@@ -124,19 +124,29 @@ fun PlaylistScreen(
             // Search results or normal playlist carousel
             if (searchQuery.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    itemsIndexed(searchResults) { _, item ->
-                        PlaylistSearchItem(
-                            playlist = item,
-                            onClick = {
-                                viewModel.selectPlaylist(item)
-                                viewModel.clearSearch()
-                            }
-                        )
-                    }
-                    if (searchResults.isEmpty()) {
+                    if (error != null && searchResults.isEmpty()) {
                         item {
                             Text(
-                                text = if (searchQuery.isNotEmpty()) "未找到相关歌单" else "",
+                                text = error!!,
+                                modifier = Modifier.padding(32.dp),
+                                color = Color(0xFF747B89),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    } else if (searchResults.isNotEmpty()) {
+                        itemsIndexed(searchResults) { _, item ->
+                            PlaylistSearchItem(
+                                playlist = item,
+                                onClick = {
+                                    viewModel.selectPlaylist(item)
+                                    viewModel.clearSearch()
+                                }
+                            )
+                        }
+                    } else {
+                        item {
+                            Text(
+                                text = "",
                                 modifier = Modifier.padding(32.dp),
                                 color = Color(0xFF747B89),
                                 style = MaterialTheme.typography.bodyMedium

@@ -76,16 +76,23 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
         }
         searchDebounceJob = viewModelScope.launch {
             delay(400)
-            val token = SpotifyAuthHolder.accessToken ?: return@launch
+            val token = SpotifyAuthHolder.accessToken
+            if (token == null) {
+                _searchResults.value = emptyList()
+                _error.value = "未登录 Spotify，请先在播放页登录"
+                return@launch
+            }
             try {
                 val resp = SpotifyWebApiClient.api.searchPlaylists(
                     auth = SpotifyWebApiClient.authHeader(token),
                     query = query
                 )
                 _searchResults.value = resp.playlists?.items ?: emptyList()
+                _error.value = if (resp.playlists?.items.isNullOrEmpty()) "未找到相关歌单" else null
             } catch (e: Exception) {
                 Log.w(TAG, "Search failed: ${e.message}")
                 _searchResults.value = emptyList()
+                _error.value = "搜索失败: ${e.message}"
             }
         }
     }
