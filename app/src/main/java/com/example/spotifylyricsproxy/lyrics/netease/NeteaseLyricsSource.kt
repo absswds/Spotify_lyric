@@ -69,6 +69,7 @@ class NeteaseLyricsSource : LyricsSource {
             durationMs = bestSong.duration,
             syncedLyrics = lrcText?.lyric,
             plainLyrics = null,
+            translation = lrcText?.translation,
             source = name,
             score = 0
         )

@@ -74,6 +74,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val _translatedLine = MutableStateFlow<String?>(null)
     val translatedLine: StateFlow<String?> = _translatedLine.asStateFlow()
 
+    private val _fullTranslation = MutableStateFlow<String?>(null)
+    private var translationMap: Map<Long, String> = emptyMap()
+
     private var translationJob: kotlinx.coroutines.Job? = null
 
     private val _isTranslationEnabled = MutableStateFlow(false)
@@ -390,6 +393,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             lyricsRepo.currentLine.collect { line ->
                 if (line == null || !_isTranslationEnabled.value) {
                     _translatedLine.value = null
+                    return@collect
+                }
+                val tlyricText = translationMap[line.startMs]
+                if (tlyricText != null) {
+                    _translatedLine.value = tlyricText
                     return@collect
                 }
                 translationJob?.cancel()

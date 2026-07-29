@@ -80,12 +80,7 @@ fun PlaylistScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onOpenDrawer) {
-                        Icon(
-                            imageVector = Icons.Filled.Menu,
-                            contentDescription = "菜单"
-                        )
-                    }
+                    // Search button placeholder
                 }
             )
         },

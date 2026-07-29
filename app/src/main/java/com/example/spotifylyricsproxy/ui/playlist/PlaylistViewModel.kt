@@ -12,6 +12,7 @@ import com.example.spotifylyricsproxy.spotify.webapi.SpotifyWebApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class PlaylistTrack(
@@ -56,6 +57,43 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun token(): String? = SpotifyAuthHolder.accessToken
+
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _searchResults = MutableStateFlow<List<SpotifyPlaylistItem>>(emptyList())
+    val searchResults: StateFlow<List<SpotifyPlaylistItem>> = _searchResults.asStateFlow()
+
+    private var searchDebounceJob: kotlinx.coroutines.Job? = null
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+        searchDebounceJob?.cancel()
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            return
+        }
+        searchDebounceJob = viewModelScope.launch {
+            delay(400)
+            val token = SpotifyAuthHolder.accessToken ?: return@launch
+            try {
+                val resp = SpotifyWebApiClient.api.searchPlaylists(
+                    auth = SpotifyWebApiClient.authHeader(token),
+                    query = query
+                )
+                _searchResults.value = resp.playlists?.items ?: emptyList()
+            } catch (e: Exception) {
+                Log.w(TAG, "Search failed: ${e.message}")
+                _searchResults.value = emptyList()
+            }
+        }
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+        _searchResults.value = emptyList()
+    }
 
     fun loadPlaylists() {
         val t = token() ?: run {
