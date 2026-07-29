@@ -21,7 +21,8 @@ data class PlaylistTrack(
     val title: String,
     val artist: String,
     val durationMs: Long,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val playlistIndex: Int = -1
 )
 
 class PlaylistViewModel(application: Application) : AndroidViewModel(application) {
@@ -144,7 +145,7 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                 var offset = 0
                 var total = Int.MAX_VALUE
 
-                while (offset < total && offset < 2000) { // safety cap
+                while (offset < total && offset < 2000) {
                     val response = SpotifyWebApiClient.api.getPlaylistTracks(
                         auth = SpotifyWebApiClient.authHeader(t),
                         playlistId = playlist.id,
@@ -152,9 +153,10 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                         offset = offset
                     )
                     if (total == Int.MAX_VALUE) total = response.total
-                    for (item in response.items) {
+                    for ((pageIdx, item) in response.items.withIndex()) {
                         val track = item.track ?: continue
                         if (track.id.isBlank()) continue
+                        val actualIndex = offset + pageIdx
                         val imageUrl = track.album?.images
                             ?.minByOrNull { it.width ?: Int.MAX_VALUE }
                             ?.url
@@ -165,7 +167,8 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                                 title = track.name,
                                 artist = track.artists.joinToString(", ") { it.name },
                                 durationMs = track.durationMs,
-                                imageUrl = imageUrl
+                                imageUrl = imageUrl,
+                                playlistIndex = actualIndex
                             )
                         )
                     }

@@ -145,10 +145,16 @@ fun PlaylistScreen(
                             TrackRow(
                                 track = track,
                                 onClick = {
-                                    val idx = tracks.indexOfFirst { it.uri == track.uri }
+                                    val idx = track.playlistIndex
                                     if (idx >= 0) {
-                                        selectedPlaylist?.let { p ->
-                                            viewModel.playTrack(track, p.id, idx)
+                                        viewModel.playTrack(track, selectedPlaylist!!.id, idx)
+                                    } else {
+                                        // Fallback: URI-based match
+                                        val fallbackIdx = tracks.indexOfFirst { it.uri == track.uri }
+                                        if (fallbackIdx >= 0) {
+                                            selectedPlaylist?.let { p ->
+                                                viewModel.playTrack(track, p.id, fallbackIdx)
+                                            }
                                         }
                                     }
                                 }
@@ -218,12 +224,16 @@ fun PlaylistScreen(
                         }
                     }
                     items(tracks, key = { it.id }) { track ->
-                        val trackIndex = tracks.indexOf(track)
                         TrackRow(
                             track = track,
                             onClick = {
-                                selectedPlaylist?.let { playlist ->
-                                    viewModel.playTrack(track, playlist.id, trackIndex)
+                                val idx = track.playlistIndex
+                                if (idx >= 0) {
+                                    viewModel.playTrack(track, selectedPlaylist!!.id, idx)
+                                } else {
+                                    selectedPlaylist?.let { playlist ->
+                                        viewModel.playTrack(track, playlist.id, tracks.indexOf(track))
+                                    }
                                 }
                             }
                         )
