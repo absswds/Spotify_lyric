@@ -4,33 +4,22 @@ import android.app.Activity
 import android.content.res.Configuration
 import android.os.Build
 import androidx.annotation.StringRes
-import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,7 +41,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -126,7 +114,6 @@ fun AppNavigation(
         else -> Color(0xFFF7F8FC)
     }
 
-    PredictiveBackHandler(enabled = showRightDrawer) { progress -> progress.collect { }; showRightDrawer = false }
     SystemBarsForRoute(isPlayback = isPlayback, isDarkTheme = isDarkTheme)
 
     Scaffold(
@@ -152,7 +139,7 @@ fun AppNavigation(
         NavHost(
             navController = navController,
             startDestination = NavRoute.Playback.route,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.padding(innerPadding)
         ) {
             composable(NavRoute.Playback.route) {
                 PlaybackScreen(
@@ -167,64 +154,50 @@ fun AppNavigation(
                 )
             }
             composable(NavRoute.Cache.route) {
-                Box(modifier = Modifier.padding(innerPadding)) { CacheScreen(viewModel = cacheViewModel) }
+                CacheScreen(viewModel = cacheViewModel)
             }
             composable(NavRoute.Precache.route) {
-                Box(modifier = Modifier.padding(innerPadding)) { PrecacheScreen(viewModel = precacheViewModel) }
+                PrecacheScreen(viewModel = precacheViewModel)
             }
             composable(NavRoute.Settings.route) {
-                Box(modifier = Modifier.padding(innerPadding)) { SettingsScreen() }
+                SettingsScreen()
             }
             composable(NavRoute.Playlist.route) {
-                Box(modifier = Modifier.padding(innerPadding)) {
-                    val playlistViewModel: PlaylistViewModel = viewModel()
-                    PlaylistScreen(
-                        viewModel = playlistViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                val playlistViewModel: PlaylistViewModel = viewModel()
+                PlaylistScreen(
+                    viewModel = playlistViewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(NavRoute.LyricsCorrection.route) {
-                Box(modifier = Modifier.padding(innerPadding)) {
-                    LyricsCorrectionScreen(
-                        viewModel = playbackViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                LyricsCorrectionScreen(
+                    viewModel = playbackViewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
-        AnimatedVisibility(
-            visible = showRightDrawer,
-            enter = slideInHorizontally { it } + fadeIn(animationSpec = tween(220)),
-            exit = slideOutHorizontally { it } + fadeOut(animationSpec = tween(180))
-        ) {
-            Box(Modifier.fillMaxSize().clickable { showRightDrawer = false }) {
+
+        if (showRightDrawer) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)).clickable { showRightDrawer = false }) {
                 Box(
                     Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(300.dp)
                         .clip(RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp))
                         .background(Color(0xFF0B0F18))
                 ) {
                     Column(Modifier.fillMaxSize().padding(top = 52.dp, start = 18.dp, end = 18.dp, bottom = 26.dp)) {
-                        Text(text = stringResource(R.string.nav_menu_title), color = Color.White,
+                        Text(stringResource(R.string.nav_menu_title), color = Color.White,
                             style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(start = 12.dp, bottom = 16.dp))
-                        listOf(
-                            NavRoute.Playlist, NavRoute.Cache, NavRoute.Precache,
-                            NavRoute.Settings, NavRoute.LyricsCorrection
-                        ).forEach { item ->
-                            Row(
-                                Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .clickable {
-                                        showRightDrawer = false
-                                        navController.navigate(item.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
+                        listOf(NavRoute.Playlist, NavRoute.Cache, NavRoute.Precache, NavRoute.Settings, NavRoute.LyricsCorrection).forEach { item ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(18.dp))
+                                .clickable {
+                                    showRightDrawer = false
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true; restoreState = true
                                     }
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                }.padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(item.icon, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = 0.75f))
@@ -233,11 +206,10 @@ fun AppNavigation(
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                                .background(Color.White.copy(alpha = 0.10f))
-                                .clickable { showRightDrawer = false }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                            .background(Color.White.copy(alpha = 0.10f))
+                            .clickable { showRightDrawer = false }
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(Icons.Filled.Settings, null, Modifier.size(22.dp), tint = Color.White.copy(alpha = 0.75f))
@@ -282,7 +254,6 @@ private fun CompactBottomBar(
     isDarkTheme: Boolean,
     onSelect: (NavRoute) -> Unit
 ) {
-    var showRightDrawer by remember { mutableStateOf(false) }
     val isPlayback = currentRoute == NavRoute.Playback.route
     val darkChrome = isPlayback || isDarkTheme
     val outerColor = if (darkChrome) Color(0xFF080D16) else Color(0xFFF7F8FC)
