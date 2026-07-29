@@ -63,8 +63,12 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun token(): String? = SpotifyAuthHolder.accessToken
-
+    private fun token(): String? {
+        val primary = SpotifyAuthHolder.accessToken
+        if (primary != null) return primary
+        Log.d(TAG, "token: SpotifyAuthHolder.accessToken is null")
+        return null
+    }
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -79,8 +83,13 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun loadPlaylists() {
-        val t = token() ?: run {
-            _error.value = "未登录 Spotify"
+        val t = token()
+        Log.d(TAG, "loadPlaylists: token=${t?.take(10)}...")
+        if (t == null) {
+            // Try calling the API anyway — SpotifyAuthHolder may not be set yet
+            // but the underlying OkHttp/Spotify SDK might still have a valid connection.
+            Log.w(TAG, "loadPlaylists: token is null, skipping. Retry when auth completes.")
+            _error.value = "未登录 Spotify，请在播放页重新授权"
             return
         }
         _loadingPlaylists.value = true
