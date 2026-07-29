@@ -417,7 +417,7 @@ fun ImmersiveLyricsBlock(
 }
 
 @Composable
-private fun LyricLine(
+internal fun LyricLine(
     text: String,
     isCurrent: Boolean,
     shouldAnimate: Boolean,
@@ -470,7 +470,7 @@ private fun LyricLine(
 }
 
 @Composable
-private fun WholeLinePopLyric(
+internal fun WholeLinePopLyric(
     text: String,
     animationKey: Long,
     fontSize: androidx.compose.ui.unit.TextUnit = 31.sp,

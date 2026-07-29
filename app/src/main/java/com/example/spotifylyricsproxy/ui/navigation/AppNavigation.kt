@@ -269,8 +269,8 @@ private fun SystemBarsForRoute(isPlayback: Boolean, isDarkTheme: Boolean) {
             isDarkTheme -> Color(0xFF0B0F18)
             else -> Color(0xFFF7F8FC)
         }
-        window.statusBarColor = Color.Transparent.toArgb()
-        window.navigationBarColor = navigationBarColor.toArgb()
+        window.statusBarColor = if (isPlayback) Color.Transparent.toArgb() else Color.Transparent.toArgb()
+        window.navigationBarColor = if (isPlayback) Color.Transparent.toArgb() else navigationBarColor.toArgb()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isStatusBarContrastEnforced = false
             window.isNavigationBarContrastEnforced = false

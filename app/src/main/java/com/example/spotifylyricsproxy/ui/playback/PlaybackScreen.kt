@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -84,6 +85,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -185,6 +187,8 @@ fun PlaybackScreen(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0)
     ) { padding ->
+        // Root box draws behind the status bar. The gradient is computed from the
+        // album palette and fills the entire screen so the top never shows black.
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -197,6 +201,12 @@ fun PlaybackScreen(
                         )
                     )
                 )
+        ) {
+        // Content is allowed to draw under the status bar; only bottom nav inset
+        // (when present on non-playback routes) is respected via padding.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
                 .padding(padding)
         ) {
             if (lyricsExpanded && lyricStatus is LyricStatus.Synced) {
@@ -341,6 +351,7 @@ fun PlaybackScreen(
                 }
             }
         }
+        } // close background box (full-screen gradient)
 
         if (showLyricDisplaySettings) {
             LyricDisplaySettingsDialog(
@@ -1364,230 +1375,247 @@ private fun LandscapePlaybackLayout(
     onCycleRepeat: () -> Unit,
     onLyricDisplaySettings: () -> Unit
 ) {
-    val landscapeConfig = LocalConfiguration.current
-    val isTablet = landscapeConfig.smallestScreenWidthDp >= 600
+    val dominant = palette.deep
+    val secondary = palette.mid
+    val accent = palette.accent
 
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 18.dp, vertical = 8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .weight(if (isTablet) 0.44f else 0.34f)
-                .fillMaxHeight(),
-            horizontalAlignment = Alignment.Start
-        ) {
-            CompactTopBar(
-                state = connectionState,
-                onOpenDrawer = { /* Landscape keeps its existing direct actions below. */ },
-                showStatus = false
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Album art — compact and proportional in landscape
-                Box(
-                    modifier = Modifier.fillMaxWidth(if (isTablet) 0.88f else 0.48f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AlbumArtHero(
-                        albumArt = albumArt,
-                        accent = palette.accent,
-                        widthFraction = if (isTablet) 0.88f else 0.66f
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(if (isTablet) 16.dp else 12.dp))
-
-                TrackTitleBlock(
-                    trackInfo = trackInfo,
-                    connectionState = connectionState,
-                    textScale = if (isTablet) 1.28f else 1f
-                )
-
-                // Flexible spacer — absorbs extra space on large screens,
-                // collapses on small screens to prevent overlap
-                Spacer(modifier = Modifier.weight(1f))
-
-                ProgressBlock(
-                    estimatedPositionMs = estimatedPositionMs,
-                    durationMs = durationMs,
-                    accent = palette.accent,
-                    onSeek = onSeek
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                PlaybackControls(
-                    isPlaying = isPlaying,
-                    isConnected = isConnected,
-                    accent = palette.accent,
-                    playbackOptions = playbackOptions,
-                    onPlayPause = onPlayPause,
-                    onSkipNext = onSkipNext,
-                    onSkipPrevious = onSkipPrevious,
-                    onToggleShuffle = onToggleShuffle,
-                    onCycleRepeat = onCycleRepeat
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(if (isTablet) 0.56f else 0.66f)
-                .fillMaxHeight()
-                .padding(start = 22.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.Start
-        ) {
-            if (!isConnected) {
-                ConnectActionPanel(
-                    state = connectionState,
-                    accent = palette.accent,
-                    isSpotifyInstalled = isSpotifyInstalled,
-                    onConnect = onConnect,
-                    onOpenSpotify = onOpenSpotify
-                )
-            } else {
-                LandscapeLyricsContent(
-                    lines = parsedLyrics,
-                    currentLine = currentLyricLine,
-                    lyricStatus = lyricStatus,
-                    translatedLine = translatedLine,
-                    isTranslationEnabled = isTranslationEnabled,
-                    onSeek = onSeek,
-                    onSkipNext = onSkipNext,
-                    onSkipPrevious = onSkipPrevious
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LandscapeLyricsContent(
-    lines: List<LrcLine>,
-    currentLine: LrcLine?,
-    lyricStatus: LyricStatus,
-    translatedLine: String?,
-    isTranslationEnabled: Boolean,
-    onSeek: (Long) -> Unit,
-    onSkipNext: () -> Unit,
-    onSkipPrevious: () -> Unit
-) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(onSkipNext, onSkipPrevious) {
-                val threshold = 70.dp.toPx()
-                var accumulatedX = 0f
+            .background(
+                Brush.horizontalGradient(
+                    colors = listOf(dominant, secondary)
+                )
+            )
+    ) {
+        if (!isConnected) {
+            ConnectActionPanel(
+                state = connectionState,
+                accent = accent,
+                isSpotifyInstalled = isSpotifyInstalled,
+                onConnect = onConnect,
+                onOpenSpotify = onOpenSpotify,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .wrapContentSize(Alignment.Center)
+            )
+        } else {
+            val config = LyricDisplayPreferences.resolvedConfig()
+            val currentIndex = currentLyricLine?.let { parsedLyrics.indexOf(it) } ?: -1
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 40.dp, vertical = 48.dp)
+                    .pointerInput(onSkipNext, onSkipPrevious) {
+                        val threshold = 80.dp.toPx()
+                        var acc by mutableStateOf(0f)
+                        detectHorizontalDragGestures(
+                            onDragStart = { acc = 0f },
+                            onHorizontalDrag = { _, amt ->
+                                acc += amt
+                                if (acc > threshold) { acc = 0f; onSkipPrevious() }
+                                else if (acc < -threshold) { acc = 0f; onSkipNext() }
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                when (lyricStatus) {
+                    is LyricStatus.Idle -> LyricMessage(stringResource(R.string.playback_lyrics_idle))
+                    is LyricStatus.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        LyricMessage(stringResource(R.string.playback_lyrics_searching))
+                    }
+                    is LyricStatus.Synced -> {
+                        if (parsedLyrics.isNotEmpty() && currentIndex >= 0) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(18.dp)
+                            ) {
+                                val past = parsedLyrics.getOrNull(currentIndex - 1)
+                                val next1 = parsedLyrics.getOrNull(currentIndex + 1)
+                                val next2 = parsedLyrics.getOrNull(currentIndex + 2)
 
-                detectHorizontalDragGestures(
-                    onDragStart = { accumulatedX = 0f },
-                    onHorizontalDrag = { _, dragAmount ->
-                        accumulatedX += dragAmount
-                        if (accumulatedX > threshold) {
-                            accumulatedX = 0f
-                            onSkipPrevious()
-                        } else if (accumulatedX < -threshold) {
-                            accumulatedX = 0f
-                            onSkipNext()
+                                past?.let {
+                                    Text(
+                                        text = it.text,
+                                        fontSize = config.otherLineSp,
+                                        color = Color.White.copy(alpha = config.pastLineAlpha),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(if (config.blurEnabled) Modifier.blur(2.dp) else Modifier)
+                                    )
+                                }
+
+                                LyricLine(
+                                    text = currentLyricLine!!.text,
+                                    isCurrent = true,
+                                    shouldAnimate = isPlaying,
+                                    animationKey = currentLyricLine!!.startMs,
+                                    lineStartMs = currentLyricLine!!.startMs,
+                                    lineEndMs = parsedLyrics.getOrNull(currentIndex + 1)?.startMs
+                                        ?: (currentLyricLine!!.startMs + 4000L),
+                                    positionMs = estimatedPositionMs,
+                                    config = config,
+                                    onClick = { }
+                                )
+
+                                if (isTranslationEnabled && !translatedLine.isNullOrBlank()) {
+                                    Text(
+                                        text = translatedLine,
+                                        fontSize = config.otherLineSp,
+                                        color = Color.White.copy(alpha = 0.55f),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                next1?.let {
+                                    Text(
+                                        text = it.text,
+                                        fontSize = config.otherLineSp,
+                                        color = Color.White.copy(alpha = config.futureLineAlpha),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(if (config.blurEnabled) Modifier.blur(2.dp) else Modifier)
+                                    )
+                                }
+                                next2?.let {
+                                    Text(
+                                        text = it.text,
+                                        fontSize = config.otherLineSp,
+                                        color = Color.White.copy(alpha = config.futureLineAlpha * 0.6f),
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(if (config.blurEnabled) Modifier.blur(2.dp) else Modifier)
+                                    )
+                                }
+                            }
+                        } else {
+                            LyricMessage(stringResource(R.string.playback_lyrics_no_content))
                         }
                     }
-                )
-            }
-    ) {
-        when (lyricStatus) {
-            is LyricStatus.Idle -> LyricMessage(stringResource(R.string.playback_lyrics_idle))
-            is LyricStatus.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                LyricMessage(stringResource(R.string.playback_lyrics_searching))
-            }
-            is LyricStatus.Synced -> {
-                if (lines.isNotEmpty()) {
-                    LandscapeLyricsList(lines, currentLine, translatedLine, isTranslationEnabled, onSeek)
-                } else {
-                    LyricMessage(stringResource(R.string.playback_lyrics_no_content))
+                    is LyricStatus.PlainOnly -> LyricMessage(stringResource(R.string.playback_lyrics_plain_only))
+                    is LyricStatus.NotFound -> LyricMessage(stringResource(R.string.playback_lyrics_not_found))
+                    is LyricStatus.LowConfidence -> LyricMessage(stringResource(R.string.playback_lyrics_low_confidence))
+                    is LyricStatus.ParseError -> LyricMessage(stringResource(R.string.playback_lyrics_parse_error))
+                    is LyricStatus.Error -> LyricMessage(stringResource(R.string.playback_lyrics_load_error))
                 }
             }
-            is LyricStatus.PlainOnly -> LyricMessage(stringResource(R.string.playback_lyrics_plain_only))
-            is LyricStatus.NotFound -> LyricMessage(stringResource(R.string.playback_lyrics_not_found))
-            is LyricStatus.LowConfidence -> LyricMessage(stringResource(R.string.playback_lyrics_low_confidence))
-            is LyricStatus.ParseError -> LyricMessage(stringResource(R.string.playback_lyrics_parse_error))
-            is LyricStatus.Error -> LyricMessage(stringResource(R.string.playback_lyrics_load_error))
         }
-    }
-}
 
-@Composable
-private fun LandscapeLyricsList(
-    lines: List<LrcLine>,
-    currentLine: LrcLine?,
-    translatedLine: String?,
-    isTranslationEnabled: Boolean,
-    onSeek: (Long) -> Unit
-) {
-    val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
-    val listState = rememberLazyListState()
-    val config = LyricDisplayPreferences.resolvedLandscapeConfig()
-
-    // Auto-scroll to keep the current line centered
-    LaunchedEffect(currentIndex) {
-        if (currentIndex >= 0) {
-            listState.animateScrollToItem((currentIndex - 2).coerceAtLeast(0))
-        }
-    }
-
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        itemsIndexed(lines) { index, line ->
-            val isCurrent = index == currentIndex
-            val isPast = index < currentIndex
-            Column(
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(start = 22.dp, bottom = 20.dp)
+                .clickable { onOpenPlaylist() },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSeek(line.startMs) }
-                    .padding(horizontal = 28.dp, vertical = 10.dp)
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White.copy(alpha = 0.10f))
             ) {
-                Text(
-                    text = line.text,
-                    color = when {
-                        isCurrent -> Color.White
-                        isPast -> Color.White.copy(alpha = config.pastLineAlpha)
-                        else -> Color.White.copy(alpha = config.futureLineAlpha)
-                    },
-                    fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
-                    fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
-                    textAlign = config.textAlign,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (isCurrent && isTranslationEnabled && !translatedLine.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = translatedLine,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = config.otherLineSp,
-                        textAlign = config.textAlign,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                albumArt?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = "专辑封面",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = trackInfo.title.ifEmpty { stringResource(R.string.playback_title_waiting) },
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                val sub = listOf(trackInfo.artist, trackInfo.album).filter { it.isNotBlank() }.joinToString(" · ")
+                if (sub.isNotEmpty()) {
+                    Text(
+                        text = sub,
+                        color = Color.White.copy(alpha = 0.62f),
+                        fontSize = 13.sp,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(end = 22.dp, bottom = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formatMs(estimatedPositionMs) + " / " + formatMs(durationMs),
+                color = Color.White.copy(alpha = 0.66f),
+                fontSize = 13.sp,
+                modifier = Modifier.padding(end = 16.dp)
+            )
+            GlassSurface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                glassAlpha = 0.16f,
+                borderAlpha = 0.22f
+            ) {
+                IconButton(onClick = onSkipPrevious, modifier = Modifier.fillMaxSize()) {
+                    Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.playback_cd_previous), tint = Color.White, modifier = Modifier.size(22.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            GlassSurface(
+                modifier = Modifier.size(52.dp),
+                shape = CircleShape,
+                glassAlpha = 0.20f,
+                borderAlpha = 0.26f
+            ) {
+                IconButton(onClick = onPlayPause, modifier = Modifier.fillMaxSize()) {
+                    if (isPlaying) PauseGlyph(color = Color.White)
+                    else Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.playback_cd_play), tint = Color.White, modifier = Modifier.size(30.dp))
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            GlassSurface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                glassAlpha = 0.16f,
+                borderAlpha = 0.22f
+            ) {
+                IconButton(onClick = onSkipNext, modifier = Modifier.fillMaxSize()) {
+                    Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.playback_cd_next), tint = Color.White, modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+
+        GlassSurface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 8.dp, end = 16.dp)
+                .size(42.dp),
+            shape = CircleShape,
+            glassAlpha = 0.12f,
+            borderAlpha = 0.20f
+        ) {
+            IconButton(onClick = onLyricDisplaySettings, modifier = Modifier.fillMaxSize()) {
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.lyric_settings_title), tint = Color.White.copy(alpha = 0.9f))
             }
         }
     }
