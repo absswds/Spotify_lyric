@@ -234,12 +234,13 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
                 val me = SpotifyWebApiClient.api.getMe(auth = "Bearer $token")
                 _currentUserId.value = me.id
                 val response = SpotifyWebApiClient.api.getPlaylists(auth = "Bearer $token")
+                val playlists = response.items.filterNotNull()
                 Log.i(
                     "PrecacheVM",
-                    "Got ${response.items.size} playlists for user=${me.id}; " +
-                        "${response.items.count { it.canReadItems(me.id) }} can be precached"
+                    "Got ${playlists.size} playlists for user=${me.id}; " +
+                        "${playlists.count { it.canReadItems(me.id) }} can be precached"
                 )
-                _playlists.value = response.items
+                _playlists.value = playlists
             } catch (e: Exception) {
                 Log.e("PrecacheVM", "Failed to load playlists", e)
                 // Detect auth errors (invalid/insufficient token) and reset auth state

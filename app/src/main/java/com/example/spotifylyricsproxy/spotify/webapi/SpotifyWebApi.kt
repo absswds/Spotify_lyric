@@ -34,18 +34,10 @@ interface SpotifyWebApi {
         @Header("Authorization") auth: String,
         @Path("id") trackId: String
     ): SpotifyTrack?
-
-    @GET("v1/search")
-    suspend fun searchPlaylists(
-        @Header("Authorization") auth: String,
-        @Query("q") query: String,
-        @Query("type") type: String = "playlist",
-        @Query("limit") limit: Int = 10
-    ): SpotifyPlaylistSearchResponse
 }
 
 data class SpotifyPlaylistResponse(
-    val items: List<SpotifyPlaylistItem> = emptyList(),
+    val items: List<SpotifyPlaylistItem?> = emptyList(),
     val total: Int = 0
 )
 
@@ -58,14 +50,6 @@ data class SpotifyPlaylistItem(
     @SerializedName("items")
     val tracks: SpotifyPlaylistTracksInfo = SpotifyPlaylistTracksInfo(),
     val images: List<SpotifyImage> = emptyList()
-)
-
-data class SpotifyPlaylistSearchResponse(
-    val playlists: SpotifyPlaylistSearchResult? = null
-)
-
-data class SpotifyPlaylistSearchResult(
-    val items: List<SpotifyPlaylistItem> = emptyList()
 )
 
 data class SpotifyPlaylistOwner(

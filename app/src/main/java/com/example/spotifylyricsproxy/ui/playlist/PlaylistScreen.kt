@@ -42,6 +42,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,8 +73,15 @@ fun PlaylistScreen(
     val loadingTracks by viewModel.loadingTracks.collectAsState()
     val error by viewModel.error.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val searchResults by viewModel.searchResults.collectAsState()
     val trackProgress by viewModel.trackProgress.collectAsState()
+
+    val filteredTracks = remember(tracks, searchQuery) {
+        if (searchQuery.isBlank()) tracks
+        else tracks.filter { t ->
+            t.title.contains(searchQuery, ignoreCase = true) ||
+            t.artist.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -104,7 +112,7 @@ fun PlaylistScreen(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("搜索歌单") },
+                placeholder = { Text("搜索歌曲") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -120,35 +128,30 @@ fun PlaylistScreen(
                     focusedContainerColor = Color(0xFFF0F0F5)
                 )
             )
-            // Search results or normal playlist carousel
+            // Search results — local filter of loaded tracks
             if (searchQuery.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.weight(1f)) {
-                    if (error != null && searchResults.isEmpty()) {
+                    if (filteredTracks.isEmpty()) {
                         item {
                             Text(
-                                text = error!!,
+                                text = "未找到匹配歌曲",
                                 modifier = Modifier.padding(32.dp),
                                 color = Color(0xFF747B89),
                                 style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    } else if (searchResults.isNotEmpty()) {
-                        itemsIndexed(searchResults) { _, item ->
-                            PlaylistSearchItem(
-                                playlist = item,
-                                onClick = {
-                                    viewModel.selectPlaylist(item)
-                                    viewModel.clearSearch()
-                                }
                             )
                         }
                     } else {
-                        item {
-                            Text(
-                                text = "",
-                                modifier = Modifier.padding(32.dp),
-                                color = Color(0xFF747B89),
-                                style = MaterialTheme.typography.bodyMedium
+                        itemsIndexed(filteredTracks) { _, track ->
+                            TrackRow(
+                                track = track,
+                                onClick = {
+                                    val idx = tracks.indexOf(track)
+                                    if (idx >= 0) {
+                                        selectedPlaylist?.let { p ->
+                                            viewModel.playTrack(track, p.id, idx)
+                                        }
+                                    }
+                                }
                             )
                         }
                     }
@@ -392,37 +395,4 @@ private fun formatMs(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
-}
-
-
-@Composable
-private fun PlaylistSearchItem(
-    playlist: SpotifyPlaylistItem,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val imgUrl = playlist.images.firstOrNull()?.url
-        if (imgUrl != null) {
-            AsyncImage(
-                model = imgUrl,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
-            )
-        } else {
-            Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFFE8EBF2)))
-        }
-        Column(Modifier.padding(start = 12.dp)) {
-            Text(playlist.name, fontWeight = FontWeight.Medium, fontSize = 15.sp)
-            if (!playlist.description.isNullOrBlank()) {
-                Text(playlist.description!!.take(60), color = Color(0xFF747B89), fontSize = 13.sp,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Text("${playlist.tracks.total} tracks", color = Color(0xFF747B89), fontSize = 12.sp)
-        }
-    }
 }

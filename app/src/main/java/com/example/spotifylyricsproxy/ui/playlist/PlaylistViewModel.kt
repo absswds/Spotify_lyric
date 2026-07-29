@@ -62,43 +62,13 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _searchResults = MutableStateFlow<List<SpotifyPlaylistItem>>(emptyList())
-    val searchResults: StateFlow<List<SpotifyPlaylistItem>> = _searchResults.asStateFlow()
-
-    private var searchDebounceJob: kotlinx.coroutines.Job? = null
-
+    /** Local filter for tracks already loaded from the selected playlist. */
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
-        searchDebounceJob?.cancel()
-        if (query.isBlank()) {
-            _searchResults.value = emptyList()
-            return
-        }
-        searchDebounceJob = viewModelScope.launch {
-            val token = SpotifyAuthHolder.accessToken
-            if (token == null) {
-                _searchResults.value = emptyList()
-                _error.value = "未登录 Spotify，请先在播放页登录"
-                return@launch
-            }
-            try {
-                val resp = SpotifyWebApiClient.api.searchPlaylists(
-                    auth = SpotifyWebApiClient.authHeader(token),
-                    query = query
-                )
-                _searchResults.value = resp.playlists?.items ?: emptyList()
-                _error.value = if (resp.playlists?.items.isNullOrEmpty()) "未找到相关歌单" else null
-            } catch (e: Exception) {
-                Log.w(TAG, "Search failed: ${e.message}")
-                _searchResults.value = emptyList()
-                _error.value = "搜索失败 (${e::class.simpleName}: ${e.message})"
-            }
-        }
     }
 
     fun clearSearch() {
         _searchQuery.value = ""
-        _searchResults.value = emptyList()
     }
 
     fun loadPlaylists() {
@@ -113,10 +83,11 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                 val response = SpotifyWebApiClient.api.getPlaylists(
                     auth = SpotifyWebApiClient.authHeader(t)
                 )
-                _playlists.value = response.items
+                val playlists = response.items.filterNotNull()
+                _playlists.value = playlists
                 // Auto-select first if none selected
-                if (_selectedPlaylist.value == null && response.items.isNotEmpty()) {
-                    selectPlaylist(response.items.first())
+                if (_selectedPlaylist.value == null && playlists.isNotEmpty()) {
+                    selectPlaylist(playlists.first())
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load playlists", e)
