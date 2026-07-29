@@ -83,7 +83,7 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                 val response = SpotifyWebApiClient.api.getPlaylists(
                     auth = SpotifyWebApiClient.authHeader(t)
                 )
-                val playlists = response.items.filterNotNull()
+                val playlists = response.items
                 _playlists.value = playlists
                 // Auto-select first if none selected
                 if (_selectedPlaylist.value == null && playlists.isNotEmpty()) {

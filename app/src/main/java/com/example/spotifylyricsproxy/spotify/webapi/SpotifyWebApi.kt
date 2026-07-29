@@ -37,7 +37,7 @@ interface SpotifyWebApi {
 }
 
 data class SpotifyPlaylistResponse(
-    val items: List<SpotifyPlaylistItem?> = emptyList(),
+    val items: List<SpotifyPlaylistItem> = emptyList(),
     val total: Int = 0
 )
 

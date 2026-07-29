@@ -234,7 +234,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
                 val me = SpotifyWebApiClient.api.getMe(auth = "Bearer $token")
                 _currentUserId.value = me.id
                 val response = SpotifyWebApiClient.api.getPlaylists(auth = "Bearer $token")
-                val playlists = response.items.filterNotNull()
+                val playlists = response.items
                 Log.i(
                     "PrecacheVM",
                     "Got ${playlists.size} playlists for user=${me.id}; " +
