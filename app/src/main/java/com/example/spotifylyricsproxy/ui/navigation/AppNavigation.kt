@@ -112,6 +112,7 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     var showRightDrawer by remember { mutableStateOf(false) }
+    var requestLyricSettings by remember { mutableStateOf(false) }
     val isPlayback = currentRoute == NavRoute.Playback.route
     val isDarkTheme = ThemePreferences.isDarkTheme()
     val configuration = LocalConfiguration.current
@@ -163,7 +164,9 @@ fun AppNavigation(
                     },
                     onOpenLyricsCorrection = {
                         navController.navigate(NavRoute.LyricsCorrection.route)
-                    }
+                    },
+                    showLyricSettingsFromDrawer = requestLyricSettings,
+                    onLyricSettingsShown = { requestLyricSettings = false }
                 )
             }
             composable(NavRoute.Cache.route) {
@@ -229,9 +232,12 @@ fun AppNavigation(
                         }
                         Spacer(Modifier.height(8.dp))
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
-                                .background(Color.White.copy(alpha = 0.10f))
-                                .clickable { showRightDrawer = false }
+                            Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                .clip(RoundedCornerShape(18.dp))
+                                .clickable {
+                                    showRightDrawer = false
+                                    requestLyricSettings = true
+                                }
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
