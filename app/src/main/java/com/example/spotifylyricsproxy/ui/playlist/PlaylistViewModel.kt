@@ -54,6 +54,13 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
 
     init {
         loadPlaylists()
+        // Retry when token becomes available after a fresh app start
+        viewModelScope.launch {
+            while (SpotifyAuthHolder.accessToken == null) {
+                delay(500)
+            }
+            loadPlaylists()
+        }
     }
 
     private fun token(): String? = SpotifyAuthHolder.accessToken
