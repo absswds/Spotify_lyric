@@ -303,4 +303,6 @@
 
     <!-- Cache source labels -->
     <string name="cache_source_manual">Manual</string>
+    <string name="nav_menu_title">Menu</string>
+    <string name="nav_lyric_display">Lyric Display</string>
 </resources>

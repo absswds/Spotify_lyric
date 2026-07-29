@@ -128,9 +128,7 @@ fun PlaybackScreen(
     onOpenLyricsCorrection: () -> Unit = {},
     onOpenCache: () -> Unit = {},
     onOpenPrecache: () -> Unit = {},
-    onOpenSettings: () -> Unit = {},
-    showLyricSettingsFromDrawer: Boolean = false,
-    onLyricSettingsShown: () -> Unit = {}
+    onOpenSettings: () -> Unit = {}
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
     val playbackOptions by viewModel.playbackOptions.collectAsState()
@@ -148,12 +146,6 @@ fun PlaybackScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var showLyricDisplaySettings by remember { mutableStateOf(false) }
-    LaunchedEffect(showLyricSettingsFromDrawer) {
-        if (showLyricSettingsFromDrawer) {
-            showLyricDisplaySettings = true
-            onLyricSettingsShown()
-        }
-    }
     val isSpotifyInstalled = rememberIsSpotifyInstalled()
     val activity = LocalContext.current as? android.app.Activity
 
@@ -321,7 +313,6 @@ fun PlaybackScreen(
                                 isTranslationEnabled = isTranslationEnabled,
                                 isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
                                 positionMs = estimatedPositionMs,
-                                config = LyricDisplayPreferences.resolvedConfig(),
                                 onSeek = viewModel::seekTo,
                                 modifier = Modifier
                                     .weight(1f)
@@ -655,7 +646,7 @@ private fun CompactLyricsBlock(
     val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
     val previous = allLines.getOrNull(currentIndex - 1)?.text
     val next = allLines.getOrNull(currentIndex + 1)?.text
-    val config = LyricDisplayPreferences.resolvedConfig()
+    val config = LyricDisplayPreferences.resolvedCompactPreviewConfig()
 
     Card(
         modifier = Modifier
@@ -756,12 +747,12 @@ private fun LyricMessage(text: String) {
 @Composable
 private fun ContextLyric(
     text: String,
-    config: LyricDisplayConfig = LyricDisplayPreferences.resolvedConfig()
+    config: CompactLyricPreviewConfig = LyricDisplayPreferences.resolvedCompactPreviewConfig()
 ) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
-        fontSize = config.otherLineSp,
+        fontSize = config.contextLineSp,
         color = Color.White.copy(alpha = 0.48f),
         textAlign = config.textAlign,
         maxLines = 2,
@@ -1015,8 +1006,6 @@ internal data class AlbumPalette(
     val accent: Color
 )
 
-private val paletteCache = androidx.collection.LruCache<Int, AlbumPalette>(20)
-
 internal fun albumPalette(bitmap: Bitmap?): AlbumPalette {
     if (bitmap == null) {
         return AlbumPalette(
@@ -1025,8 +1014,6 @@ internal fun albumPalette(bitmap: Bitmap?): AlbumPalette {
             accent = Color(0xFF6D7DFF)
         )
     }
-    val key = bitmap.hashCode()
-    paletteCache.get(key)?.let { return it }
 
     val stepX = (bitmap.width / 18).coerceAtLeast(1)
     val stepY = (bitmap.height / 18).coerceAtLeast(1)
@@ -1052,7 +1039,9 @@ internal fun albumPalette(bitmap: Bitmap?): AlbumPalette {
     val avgR = (r / count).toInt()
     val avgG = (g / count).toInt()
     val avgB = (b / count).toInt()
-    val result = AlbumPalette(
+    return AlbumPalette(
+        // Keep enough album colour to separate metadata/lyrics from the art stage;
+        // the old 0.28 multiplier collapsed blue/grey covers into near-black.
         deep = Color(avgR / 255f * 0.52f, avgG / 255f * 0.52f, avgB / 255f * 0.52f),
         mid = Color(avgR / 255f * 0.72f, avgG / 255f * 0.72f, avgB / 255f * 0.72f),
         accent = Color(
@@ -1061,8 +1050,6 @@ internal fun albumPalette(bitmap: Bitmap?): AlbumPalette {
             blue = (avgB + 64).coerceAtMost(255) / 255f
         )
     )
-    paletteCache.put(key, result)
-    return result
 }
 
 @Composable
@@ -1622,35 +1609,39 @@ private fun LyricDisplaySettingsDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Font size sliders
-                val currentSp = LyricDisplayPreferences.fontSizeCurrent.value
-                val otherSp = LyricDisplayPreferences.fontSizeOther.value
-
                 Column {
                     Text(
-                        text = "当前行字号: ${currentSp.toInt()}sp",
+                        text = stringResource(R.string.lyric_settings_font_size),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Slider(
-                        value = currentSp,
-                        onValueChange = { LyricDisplayPreferences.setFontSizeCurrent(it) },
-                        valueRange = 12f..36f,
-                        steps = 22
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val fontLabels = listOf(
+                        "small" to stringResource(R.string.lyric_settings_font_small),
+                        "default" to stringResource(R.string.lyric_settings_font_default),
+                        "large" to stringResource(R.string.lyric_settings_font_large),
+                        "xlarge" to stringResource(R.string.lyric_settings_font_xlarge)
                     )
-                }
-                Column {
-                    Text(
-                        text = "非当前行字号: ${otherSp.toInt()}sp",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Slider(
-                        value = otherSp,
-                        onValueChange = { LyricDisplayPreferences.setFontSizeOther(it) },
-                        valueRange = 12f..36f,
-                        steps = 22
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            fontLabels.take(2).forEach { (value, label) ->
+                                FilterChip(
+                                    selected = currentFontSize == value,
+                                    onClick = { LyricDisplayPreferences.setFontSize(value) },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            fontLabels.drop(2).forEach { (value, label) ->
+                                FilterChip(
+                                    selected = currentFontSize == value,
+                                    onClick = { LyricDisplayPreferences.setFontSize(value) },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Column {
@@ -1665,7 +1656,7 @@ private fun LyricDisplaySettingsDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(stringResource(R.string.lyric_settings_bold_label), fontSize = 16.sp)
+                        Text(stringResource(R.string.lyric_settings_bold_label), style = MaterialTheme.typography.bodyMedium)
                         Switch(
                             checked = currentBold,
                             onCheckedChange = { LyricDisplayPreferences.setBoldCurrentLine(it) }
@@ -1673,47 +1664,28 @@ private fun LyricDisplaySettingsDialog(
                     }
                 }
 
-                // Blur toggle for inactive lines
-                val blurEnabled = LyricDisplayPreferences.blurEnabled.value
                 Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("非当前行模糊", fontSize = 16.sp)
-                        Switch(
-                            checked = blurEnabled,
-                            onCheckedChange = { LyricDisplayPreferences.setBlurEnabled(it) }
+                    Text(
+                        text = stringResource(R.string.lyric_settings_dim_level),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val dimLabels = listOf(
+                            "low" to stringResource(R.string.lyric_settings_dim_low),
+                            "medium" to stringResource(R.string.lyric_settings_dim_medium),
+                            "high" to stringResource(R.string.lyric_settings_dim_high)
                         )
-                    }
-                }
-
-                // Dim level is a sub-setting of blur: only visible when blur is on.
-                    if (blurEnabled) {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.lyric_settings_dim_level),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        dimLabels.forEach { (value, label) ->
+                            FilterChip(
+                                selected = currentDim == value,
+                                onClick = { LyricDisplayPreferences.setDimLevel(value) },
+                                label = { Text(label) }
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                val dimLabels = listOf(
-                                    "low" to stringResource(R.string.lyric_settings_dim_low),
-                                    "medium" to stringResource(R.string.lyric_settings_dim_medium),
-                                    "high" to stringResource(R.string.lyric_settings_dim_high)
-                                )
-                                dimLabels.forEach { (value, label) ->
-                                    FilterChip(
-                                        selected = currentDim == value,
-                                        onClick = { LyricDisplayPreferences.setDimLevel(value) },
-                                        label = { Text(label) }
-                                    )
-                                }
-                            }
                         }
                     }
+                }
 
                 Column {
                     Text(

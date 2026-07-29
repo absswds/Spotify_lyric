@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -148,9 +147,7 @@ internal fun ImmersiveAlbumBackground(
                 bitmap = albumArt.asImageBitmap(),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
-                // Preserve the complete album artwork. Remaining stage space keeps
-                // the sampled album backdrop instead of cutting artwork edges.
-                contentScale = ContentScale.Fit,
+                contentScale = ContentScale.Crop,
                 filterQuality = FilterQuality.High
             )
 
@@ -339,11 +336,10 @@ fun ImmersiveLyricsBlock(
     isTranslationEnabled: Boolean,
     isPlaying: Boolean,
     positionMs: Long = 0L,
-    config: com.example.spotifylyricsproxy.ui.playback.LyricDisplayConfig,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val listState = remember(allLines) { LazyListState() }
+    val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val currentIndex = currentLine?.let { allLines.indexOf(it) } ?: -1
 
@@ -386,7 +382,6 @@ fun ImmersiveLyricsBlock(
                             lineStartMs = line.startMs,
                             lineEndMs = lineEndMs,
                             positionMs = positionMs,
-                            config = config,
                             onClick = { onSeek(line.startMs) }
                         )
 
@@ -425,7 +420,6 @@ private fun LyricLine(
     lineStartMs: Long = 0L,
     lineEndMs: Long = 0L,
     positionMs: Long = 0L,
-    config: com.example.spotifylyricsproxy.ui.playback.LyricDisplayConfig,
     onClick: () -> Unit
 ) {
     // Current line is one coherent phrase: a restrained single pop, never per-character.
@@ -433,20 +427,15 @@ private fun LyricLine(
         WholeLinePopLyric(
             text = text,
             animationKey = animationKey,
-            fontSize = config.currentLineSp,
-            lineHeight = config.currentLineSp * 1.38f,
-            fontWeight = config.currentLineWeight,
-            textAlign = config.textAlign,
             onClick = onClick
         )
     } else if (isCurrent) {
         Text(
             text = text,
-            fontSize = config.currentLineSp,
-            lineHeight = config.currentLineSp * 1.38f,
-            fontWeight = config.currentLineWeight,
+            fontSize = 31.sp,
+            lineHeight = 42.sp,
+            fontWeight = FontWeight.Bold,
             color = Color.White,
-            textAlign = config.textAlign,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
@@ -455,14 +444,13 @@ private fun LyricLine(
     } else {
         Text(
             text = text,
-            fontSize = config.otherLineSp,
-            lineHeight = config.otherLineSp * 1.38f,
+            fontSize = 20.sp,
+            lineHeight = 29.sp,
             fontWeight = FontWeight.Normal,
-            color = Color.White.copy(alpha = config.pastLineAlpha),
-            textAlign = config.textAlign,
+            color = Color.White.copy(alpha = 0.45f),
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (config.blurEnabled) Modifier.blur(2.dp) else Modifier)
+                .blur(1.5.dp)
                 .clickable(onClick = onClick)
                 .padding(vertical = 3.dp)
         )
@@ -473,10 +461,6 @@ private fun LyricLine(
 private fun WholeLinePopLyric(
     text: String,
     animationKey: Long,
-    fontSize: androidx.compose.ui.unit.TextUnit = 31.sp,
-    lineHeight: androidx.compose.ui.unit.TextUnit = 42.sp,
-    fontWeight: FontWeight = FontWeight.Bold,
-    textAlign: androidx.compose.ui.text.style.TextAlign = androidx.compose.ui.text.style.TextAlign.Center,
     onClick: () -> Unit
 ) {
     val alpha = remember(animationKey) { Animatable(0f) }
@@ -491,11 +475,10 @@ private fun WholeLinePopLyric(
     }
     Text(
         text = text,
-        fontSize = fontSize,
-        lineHeight = lineHeight,
-        fontWeight = fontWeight,
+        fontSize = 31.sp,
+        lineHeight = 42.sp,
+        fontWeight = FontWeight.Bold,
         color = Color.White,
-        textAlign = textAlign,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)

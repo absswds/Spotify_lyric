@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -55,7 +56,8 @@ import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
 @Composable
 fun PlaylistScreen(
     viewModel: PlaylistViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenDrawer: () -> Unit = {}
 ) {
     val playlists by viewModel.playlists.collectAsState()
     val selectedPlaylist by viewModel.selectedPlaylist.collectAsState()
@@ -74,6 +76,14 @@ fun PlaylistScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.correction_back)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(
+                            imageVector = Icons.Filled.Menu,
+                            contentDescription = "菜单"
                         )
                     }
                 }

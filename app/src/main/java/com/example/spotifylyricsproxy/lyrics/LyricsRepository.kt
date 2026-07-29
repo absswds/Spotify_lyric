@@ -7,8 +7,10 @@ import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.database.entity.LyricCacheEntity
 import com.example.spotifylyricsproxy.database.entity.RejectedLyricMatchEntity
 import com.example.spotifylyricsproxy.database.entity.TrackPlayHistoryEntity
+import com.example.spotifylyricsproxy.lyrics.LyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LrclibLyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
+import com.example.spotifylyricsproxy.lyrics.netease.NeteaseLyricsSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,10 +21,30 @@ class LyricsRepository(private val database: AppDatabase) {
 
     companion object {
         private const val TAG = "LyricsRepo"
-        private const val RETRY_DELAY_MS = 7 * 24 * 60 * 60 * 1000L // 7 days
+        private const val RETRY_DELAY_MS = 60 * 60 * 1000L // 1 hour (was 7 days)
     }
 
-    private val source = LrclibLyricsSource()
+    private val sources: List<LyricsSource> = listOf(
+        LrclibLyricsSource(),
+        NeteaseLyricsSource()
+    )
+
+    /** Query every source in order, returning the first non-empty result. */
+    private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> {
+        for (source in sources) {
+            try {
+                val result = source.search(request)
+                if (result.isNotEmpty()) {
+                    Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
+                    return result
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Source '${source.name}' failed: ${e.message}")
+            }
+        }
+        return emptyList()
+    }
+
     private val cacheDao = database.lyricCacheDao()
     private val historyDao = database.trackPlayHistoryDao()
     private val rejectedDao = database.rejectedLyricMatchDao()
@@ -99,9 +121,15 @@ class LyricsRepository(private val database: AppDatabase) {
                 }
                 "not_found", "failed" -> {
                     if (cached.nextRetryAt != null && System.currentTimeMillis() < cached.nextRetryAt) {
-                        Log.d(TAG, "Retry not yet due for $title")
-                        _lyricStatus.value = LyricStatus.NotFound
-                        return
+                        // If the cache source is null/empty, it was created by an older version
+                        // without multi-source support. Re-check immediately.
+                        if (cached.source.isNullOrEmpty()) {
+                            Log.i(TAG, "Old not_found cache (no source), re-checking with new sources")
+                        } else {
+                            Log.d(TAG, "Retry not yet due for $title")
+                            _lyricStatus.value = LyricStatus.NotFound
+                            return
+                        }
                     }
                 }
                 "plain_only" -> {
@@ -128,7 +156,7 @@ class LyricsRepository(private val database: AppDatabase) {
                 durationMs = durationMs
             )
 
-            val candidates = withContext(Dispatchers.IO) { source.search(request) }
+            val candidates = withContext(Dispatchers.IO) { aggregateSearch(request) }
 
             if (candidates.isEmpty()) {
                 Log.w(TAG, "No lyrics found for: $title - $artist")
@@ -222,7 +250,7 @@ class LyricsRepository(private val database: AppDatabase) {
             val searchArtist = artist.ifBlank { cached?.artist ?: return }
 
             val results = withContext(Dispatchers.IO) {
-                source.search(LyricsSearchRequest(
+                aggregateSearch(LyricsSearchRequest(
                     trackName = searchTitle,
                     artistName = searchArtist,
                     albumName = album.ifBlank { cached?.album ?: "" },

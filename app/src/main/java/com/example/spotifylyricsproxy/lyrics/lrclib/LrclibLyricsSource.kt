@@ -1,12 +1,15 @@
 package com.example.spotifylyricsproxy.lyrics.lrclib
 
 import com.example.spotifylyricsproxy.core.model.LyricCandidate
+import com.example.spotifylyricsproxy.lyrics.LyricsSource
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
-class LrclibLyricsSource {
+class LrclibLyricsSource : LyricsSource {
+
+    override val name: String = "lrclib"
 
     private val api: LrclibApi
 
@@ -25,7 +28,7 @@ class LrclibLyricsSource {
         api = retrofit.create(LrclibApi::class.java)
     }
 
-    suspend fun search(request: LyricsSearchRequest): List<LyricCandidate> {
+    override suspend fun search(request: LyricsSearchRequest): List<LyricCandidate> {
         // Try precise lookup first (best effort, don't crash on failure)
         val preciseResult: LrclibGetResult? = try {
             val durationSec = if (request.durationMs > 0) request.durationMs / 1000.0 else null
@@ -69,7 +72,7 @@ class LrclibLyricsSource {
         durationMs = (duration * 1000).toLong(),
         syncedLyrics = syncedLyrics,
         plainLyrics = plainLyrics,
-        source = "lrclib"
+        source = name
     )
 
     private fun LrclibSearchResult.toCandidate() = LyricCandidate(
@@ -80,7 +83,7 @@ class LrclibLyricsSource {
         durationMs = (duration * 1000).toLong(),
         syncedLyrics = syncedLyrics,
         plainLyrics = plainLyrics,
-        source = "lrclib"
+        source = name
     )
 }
 

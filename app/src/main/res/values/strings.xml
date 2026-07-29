@@ -303,4 +303,6 @@
 
     <!-- Cache source labels -->
     <string name="cache_source_manual">手动</string>
+    <string name="nav_menu_title">菜单</string>
+    <string name="nav_lyric_display">歌词显示</string>
 </resources>
