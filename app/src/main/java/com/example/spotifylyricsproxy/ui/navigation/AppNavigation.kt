@@ -152,7 +152,7 @@ fun AppNavigation(
         NavHost(
             navController = navController,
             startDestination = NavRoute.Playback.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) {
             composable(NavRoute.Playback.route) {
                 PlaybackScreen(
@@ -167,26 +167,30 @@ fun AppNavigation(
                 )
             }
             composable(NavRoute.Cache.route) {
-                CacheScreen(viewModel = cacheViewModel)
+                Box(modifier = Modifier.padding(innerPadding)) { CacheScreen(viewModel = cacheViewModel) }
             }
             composable(NavRoute.Precache.route) {
-                PrecacheScreen(viewModel = precacheViewModel)
+                Box(modifier = Modifier.padding(innerPadding)) { PrecacheScreen(viewModel = precacheViewModel) }
             }
             composable(NavRoute.Settings.route) {
-                SettingsScreen()
+                Box(modifier = Modifier.padding(innerPadding)) { SettingsScreen() }
             }
             composable(NavRoute.Playlist.route) {
-                val playlistViewModel: PlaylistViewModel = viewModel()
-                PlaylistScreen(
-                    viewModel = playlistViewModel,
-                    onBack = { navController.popBackStack() }
-                )
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    val playlistViewModel: PlaylistViewModel = viewModel()
+                    PlaylistScreen(
+                        viewModel = playlistViewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
             composable(NavRoute.LyricsCorrection.route) {
-                LyricsCorrectionScreen(
-                    viewModel = playbackViewModel,
-                    onBack = { navController.popBackStack() }
-                )
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    LyricsCorrectionScreen(
+                        viewModel = playbackViewModel,
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }
@@ -212,7 +216,14 @@ fun AppNavigation(
                             Row(
                                 Modifier.fillMaxWidth().padding(vertical = 4.dp)
                                     .clip(RoundedCornerShape(18.dp))
-                                    .clickable { showRightDrawer = false }
+                                    .clickable {
+                                        showRightDrawer = false
+                                        navController.navigate(item.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
                                     .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
