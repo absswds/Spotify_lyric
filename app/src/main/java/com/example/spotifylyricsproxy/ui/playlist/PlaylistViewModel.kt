@@ -91,7 +91,7 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
             } catch (e: Exception) {
                 Log.w(TAG, "Search failed: ${e.message}")
                 _searchResults.value = emptyList()
-                _error.value = "搜索失败: ${e.message}"
+                _error.value = "搜索失败 (${e::class.simpleName}: ${e.message})"
             }
         }
     }

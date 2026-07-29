@@ -13,6 +13,18 @@ object SpotifyWebApiClient {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                android.util.Log.i("SpotifyApi", "${request.method} ${request.url}")
+                val response = chain.proceed(request)
+                if (response.code in 200..299) {
+                    android.util.Log.i("SpotifyApi", "→ ${response.code}")
+                } else {
+                    val body = response.peekBody(2048)?.string() ?: ""
+                    android.util.Log.i("SpotifyApi", "→ ${response.code} body=${body}")
+                }
+                response
+            }
             .build()
     }
 

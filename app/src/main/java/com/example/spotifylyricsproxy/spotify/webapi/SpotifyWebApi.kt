@@ -40,7 +40,7 @@ interface SpotifyWebApi {
         @Header("Authorization") auth: String,
         @Query("q") query: String,
         @Query("type") type: String = "playlist",
-        @Query("limit") limit: Int = 20
+        @Query("limit") limit: Int = 10
     ): SpotifyPlaylistSearchResponse
 }
 

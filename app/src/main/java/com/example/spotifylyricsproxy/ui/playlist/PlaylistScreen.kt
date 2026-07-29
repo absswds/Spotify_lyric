@@ -120,9 +120,6 @@ fun PlaylistScreen(
                     focusedContainerColor = Color(0xFFF0F0F5)
                 )
             )
-            Text(text = "query: $searchQuery", fontSize = 12.sp, color = Color.Gray,
-                modifier = Modifier.padding(horizontal = 16.dp))
-
             // Search results or normal playlist carousel
             if (searchQuery.isNotEmpty()) {
                 LazyColumn(modifier = Modifier.weight(1f)) {
