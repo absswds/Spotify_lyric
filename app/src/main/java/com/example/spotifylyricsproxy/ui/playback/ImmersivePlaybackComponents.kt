@@ -427,6 +427,7 @@ fun ImmersiveLyricsBlock(
                                 fontSize = 16.sp,
                                 lineHeight = 24.sp,
                                 color = Color.White.copy(alpha = 0.55f),
+                                textAlign = config.textAlign,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(start = 4.dp, top = 8.dp)
