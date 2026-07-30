@@ -276,7 +276,14 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         _currentLine.value = null
         _lyricSource.value = candidate.source
 
-        cacheResult(currentTrackId, "", "", "", 0, candidate)
+        cacheResult(
+            trackId = currentTrackId,
+            title = candidate.trackName,
+            artist = candidate.artistName,
+            album = candidate.albumName,
+            durationMs = candidate.durationMs,
+            best = candidate
+        )
 
         val synced = candidate.syncedLyrics
         if (synced.isNullOrEmpty()) {
