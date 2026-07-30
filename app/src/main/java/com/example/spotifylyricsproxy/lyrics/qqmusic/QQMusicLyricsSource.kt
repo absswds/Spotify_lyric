@@ -18,8 +18,8 @@ class QQMusicLyricsSource : LyricsSource {
     override val name: String = "qqmusic"
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(8, TimeUnit.SECONDS)
-        .readTimeout(8, TimeUnit.SECONDS)
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(5, TimeUnit.SECONDS)
         .build()
 
     override suspend fun search(request: LyricsSearchRequest): List<LyricCandidate> =
@@ -43,6 +43,7 @@ class QQMusicLyricsSource : LyricsSource {
                 ?: return@withContext candidates.also { android.util.Log.w("QQMusic", "No song list in response") }
 
             android.util.Log.i("QQMusic", "Found ${songList.length()} songs")
+            android.util.Log.i("QQMusic", "Starting for loop...")
 
             for (i in 0 until songList.length()) {
                 val song = songList.getJSONObject(i)
@@ -56,22 +57,43 @@ class QQMusicLyricsSource : LyricsSource {
 
                 // Step 2: fetch lyrics
                 val lyricUrl = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=$songmid&g_tk=5381&format=json"
-                val lyricBody = client.newCall(
+                val response = client.newCall(
                     Request.Builder().url(lyricUrl)
                         .header("Referer", "https://y.qq.com/")
                         .build()
-                ).execute().body?.string()
-                    ?: continue
+                ).execute()
+                if (!response.isSuccessful) {
+                    android.util.Log.w("QQMusic", "Lyric HTTP ${response.code} for $songmid")
+                    continue
+                }
+                val lyricBody = response.body?.string()
+                if (lyricBody == null) {
+                    android.util.Log.w("QQMusic", "Lyric null body for $songmid")
+                    continue
+                }
 
-                val lyricJson = JSONObject(if (lyricBody.startsWith("(")) lyricBody.substring(1, lyricBody.length - 1) else lyricBody)
-                if (lyricJson.optInt("retcode", -1) != 0) continue
-
+                val lyricJson = try {
+                    JSONObject(if (lyricBody.startsWith("(")) lyricBody.substring(1, lyricBody.length - 1) else lyricBody)
+                } catch (e: Exception) {
+                    android.util.Log.w("QQMusic", "Lyric JSON parse error for $songmid: ${e.message}")
+                    continue
+                }
+                if (lyricJson.optInt("retcode", -1) != 0) {
+                    android.util.Log.w("QQMusic", "Lyric retcode=${lyricJson.optInt("retcode")} for $songmid")
+                    continue
+                }
                 val lyricEncoded = lyricJson.optString("lyric", "")
-                if (lyricEncoded.isEmpty()) continue
+                if (lyricEncoded.isEmpty()) {
+                    android.util.Log.w("QQMusic", "Empty lyric for $songmid")
+                    continue
+                }
 
                 val synced = try {
                     Base64.getDecoder().decode(lyricEncoded).decodeToString()
-                } catch (e: Exception) { continue }
+                } catch (e: Exception) {
+                    android.util.Log.w("QQMusic", "Base64 decode failed for $songmid: ${e.message}")
+                    continue
+                }
 
                 val transEncoded = lyricJson.optString("trans", "")
                 val trans = if (transEncoded.isNotEmpty()) {
@@ -89,6 +111,7 @@ class QQMusicLyricsSource : LyricsSource {
                     source = name,
                     score = 0
                 ))
+                android.util.Log.i("QQMusic", "Added candidate: $songName - $singer ($songmid)")
             }
             candidates
         }
