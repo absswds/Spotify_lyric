@@ -98,6 +98,8 @@ class LyricsRepository(private val database: AppDatabase) {
         var cached: LyricCacheEntity? = null
         if (!forceOnline) {
             cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        } else {
+            Log.d(TAG, "forceOnline=true — skipping cache for $title")
         }
         if (cached != null) {
             _offsetMs = cached.offsetMs
@@ -148,8 +150,10 @@ class LyricsRepository(private val database: AppDatabase) {
             }
         }
 
-        // Not cached or needs refresh
-        _lyricStatus.value = LyricStatus.Searching
+        // Not cached or needs refresh — keep old lyrics visible when forceOnline
+        if (!forceOnline) {
+            _lyricStatus.value = LyricStatus.Searching
+        }
 
         try {
             val request = LyricsSearchRequest(
@@ -468,9 +472,20 @@ class LyricsRepository(private val database: AppDatabase) {
      * Used as fallback when [forceOnline] search returns nothing.
      */
     private suspend fun tryFallbackToCache(trackId: String): Boolean {
-        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) } ?: return false
-        if (cached.fetchStatus != "success" && cached.fetchStatus != "plain_only") return false
-        val synced = cached.syncedLyrics ?: return false
+        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        if (cached == null) {
+            Log.d(TAG, "tryFallbackToCache: no cache entry for $trackId")
+            return false
+        }
+        if (cached.fetchStatus != "success" && cached.fetchStatus != "plain_only") {
+            Log.d(TAG, "tryFallbackToCache: cache entry status=${cached.fetchStatus}, no usable lyrics")
+            return false
+        }
+        val synced = cached.syncedLyrics
+        if (synced == null) {
+            Log.d(TAG, "tryFallbackToCache: cache has status=${cached.fetchStatus} but no syncedLyrics")
+            return false
+        }
         val lines = LrcParser.parse(synced)
         if (lines.isEmpty()) return false
         _offsetMs = cached.offsetMs
