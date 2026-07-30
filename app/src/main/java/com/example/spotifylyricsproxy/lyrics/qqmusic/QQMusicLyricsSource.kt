@@ -25,6 +25,7 @@ class QQMusicLyricsSource : LyricsSource {
     override suspend fun search(request: LyricsSearchRequest): List<LyricCandidate> =
         withContext(Dispatchers.IO) {
             val candidates = mutableListOf<LyricCandidate>()
+            android.util.Log.i("QQMusic", "Searching: ${request.trackName} ${request.artistName}")
 
             // Step 1: search for songs
             val keyword = "${request.trackName} ${request.artistName}"
@@ -35,10 +36,13 @@ class QQMusicLyricsSource : LyricsSource {
                     .header("Referer", "https://y.qq.com/")
                     .build()
             ).execute().body?.string()
-                ?: return@withContext candidates
+                ?: return@withContext candidates.also { android.util.Log.w("QQMusic", "Search HTTP failed") }
 
             val searchJson = JSONObject(if (searchBody.startsWith("(")) searchBody.substring(1, searchBody.length - 1) else searchBody)
-            val songList = searchJson.optJSONObject("data")?.optJSONObject("song")?.optJSONArray("list") ?: return@withContext candidates
+            val songList = searchJson.optJSONObject("data")?.optJSONObject("song")?.optJSONArray("list")
+                ?: return@withContext candidates.also { android.util.Log.w("QQMusic", "No song list in response") }
+
+            android.util.Log.i("QQMusic", "Found ${songList.length()} songs")
 
             for (i in 0 until songList.length()) {
                 val song = songList.getJSONObject(i)

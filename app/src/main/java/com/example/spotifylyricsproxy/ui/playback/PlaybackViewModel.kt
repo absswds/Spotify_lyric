@@ -391,6 +391,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             lyricsRepo.selectCandidate(index)
             _showCandidatePicker.value = false
+            // When user manually selects a different source, reset chinese form
+            // to original so the new lyrics are shown as-is from the source.
+            LyricDisplayPreferences.setChineseForm("original")
         }
     }
 

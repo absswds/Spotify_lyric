@@ -260,6 +260,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         } else {
             _lyricStatus.value = LyricStatus.PlainOnly
         }
+        _lyricSource.value = candidate.source
     }
 
     /** Re-fetch and re-score from network, then update candidates. */
