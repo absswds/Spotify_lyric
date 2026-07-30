@@ -305,4 +305,27 @@
     <string name="cache_source_manual">手動</string>
     <string name="nav_menu_title">メニュー</string>
     <string name="nav_lyric_display">歌詞表示</string>
+
+    <!-- Mobile data dialog -->
+    <string name="mobile_data_dialog_title">モバイルデータで歌詞を検索しますか？</string>
+    <string name="mobile_data_dialog_message">モバイルデータ/テザリング接続です。オンラインで歌詞を検索しますか？（データ通信料が発生します）</string>
+    <string name="mobile_data_dialog_always_allow">次回から確認しない、常に許可</string>
+    <string name="mobile_data_dialog_confirm">モバイルデータを使用</string>
+    <string name="mobile_data_restricted">モバイルデータではオンライン検索が制限されています。設定で許可するかWi-Fiに接続してください</string>
+    <string name="mobile_data_restricted_short">モバイルデータ制限中</string>
+    <!-- Lyric source labels -->
+    <string name="lyric_source_label">ソース：%1$s</string>
+    <string name="lyric_source_cache">💾 キャッシュ</string>
+    <string name="lyric_source_lrclib">🌐 LRCLIB</string>
+    <string name="lyric_source_netease">🎵 NetEase</string>
+    <string name="lyric_source_qqmusic">🎵 QQ Music</string>
+    <string name="lyric_source_manual">📝 手動</string>
+    <!-- Mobile data settings -->
+    <string name="mobile_data_search_section">モバイルデータ検索</string>
+    <string name="mobile_data_strategy_ask">毎回確認</string>
+    <string name="mobile_data_strategy_allow">常に許可</string>
+    <string name="mobile_data_strategy_deny">キャッシュのみ</string>
+    <!-- Other -->
+    <string name="album_art_description">アルバムアート</string>
+    <string name="correction_status_mobile_restricted">モバイルデータ制限</string>
 </resources>

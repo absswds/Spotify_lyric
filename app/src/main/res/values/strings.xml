@@ -305,4 +305,32 @@
     <string name="cache_source_manual">手动</string>
     <string name="nav_menu_title">菜单</string>
     <string name="nav_lyric_display">歌词显示</string>
+
+    <!-- Mobile data dialog -->
+    <string name="mobile_data_dialog_title">使用移动数据搜索歌词？</string>
+    <string name="mobile_data_dialog_message">当前为移动数据/热点网络。是否使用在线搜索歌词？（将产生流量费用）</string>
+    <string name="mobile_data_dialog_always_allow">不再询问，始终允许</string>
+    <string name="mobile_data_dialog_confirm">使用移动数据</string>
+    <string name="mobile_data_restricted">移动数据已限制在线搜索，请在设置中允许或连接到WiFi</string>
+    <string name="mobile_data_restricted_short">移动数据已限制在线搜索</string>
+
+    <!-- Lyric source labels (shown in settings dialog) -->
+    <string name="lyric_source_label">当前来源：%1$s</string>
+    <string name="lyric_source_cache">💾 缓存</string>
+    <string name="lyric_source_lrclib">🌐 LRCLIB</string>
+    <string name="lyric_source_netease">🎵 网易云</string>
+    <string name="lyric_source_qqmusic">🎵 QQ音乐</string>
+    <string name="lyric_source_manual">📝 手动导入</string>
+
+    <!-- Mobile data settings -->
+    <string name="mobile_data_search_section">移动数据搜索</string>
+    <string name="mobile_data_strategy_ask">每次询问</string>
+    <string name="mobile_data_strategy_allow">始终允许</string>
+    <string name="mobile_data_strategy_deny">仅缓存</string>
+
+    <!-- Album art content description -->
+    <string name="album_art_description">专辑封面</string>
+
+    <!-- Correction screen - mobile restricted -->
+    <string name="correction_status_mobile_restricted">移动数据限制</string>
 </resources>

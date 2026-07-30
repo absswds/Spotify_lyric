@@ -305,4 +305,27 @@
     <string name="cache_source_manual">Manual</string>
     <string name="nav_menu_title">Menu</string>
     <string name="nav_lyric_display">Lyric Display</string>
+
+    <!-- Mobile data dialog -->
+    <string name="mobile_data_dialog_title">Search lyrics on mobile data?</string>
+    <string name="mobile_data_dialog_message">You are on mobile data / hotspot. Search online for lyrics? (data charges may apply)</string>
+    <string name="mobile_data_dialog_always_allow">Do not ask again, always allow</string>
+    <string name="mobile_data_dialog_confirm">Use mobile data</string>
+    <string name="mobile_data_restricted">Online search restricted on mobile data. Allow in settings or connect to WiFi.</string>
+    <string name="mobile_data_restricted_short">Restricted on mobile data</string>
+    <!-- Lyric source labels -->
+    <string name="lyric_source_label">Source: %1$s</string>
+    <string name="lyric_source_cache">💾 Cache</string>
+    <string name="lyric_source_lrclib">🌐 LRCLIB</string>
+    <string name="lyric_source_netease">🎵 Netease</string>
+    <string name="lyric_source_qqmusic">🎵 QQ Music</string>
+    <string name="lyric_source_manual">📝 Manual</string>
+    <!-- Mobile data settings -->
+    <string name="mobile_data_search_section">Mobile data search</string>
+    <string name="mobile_data_strategy_ask">Ask each time</string>
+    <string name="mobile_data_strategy_allow">Always allow</string>
+    <string name="mobile_data_strategy_deny">Cache only</string>
+    <!-- Other -->
+    <string name="album_art_description">Album cover</string>
+    <string name="correction_status_mobile_restricted">Mobile data restricted</string>
 </resources>

@@ -373,17 +373,17 @@ fun PlaybackScreen(
             var dontAskAgain by remember { mutableStateOf(false) }
             AlertDialog(
                 onDismissRequest = { viewModel.dismissMobileDataDialog() },
-                title = { Text("使用移动数据搜索歌词?") },
+                title = { Text(stringResource(R.string.mobile_data_dialog_title)) },
                 text = {
                     Column {
-                        Text("当前为移动数据/热点网络。是否使用在线搜索歌词?（将产生流量费用）")
+                        Text(stringResource(R.string.mobile_data_dialog_message))
                         Spacer(modifier = Modifier.height(12.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = dontAskAgain,
                                     onCheckedChange = { checked -> dontAskAgain = checked }
                                 )
-                            Text("不再询问，始终允许")
+                            Text(stringResource(R.string.mobile_data_dialog_always_allow))
                         }
                     }
                 },
@@ -392,7 +392,7 @@ fun PlaybackScreen(
                         if (dontAskAgain) LyricDisplayPreferences.setMobileDataStrategy("allow")
                         viewModel.confirmMobileDataFetch()
                     }) {
-                        Text("使用移动数据")
+                        Text(stringResource(R.string.mobile_data_dialog_confirm))
                     }
                 },
                 dismissButton = {
@@ -642,7 +642,7 @@ private fun AlbumArtHero(albumArt: Bitmap?, accent: Color, widthFraction: Float 
                 if (art != null) {
                     Image(
                         bitmap = art.asImageBitmap(),
-                        contentDescription = "专辑封面",
+                        contentDescription = stringResource(R.string.album_art_description),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         filterQuality = FilterQuality.High
@@ -802,7 +802,7 @@ private fun CompactLyricsBlock(
                 is LyricStatus.LowConfidence -> LyricMessage(stringResource(R.string.playback_lyrics_low_confidence))
                 is LyricStatus.ParseError -> LyricMessage(stringResource(R.string.playback_lyrics_parse_error))
                 is LyricStatus.Error -> LyricMessage(stringResource(R.string.playback_lyrics_load_error))
-                is LyricStatus.MobileDataRestricted -> LyricMessage("移动数据已限制在线搜索")
+                is LyricStatus.MobileDataRestricted -> LyricMessage(stringResource(R.string.mobile_data_restricted_short))
             }
         }
     }
@@ -1539,7 +1539,7 @@ private fun LandscapePlaybackLayout(
                     albumArt?.let {
                         Image(
                             bitmap = it.asImageBitmap(),
-                            contentDescription = "专辑封面",
+                            contentDescription = stringResource(R.string.album_art_description),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
@@ -1649,14 +1649,15 @@ private fun LyricDisplaySettingsDialog(
                 // Current lyrics source
                 if (currentSource.isNotEmpty()) {
                     val sourceLabel = when (currentSource) {
-                        "cache" -> "💾 缓存"
-                        "lrclib" -> "🌐 LRCLIB"
-                        "netease" -> "🎵 网易云"
-                        "manual" -> "📝 手动导入"
-                        else -> currentSource
-                    }
+                                            "cache" -> stringResource(R.string.lyric_source_cache)
+                                            "lrclib" -> stringResource(R.string.lyric_source_lrclib)
+                                            "netease" -> stringResource(R.string.lyric_source_netease)
+                                            "qqmusic" -> stringResource(R.string.lyric_source_qqmusic)
+                                            "manual" -> stringResource(R.string.lyric_source_manual)
+                                            else -> currentSource
+                                        }
                     Text(
-                        text = "当前来源: $sourceLabel",
+                        text = stringResource(R.string.lyric_source_label, sourceLabel),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -1878,16 +1879,16 @@ private fun LyricDisplaySettingsDialog(
                 val currentStrategy = LyricDisplayPreferences.mobileDataStrategy.value
                 Column {
                     Text(
-                        text = "移动数据搜索",
+                        text = stringResource(R.string.mobile_data_search_section),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val strategies = listOf(
-                            "ask" to "每次询问",
-                            "allow" to "始终允许",
-                            "deny" to "仅缓存"
+                            "ask" to stringResource(R.string.mobile_data_strategy_ask),
+                                                        "allow" to stringResource(R.string.mobile_data_strategy_allow),
+                                                        "deny" to stringResource(R.string.mobile_data_strategy_deny)
                         )
                         strategies.forEach { (value, label) ->
                             FilterChip(

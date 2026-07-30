@@ -407,7 +407,7 @@ fun ImmersiveLyricsBlock(
             }
             is LyricStatus.MobileDataRestricted -> {
                 Text(
-                    text = "移动数据已限制在线搜索，请在设置中允许或连接到WiFi",
+                    text = stringResource(R.string.mobile_data_restricted),
                     fontSize = 16.sp,
                     color = Color.White.copy(alpha = 0.55f)
                 )

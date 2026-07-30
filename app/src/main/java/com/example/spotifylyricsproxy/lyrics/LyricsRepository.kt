@@ -41,20 +41,21 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         LrclibLyricsSource()
     )
 
-    /** Query every source in order, returning the first non-empty result. */
+    /** Query every source, collect all candidates, return all for scoring. */
     private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> {
+        val allCandidates = mutableListOf<LyricCandidate>()
         for (source in sources) {
             try {
                 val result = source.search(request)
                 if (result.isNotEmpty()) {
                     Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
-                    return result
+                    allCandidates.addAll(result)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Source '${source.name}' failed: ${e.message}")
             }
         }
-        return emptyList()
+        return allCandidates
     }
 
     private val cacheDao = database.lyricCacheDao()
@@ -181,6 +182,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 // Fall back to cache on forceOnline, so WiFi users still see cached lyrics when online fails
                 if (tryFallbackToCache(trackId)) return
                 cacheNotfound(trackId, title, artist, album, durationMs)
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.NotFound
                 return
             }
@@ -195,6 +197,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 Log.w(TAG, "All candidates rejected for: $title - $artist")
                 // Keep the scored list so the user can still manually choose if needed
                 _candidates.value = scored.sortedByDescending { it.score }
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.LowConfidence(0)
                 return
             }
@@ -207,18 +210,21 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             cacheResult(trackId, title, artist, album, durationMs, best)
 
             if (!LyricMatcher.isAutoAccept(best.score)) {
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.LowConfidence(best.score)
                 return
             }
 
             val syncedLyrics = best.syncedLyrics
             if (syncedLyrics.isNullOrEmpty()) {
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.PlainOnly
                 return
             }
 
             val lines = LrcParser.parse(syncedLyrics)
             if (lines.isEmpty()) {
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.ParseError
                 return
             }
