@@ -185,10 +185,22 @@ class LyricsForegroundService : Service() {
     }
 
     private fun fetchLyricsWhenTrackChanges(track: SpotifyTrackInfo) {
-        // Fetch is handled by PlaybackViewModel. This service only reads
-        // the shared LyricsRepository singleton for notification display.
-        // Resetting or re-fetching here would race with the ViewModel.
-        lyricsRepository.updatePosition(track.playbackPositionMs)
+        if (track.trackId.isBlank() || track.trackId == lastFetchedTrackId) return
+
+        // Fetch lyrics to populate the shared LyricsRepository singleton.
+        // The ViewModel also fetches; both share the same repo instance.
+        // IMPORTANT: do NOT call lyricsRepository.reset() here — that would
+        // clear the UI's currently displayed lyrics between tracks.
+        lastFetchedTrackId = track.trackId
+        serviceScope.launch {
+            lyricsRepository.fetchLyrics(
+                trackId = track.trackId,
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                durationMs = track.durationMs
+            )
+        }
     }
 
     private fun publishNotification(snapshot: LyricsNotificationSnapshot, albumArt: Bitmap?) {
