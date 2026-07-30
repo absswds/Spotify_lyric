@@ -4,7 +4,7 @@
 
     <!-- Navigation -->
     <string name="nav_playback">播放</string>
-    <string name="nav_cache">快取</string>
+    <string name="nav_cache">緩存</string>
     <string name="nav_precache">預載</string>
     <string name="nav_settings">設定</string>
     <string name="nav_playlist">歌單</string>
@@ -138,12 +138,12 @@
     <string name="settings_language_tw">繁體中文</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_ja">日本語</string>
-    <string name="settings_group_cache">快取與下載</string>
-    <string name="settings_auto_cache">自動快取新播放的歌曲</string>
+    <string name="settings_group_cache">緩存與下載</string>
+    <string name="settings_auto_cache">自動緩存新播放的歌曲</string>
     <string name="settings_auto_cache_desc">播放時自動補齊同步歌詞</string>
-    <string name="settings_wifi_only">僅在 Wi-Fi 下快取</string>
+    <string name="settings_wifi_only">僅在 Wi-Fi 下緩存</string>
     <string name="settings_wifi_only_desc">避免使用行動數據下載歌詞</string>
-    <string name="settings_cache_album_art">快取封面圖片</string>
+    <string name="settings_cache_album_art">緩存封面圖片</string>
     <string name="settings_cache_album_art_desc">離線時仍可顯示專輯封面</string>
     <string name="settings_group_playback">播放與代理</string>
     <string name="settings_mediasession_proxy">啟用 MediaSession 代理</string>
@@ -158,8 +158,8 @@
     <string name="settings_notification_granted">已授權</string>
     <string name="settings_notification_denied">未授權，點選申請</string>
     <string name="settings_notification_legacy">Android 12 及以下無需額外申請</string>
-    <string name="settings_group_storage">快取儲存</string>
-    <string name="settings_clear_cache">清理歌詞快取</string>
+    <string name="settings_group_storage">緩存儲存</string>
+    <string name="settings_clear_cache">清理歌詞緩存</string>
     <string name="settings_clear_cache_desc">刪除所有歌詞、封面和失敗記錄</string>
     <string name="settings_about_app">關於 Lyrics Proxy</string>
     <string name="settings_about_version_detail">版本 0.1.0</string>
@@ -180,20 +180,20 @@
     <string name="settings_translate_target_ja">日本語</string>
 
     <!-- Cache Screen -->
-    <string name="cache_title">快取管理</string>
+    <string name="cache_title">緩存管理</string>
     <string name="cache_filter_all">全部</string>
     <string name="cache_filter_synced">已同步</string>
     <string name="cache_filter_plain">純文字</string>
     <string name="cache_filter_not_found">未找到</string>
-    <string name="cache_search_placeholder">搜尋已快取的曲目</string>
-    <string name="cache_empty_all">暫無快取曲目</string>
-    <string name="cache_empty_synced">暫無已同步的歌詞快取</string>
-    <string name="cache_empty_plain">暫無純文字歌詞快取</string>
+    <string name="cache_search_placeholder">搜尋已緩存的曲目</string>
+    <string name="cache_empty_all">暫無緩存曲目</string>
+    <string name="cache_empty_synced">暫無已同步的歌詞緩存</string>
+    <string name="cache_empty_plain">暫無純文字歌詞緩存</string>
     <string name="cache_empty_not_found">暫無未找到的條目</string>
     <string name="cache_cd_delete">刪除</string>
     <string name="cache_cd_open">開啟</string>
     <string name="cache_confirm_delete_title">確認刪除</string>
-    <string name="cache_confirm_delete_message">確定要刪除這首歌詞快取嗎？</string>
+    <string name="cache_confirm_delete_message">確定要刪除這首歌詞緩存嗎？</string>
     <string name="cache_confirm_delete_confirm">刪除</string>
     <string name="cache_confirm_delete_cancel">取消</string>
     <string name="cache_delete_success">已刪除</string>
@@ -203,7 +203,7 @@
     <string name="cache_not_found_status">7天內不重複搜尋</string>
     <string name="cache_filter_failed">失敗</string>
     <string name="cache_filter_failed_fmt">失敗 %1$d</string>
-    <string name="cache_empty_desc">播放或預載歌曲後，歌詞快取狀態會顯示在這裡。</string>
+    <string name="cache_empty_desc">播放或預載歌曲後，歌詞緩存狀態會顯示在這裡。</string>
 
     <!-- Playlist Screen -->
     <string name="playlist_loading">正在載入歌單…</string>
@@ -278,13 +278,13 @@
     <string name="precache_your_playlists">你的歌單</string>
     <string name="precache_logout">退出</string>
     <string name="precache_login_spotify">登入 Spotify</string>
-    <string name="precache_login_description">登入 Spotify 後選擇歌單，App 會自動補齊歌詞快取</string>
+    <string name="precache_login_description">登入 Spotify 後選擇歌單，App 會自動補齊歌詞緩存</string>
     <string name="precache_no_playlists">未取得歌單</string>
     <string name="precache_retry">重試</string>
     <string name="precache_cached_format">%1$d/%2$d 已預載</string>
     <string name="precache_processing">處理中 %1$d%%</string>
     <string name="precache_tracks_count">%1$d 首歌曲</string>
-    <string name="precache_owner_only">%1$d 首歌曲 · 僅建立者/協作歌單可快取</string>
+    <string name="precache_owner_only">%1$d 首歌曲 · 僅建立者/協作歌單可緩存</string>
     <string name="precache_cache_button">預載</string>
 
     <!-- Toast / Error messages -->
@@ -323,13 +323,13 @@
     <string name="mobile_data_dialog_title">使用行動數據搜尋歌詞？</string>
     <string name="mobile_data_dialog_message">目前為行動數據/熱點網路。選擇後當天不再詢問。</string>
     <string name="mobile_data_allow">允許</string>
-    <string name="mobile_data_deny">拒絕，僅用快取</string>
+    <string name="mobile_data_deny">拒絕，僅用緩存</string>
     <string name="mobile_data_restricted">未允許使用行動數據搜尋，請點「允許」</string>
     <string name="mobile_data_restricted_short">行動數據已限制</string>
 
     <!-- Lyric source labels -->
     <string name="lyric_source_label">目前來源：%1$s</string>
-    <string name="lyric_source_cache">💾 快取</string>
+    <string name="lyric_source_cache">💾 緩存</string>
     <string name="lyric_source_lrclib">🌐 LRCLIB</string>
     <string name="lyric_source_netease">🎵 網易雲</string>
     <string name="lyric_source_qqmusic">🎵 QQ音樂</string>
@@ -338,7 +338,7 @@
     <!-- Mobile data settings -->
     <string name="mobile_data_search_section">行動數據搜尋</string>
     <string name="mobile_data_settings_today_allow">✓ 今天已允許使用行動數據</string>
-    <string name="mobile_data_settings_today_deny">✓ 今天已選擇僅用快取</string>
+    <string name="mobile_data_settings_today_deny">✓ 今天已選擇僅用緩存</string>
 
     <!-- Other -->
     <string name="album_art_description">專輯封面</string>
