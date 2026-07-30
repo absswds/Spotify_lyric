@@ -320,9 +320,10 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         durationMs: Long = 0
     ) {
         val t = currentTrackId.ifBlank { return }
-        val rejectedIds = withContext(Dispatchers.IO) {
-            rejectedDao.getRejectedSourceLyricIds(t).toSet()
-        }
+        android.util.Log.i(TAG, "reSearch: trackId=$t lastTitle=$lastSearchTitle lastArtist=$lastSearchArtist")
+        // Clear all rejections for this track — user explicitly asked for a fresh search.
+        withContext(Dispatchers.IO) { rejectedDao.clearForTrack(t) }
+        val rejectedIds = emptySet<String>()
 
         _lyricStatus.value = LyricStatus.Searching
         try {
