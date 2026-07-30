@@ -64,6 +64,7 @@
     <string name="playlist_loading_tracks_progress">曲を読み込み中 %1$d/%2$d</string>
     <string name="playlist_loading_tracks">曲を読み込み中…</string>
     <string name="playlist_no_songs">このプレイリストに再生可能な曲がありません</string>
+    <string name="playlist_search_placeholder">曲を検索</string>
 
     <!-- Playback Screen - Content descriptions -->
     <string name="playback_cd_more">その他</string>
@@ -112,6 +113,7 @@
     <string name="lyric_settings_align_center">中央揃え</string>
     <string name="lyric_settings_align_left">左揃え</string>
     <string name="lyric_settings_done">完了</string>
+    <string name="lyric_settings_inactive_blur">非アクティブ行をぼかす</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻訳</string>

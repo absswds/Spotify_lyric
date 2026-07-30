@@ -400,7 +400,7 @@ fun PlaybackScreen(
                         if (dontAskAgain) LyricDisplayPreferences.setMobileDataStrategy("deny")
                         viewModel.dismissMobileDataDialog()
                     }) {
-                        Text("取消")
+                        Text(stringResource(R.string.generic_cancel))
                     }
                 }
             )
@@ -1723,7 +1723,7 @@ private fun LyricDisplaySettingsDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("非当前行模糊", fontSize = 16.sp)
+                        Text(stringResource(R.string.lyric_settings_inactive_blur), fontSize = 16.sp)
                         Switch(
                             checked = blurEnabled,
                             onCheckedChange = { LyricDisplayPreferences.setBlurEnabled(it) }

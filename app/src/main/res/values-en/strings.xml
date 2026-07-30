@@ -64,6 +64,7 @@
     <string name="playlist_loading_tracks_progress">Loading songs %1$d/%2$d</string>
     <string name="playlist_loading_tracks">Loading songs…</string>
     <string name="playlist_no_songs">No playable songs in this playlist</string>
+    <string name="playlist_search_placeholder">Search songs</string>
 
     <!-- Playback Screen - Content descriptions -->
     <string name="playback_cd_more">More</string>
@@ -112,6 +113,7 @@
     <string name="lyric_settings_align_center">Center</string>
     <string name="lyric_settings_align_left">Left</string>
     <string name="lyric_settings_done">Done</string>
+    <string name="lyric_settings_inactive_blur">Blur inactive lines</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">Translate</string>

@@ -112,7 +112,7 @@ fun PlaylistScreen(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("搜索歌曲") },
+                placeholder = { Text(stringResource(R.string.playlist_search_placeholder)) },
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {

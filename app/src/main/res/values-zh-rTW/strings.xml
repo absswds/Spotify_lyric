@@ -64,6 +64,7 @@
     <string name="playlist_loading_tracks_progress">正在載入歌曲 %1$d/%2$d</string>
     <string name="playlist_loading_tracks">正在載入歌曲…</string>
     <string name="playlist_no_songs">這個歌單暫時沒有可播放歌曲</string>
+    <string name="playlist_search_placeholder">搜尋歌曲</string>
 
     <!-- Playback Screen - Content descriptions -->
     <string name="playback_cd_more">更多</string>
@@ -112,6 +113,7 @@
     <string name="lyric_settings_align_center">居中</string>
     <string name="lyric_settings_align_left">靠左</string>
     <string name="lyric_settings_done">完成</string>
+    <string name="lyric_settings_inactive_blur">非目前行模糊</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻譯</string>
