@@ -43,6 +43,9 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         LrclibLyricsSource()
     )
 
+    /** Providers whose lyrics may be displayed during the current process but never written to Room. */
+    private val memoryOnlySources = setOf("netease")
+
     /** Query every source IN PARALLEL, collect all candidates, return all for scoring. */
     private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> = coroutineScope {
         val allCandidates = mutableListOf<LyricCandidate>()
@@ -388,6 +391,12 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         trackId: String, title: String, artist: String,
         album: String, durationMs: Long, best: LyricCandidate
     ) {
+        // NetEase lyrics are session-only by policy: display them in memory but never persist them.
+        if (best.source in memoryOnlySources) {
+            Log.i(TAG, "Skipping Room cache for memory-only source=${best.source}")
+            return
+        }
+
         val fetchStatus = when {
             best.syncedLyrics != null -> "success"
             best.plainLyrics != null -> "plain_only"
@@ -445,7 +454,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
 
     /**
      * Save manually imported lyrics for a track.
-     * Once saved, fetchLyrics will always return these lyrics and never re-search LRCLIB.
+     * Once saved, fetchLyrics will always return these lyrics and never re-search online sources.
      */
     suspend fun saveManualLyrics(
         trackId: String,
