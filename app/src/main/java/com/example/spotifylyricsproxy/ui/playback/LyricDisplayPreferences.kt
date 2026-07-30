@@ -30,7 +30,7 @@ object LyricDisplayPreferences {
     private val _fontSizeCurrent = mutableFloatStateOf(20f)
     private val _fontSizeOther = mutableFloatStateOf(15f)
     private val _mobileDataStrategy = mutableStateOf("ask")  // "ask" | "allow" | "deny"
-    private val _chineseForm = mutableStateOf("simplified")  // "simplified" | "traditional"
+    private val _chineseForm = mutableStateOf("original")  // "original" | "simplified" | "traditional"
 
     val boldCurrentLine: State<Boolean> = _boldCurrentLine
     val dimLevel: State<String> = _dimLevel
@@ -85,7 +85,7 @@ object LyricDisplayPreferences {
         _fontSizeCurrent.value = prefs?.getFloat(KEY_FONT_SIZE_CURRENT, 20f) ?: 20f
         _fontSizeOther.value = prefs?.getFloat(KEY_FONT_SIZE_OTHER, 15f) ?: 15f
         _mobileDataStrategy.value = prefs?.getString(KEY_MOBILE_STRATEGY, "ask") ?: "ask"
-        _chineseForm.value = prefs?.getString(KEY_CHINESE_FORM, "simplified") ?: "simplified"
+        _chineseForm.value = prefs?.getString(KEY_CHINESE_FORM, "original") ?: "original"
     }
 
     fun setBoldCurrentLine(value: Boolean) {
@@ -199,5 +199,5 @@ data class LyricDisplayConfig(
     val futureLineAlpha: Float,
     val textAlign: TextAlign,
     val blurEnabled: Boolean = true,
-    val chineseForm: String = "simplified"
+    val chineseForm: String = "original"
 )

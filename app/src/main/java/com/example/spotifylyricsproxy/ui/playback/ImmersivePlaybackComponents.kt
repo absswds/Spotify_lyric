@@ -103,7 +103,7 @@ internal fun convertChineseForm(text: String, targetForm: String): String {
             when (targetForm) {
                 "traditional" -> cnTransliterator.transliterate(text)
                 "simplified" -> cnToSimplified.transliterate(text)
-                else -> text
+                else -> text  // "original" — leave as-is from the source
             }
         } catch (_: Exception) { text }
     }
