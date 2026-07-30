@@ -140,7 +140,7 @@ object LyricDisplayPreferences {
         return LyricDisplayConfig(
             currentLineSp = _fontSizeCurrent.value.sp,
             otherLineSp = _fontSizeOther.value.sp,
-            currentLineWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold,
+            currentLineWeight = if (bold) FontWeight.ExtraBold else FontWeight.Medium,
             pastLineAlpha = pastAlpha,
             futureLineAlpha = futureAlpha,
             textAlign = if (align == "start") TextAlign.Start else TextAlign.Center,
