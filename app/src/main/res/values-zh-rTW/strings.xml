@@ -321,11 +321,11 @@
 
     <!-- Mobile data dialog -->
     <string name="mobile_data_dialog_title">使用行動數據搜尋歌詞？</string>
-    <string name="mobile_data_dialog_message">目前為行動數據/熱點網路。是否使用線上搜尋歌詞？（將產生流量費用）</string>
-    <string name="mobile_data_dialog_always_allow">不再詢問，始終允許</string>
-    <string name="mobile_data_dialog_confirm">使用行動數據</string>
-    <string name="mobile_data_restricted">行動數據已限制線上搜尋，請在設定中允許或連線到WiFi</string>
-    <string name="mobile_data_restricted_short">行動數據已限制線上搜尋</string>
+    <string name="mobile_data_dialog_message">目前為行動數據/熱點網路。選擇後當天不再詢問。</string>
+    <string name="mobile_data_allow">允許</string>
+    <string name="mobile_data_deny">拒絕，僅用快取</string>
+    <string name="mobile_data_restricted">未允許使用行動數據搜尋，請點「允許」</string>
+    <string name="mobile_data_restricted_short">行動數據已限制</string>
 
     <!-- Lyric source labels -->
     <string name="lyric_source_label">目前來源：%1$s</string>
@@ -337,9 +337,8 @@
 
     <!-- Mobile data settings -->
     <string name="mobile_data_search_section">行動數據搜尋</string>
-    <string name="mobile_data_strategy_ask">每次詢問</string>
-    <string name="mobile_data_strategy_allow">始終允許</string>
-    <string name="mobile_data_strategy_deny">僅快取</string>
+    <string name="mobile_data_settings_today_allow">✓ 今天已允許使用行動數據</string>
+    <string name="mobile_data_settings_today_deny">✓ 今天已選擇僅用快取</string>
 
     <!-- Other -->
     <string name="album_art_description">專輯封面</string>
