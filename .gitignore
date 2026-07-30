@@ -60,13 +60,14 @@ desktop.ini
 /tmp/
 /temp/
 
-
+# Local agent workspaces and internal project material
 AGENTS.md
 CLAUDE.md
 .claude/
 .codex/
 .agents/
 .hermes/
+docs/SPOTIFY_LYRICS_PROXY_PLAN.md
 findings.md
 progress.md
 task_plan.md

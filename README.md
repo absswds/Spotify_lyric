@@ -274,10 +274,9 @@ The Apache-2.0 license covers this repository's code only. It does **not** grant
 
 ### Reference implementations and attribution
 
-See [Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIANCE.md) for the detailed source-by-source boundary, dependency attribution, and public-release checklist.
+See [Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIANCE.md) for the detailed source-by-source boundary and public-release checklist.
 
 - [Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper) — consulted as a protocol/reference implementation for the NetEase lyrics adapter. Its repository is Apache-2.0; this project does not copy its lyric data or bundle its code.
-- Spotify Android SDK/Auth SDK, AndroidX, Jetpack Compose, Room, WorkManager, Coil, OkHttp, Retrofit, Gson, and Google ML Kit — declared dependencies; their respective licenses and notices remain applicable.
 
 ---
 

@@ -14,7 +14,7 @@ It does **not** grant a license to redistribute, republish, sublicense, train on
 - Spotify content, trademarks, or user data; or
 - content returned by LRCLIB, NetEase Cloud Music, QQ Music, or another provider.
 
-The application may store data locally on the user's device for its cache feature. This repository must not contain cached lyrics, sample lyric collections, album-art archives, user listening history, credentials, tokens, or a hosted lyrics database. **NetEase lyrics are deliberately session-only in this build:** they can be displayed during the current app process but are not written to Room; any old `netease` cache row is deleted when the shared lyric repository starts.
+The application may store data locally on the user's device for its cache feature. This repository must not contain cached lyrics, sample lyric collections, album-art archives, user listening history, credentials, tokens, or a hosted lyrics database.
 
 ## 2. External services and risk boundaries
 
@@ -63,12 +63,10 @@ Before creating a public release, APK, app-store listing, paid offering, or back
 - [ ] Confirm no server, mirror, proxy, bulk-export, or public API is enabled for external lyric content.
 - [ ] Keep provider attribution visible in the app when a provider supplies the selected lyric candidate.
 
-### Public-repository history notes
+### Repository hygiene
 
-- The reachable Git history was checked for `local.properties`, common secret-file names, credential-like token values, APKs, local caches, and developer workspaces. No committed `local.properties`, signing material, OAuth token value, cached lyrics, album-art archive, or generated APK was found.
-- Commit author identity (`absswds <binbinli64@gmail.com>`) is intentionally retained: the repository owner has confirmed that this address is their public GitHub email.
-- Internal `.hermes` backups/plans and `PlaybackScreen.kt.bak` were removed from the current branch and are now ignored. They still exist in older reachable commits; removing them from Git history would require a separate force-push history rewrite, which is intentionally not performed by this documentation update.
+Do not commit local configuration, signing material, OAuth tokens, user databases, lyric caches, artwork caches, screenshots containing personal data, generated APKs, or local development workspaces. The repository's `.gitignore` covers the common local paths; contributors are still responsible for checking staged files before a commit.
 
-## 6. Reporting concerns
+## 7. Reporting concerns
 
 If you believe a file or feature creates an intellectual-property, terms-of-service, privacy, or attribution issue, open an issue without pasting copyrighted lyric text, private tokens, or personal listening data.
