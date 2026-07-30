@@ -395,7 +395,7 @@ fun ImmersiveLyricsBlock(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(22.dp)
                 ) {
-                    itemsIndexed(allLines, key = { _, line -> line.startMs }) { index, line ->
+                    itemsIndexed(allLines, key = { index, line -> "${line.startMs}_$index" }) { index, line ->
                         val isCurrent = index == currentIndex
                         val lineEndMs = allLines.getOrNull(index + 1)?.startMs ?: (line.startMs + 4000L)
                         LyricLine(
