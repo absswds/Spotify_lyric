@@ -338,7 +338,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             val searchAlbum = album.ifBlank { cached?.album?.takeIf { it.isNotBlank() } ?: lastSearchAlbum }
             val searchDuration = if (durationMs > 0) durationMs else (cached?.durationMs ?: lastSearchDurationMs)
 
-            val results = withContext(Dispatchers.IO) {
+            var results = withContext(Dispatchers.IO) {
                 aggregateSearch(LyricsSearchRequest(
                     trackName = searchTitle,
                     artistName = searchArtist,
@@ -347,9 +347,22 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 ))
             }
             if (results.isEmpty()) {
-                _lyricStatus.value = LyricStatus.NotFound
-                _candidates.value = emptyList()
-                return
+                // Cross-device fallback: the App Remote track info may be stale
+                // when playback is on a Spotify Connect device (tablet). Try
+                // searching with just the title (no artist) to increase recall.
+                Log.i(TAG, "reSearch returned 0 results for '$searchTitle $searchArtist', trying title-only")
+                val titleOnlyResults = withContext(Dispatchers.IO) {
+                    aggregateSearch(LyricsSearchRequest(
+                        trackName = searchTitle,
+                        artistName = ""
+                    ))
+                }
+                if (titleOnlyResults.isEmpty()) {
+                    _lyricStatus.value = LyricStatus.NotFound
+                    _candidates.value = emptyList()
+                    return
+                }
+                results = titleOnlyResults
             }
             var scored = results.map {
                 LyricMatcher.score(it, searchTitle, searchArtist, searchAlbum, searchDuration)
