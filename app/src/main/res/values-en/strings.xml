@@ -130,7 +130,8 @@
     <string name="settings_group_language">Language</string>
     <string name="settings_language_desc">Select the app display language</string>
     <string name="settings_language_system">System</string>
-    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_zh">Chinese</string>
+    <string name="settings_language_tw">Chinese (Traditional)</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_ja">日本語</string>
     <string name="settings_group_cache">Cache &amp; Downloads</string>
@@ -165,7 +166,8 @@
     <string name="settings_translate_lyrics">Enable lyrics translation</string>
     <string name="settings_translate_lyrics_desc">Auto-detect lyric language and translate</string>
     <string name="settings_translate_target">Target language</string>
-    <string name="settings_translate_target_zh">中文</string>
+    <string name="settings_translate_target_zh">Chinese (Simplified)</string>
+    <string name="settings_translate_target_tw">Chinese (Traditional)</string>
     <string name="settings_translate_target_en">English</string>
     <string name="settings_translate_target_ja">日本語</string>
 
@@ -303,4 +305,34 @@
 
     <!-- Cache source labels -->
     <string name="cache_source_manual">Manual</string>
+    <string name="nav_menu_title">Menu</string>
+    <string name="nav_lyric_display">Lyric Display</string>
+
+    <!-- Mobile data dialog -->
+    <string name="mobile_data_dialog_title">Search lyrics on mobile data?</string>
+    <string name="mobile_data_dialog_message">You are on mobile data / hotspot. Search online for lyrics? (data charges may apply)</string>
+    <string name="mobile_data_dialog_always_allow">Do not ask again, always allow</string>
+    <string name="mobile_data_dialog_confirm">Use mobile data</string>
+    <string name="mobile_data_restricted">Online search restricted on mobile data. Allow in settings or connect to WiFi.</string>
+    <string name="mobile_data_restricted_short">Restricted on mobile data</string>
+    <!-- Lyric source labels -->
+    <string name="lyric_source_label">Source: %1$s</string>
+    <string name="lyric_source_cache">💾 Cache</string>
+    <string name="lyric_source_lrclib">🌐 LRCLIB</string>
+    <string name="lyric_source_netease">🎵 Netease</string>
+    <string name="lyric_source_qqmusic">🎵 QQ Music</string>
+    <string name="lyric_source_manual">📝 Manual</string>
+    <!-- Mobile data settings -->
+    <string name="mobile_data_search_section">Mobile data search</string>
+    <string name="mobile_data_strategy_ask">Ask each time</string>
+    <string name="mobile_data_strategy_allow">Always allow</string>
+    <string name="mobile_data_strategy_deny">Cache only</string>
+    <!-- Other -->
+    <string name="album_art_description">Album cover</string>
+    <string name="correction_status_mobile_restricted">Mobile data restricted</string>
+
+    <!-- Chinese form selector -->
+    <string name="lyric_chinese_form">Chinese Form</string>
+    <string name="chinese_simplified">Simplified</string>
+    <string name="chinese_traditional">Traditional</string>
 </resources>

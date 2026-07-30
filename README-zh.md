@@ -6,9 +6,9 @@
 
 **读取 Spotify 播放状态，在系统通知和媒体卡片上显示同步歌词——无需 Root。**
 
-[English](README.md) · **简体中文** · [日本語](README-ja.md)
+**English** · [简体中文](README-zh.md) · [繁體中文](README-zh-TW.md) · [日本語](README-ja.md)
 
-[快速开始](#快速开始) · [功能特性](#功能特性) · [架构](#架构) · [免责声明](#免责声明)
+[快速开始](#快速开始) · [功能特性](#功能特性) · [架构](#架构) · [内容来源与合规](#内容来源与合规) · [免责声明](#免责声明)
 
 ---
 
@@ -239,6 +239,19 @@ Spotify PlayerState
 | 图片加载 | Coil |
 | 歌词翻译 | ML Kit（本地离线） |
 | Spotify 集成 | Spotify Android SDK（App Remote + Auth） |
+
+---
+
+## 内容来源与合规
+
+本仓库的 [Apache-2.0](LICENSE) 许可证仅覆盖本项目的代码、配置和文档，**不**授予歌词、翻译歌词、专辑封面、Spotify 内容或第三方服务 metadata 的再发布、镜像、训练或商业使用权。
+
+- Spotify 集成须遵守 [Spotify Developer Terms](https://developer.spotify.com/terms) 与 [Design Guidelines](https://developer.spotify.com/documentation/design)，不得暗示 Spotify 背书。
+- LRCLIB、网易云音乐和 QQ 音乐均为可选设备端来源；各来源的条款、版权规则和当地法律仍然适用。端点可用不代表有公开分发、代理、镜像、批量下载或建立公共 API 的授权。
+- 本项目不得包含或发布歌词库、封面归档、用户播放历史、token、密钥或本地缓存。公开 APK、上架、收费、服务端功能前须重新核对各来源的当前条款并取得必要的法律意见。
+- 网页云 adapter 的协议实现参考了 [Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)（Apache-2.0）；未复制其代码或歌词数据。
+
+完整边界、依赖致谢与发布检查清单见：[Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIANCE.md)。
 
 ---
 

@@ -7,22 +7,63 @@ import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.database.entity.LyricCacheEntity
 import com.example.spotifylyricsproxy.database.entity.RejectedLyricMatchEntity
 import com.example.spotifylyricsproxy.database.entity.TrackPlayHistoryEntity
+import com.example.spotifylyricsproxy.lyrics.LyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LrclibLyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
+import com.example.spotifylyricsproxy.lyrics.netease.NeteaseLyricsSource
+import com.example.spotifylyricsproxy.lyrics.qqmusic.QQMusicLyricsSource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
-class LyricsRepository(private val database: AppDatabase) {
+class LyricsRepository private constructor(private val database: AppDatabase) {
 
     companion object {
         private const val TAG = "LyricsRepo"
-        private const val RETRY_DELAY_MS = 7 * 24 * 60 * 60 * 1000L // 7 days
+        private const val RETRY_DELAY_MS = 60 * 60 * 1000L // 1 hour
+
+        @Volatile
+        private var instance: LyricsRepository? = null
+
+        /** Get or create the shared singleton, bound to the database. */
+        fun getInstance(database: AppDatabase): LyricsRepository {
+            return instance ?: synchronized(this) {
+                instance ?: LyricsRepository(database).also { instance = it }
+            }
+        }
     }
 
-    private val source = LrclibLyricsSource()
+    private val sources: List<LyricsSource> = listOf(
+        NeteaseLyricsSource(),
+        QQMusicLyricsSource(),
+        LrclibLyricsSource()
+    )
+
+    /** Query every source IN PARALLEL, collect all candidates, return all for scoring. */
+    private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> = coroutineScope {
+        val allCandidates = mutableListOf<LyricCandidate>()
+        val deferred = sources.map { source ->
+            async {
+                try {
+                    val result = source.search(request)
+                    if (result.isNotEmpty()) {
+                        Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
+                        result
+                    } else emptyList()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Source '${source.name}' failed: ${e.message}")
+                    emptyList()
+                }
+            }
+        }
+        deferred.forEach { allCandidates.addAll(it.await()) }
+        allCandidates
+    }
+
     private val cacheDao = database.lyricCacheDao()
     private val historyDao = database.trackPlayHistoryDao()
     private val rejectedDao = database.rejectedLyricMatchDao()
@@ -40,6 +81,10 @@ class LyricsRepository(private val database: AppDatabase) {
     private val _candidates = MutableStateFlow<List<LyricCandidate>>(emptyList())
     val candidates: StateFlow<List<LyricCandidate>> = _candidates.asStateFlow()
 
+    /** Source of the currently displayed lyrics: "cache", "lrclib", "netease", "manual", or empty. */
+    private val _lyricSource = MutableStateFlow("")
+    val lyricSource: StateFlow<String> = _lyricSource.asStateFlow()
+
     private var currentTrackId: String = ""
     private var _offsetMs: Long = 0L
 
@@ -55,7 +100,8 @@ class LyricsRepository(private val database: AppDatabase) {
         title: String,
         artist: String,
         album: String = "",
-        durationMs: Long = 0
+        durationMs: Long = 0,
+        forceOnline: Boolean = false
     ) {
         if (title.isEmpty() || artist.isEmpty()) return
         currentTrackId = trackId
@@ -66,8 +112,13 @@ class LyricsRepository(private val database: AppDatabase) {
             rejectedDao.getRejectedSourceLyricIds(trackId).toSet()
         }
 
-        // Check cache first
-        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        // On unmetered (WiFi), skip cache and go directly to online sources.
+        // Cache is only a fallback when every online source returns nothing.
+        // On metered (mobile data), cache-first is still the default.
+        var cached: LyricCacheEntity? = null
+        if (!forceOnline) {
+            cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        }
         if (cached != null) {
             _offsetMs = cached.offsetMs
             _currentOffsetMs.value = _offsetMs
@@ -81,6 +132,7 @@ class LyricsRepository(private val database: AppDatabase) {
                     if (lines.isNotEmpty()) {
                         _parsedLyrics.value = lines
                         _lyricStatus.value = LyricStatus.Synced(100)
+                        _lyricSource.value = cached.source
                         return
                     }
                 }
@@ -93,16 +145,14 @@ class LyricsRepository(private val database: AppDatabase) {
                         if (lines.isNotEmpty()) {
                             _parsedLyrics.value = lines
                             _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
+                            _lyricSource.value = cached.source
                             return
                         }
                     }
                 }
                 "not_found", "failed" -> {
-                    if (cached.nextRetryAt != null && System.currentTimeMillis() < cached.nextRetryAt) {
-                        Log.d(TAG, "Retry not yet due for $title")
-                        _lyricStatus.value = LyricStatus.NotFound
-                        return
-                    }
+                    // Always re-search when playing a song, don't wait for retry timer
+                    Log.d(TAG, "not_found/failed cache — re-searching for $title")
                 }
                 "plain_only" -> {
                     cached.syncedLyrics?.let { synced ->
@@ -110,6 +160,7 @@ class LyricsRepository(private val database: AppDatabase) {
                         if (lines.isNotEmpty()) {
                             _parsedLyrics.value = lines
                             _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
+                            _lyricSource.value = cached.source
                             return
                         }
                     }
@@ -117,8 +168,10 @@ class LyricsRepository(private val database: AppDatabase) {
             }
         }
 
-        // Not cached or needs refresh
-        _lyricStatus.value = LyricStatus.Searching
+        // Not cached or needs refresh — keep old lyrics visible when forceOnline
+        if (!forceOnline) {
+            _lyricStatus.value = LyricStatus.Searching
+        }
 
         try {
             val request = LyricsSearchRequest(
@@ -128,11 +181,14 @@ class LyricsRepository(private val database: AppDatabase) {
                 durationMs = durationMs
             )
 
-            val candidates = withContext(Dispatchers.IO) { source.search(request) }
+            val candidates = withContext(Dispatchers.IO) { aggregateSearch(request) }
 
             if (candidates.isEmpty()) {
                 Log.w(TAG, "No lyrics found for: $title - $artist")
+                // Fall back to cache on forceOnline, so WiFi users still see cached lyrics when online fails
+                if (tryFallbackToCache(trackId)) return
                 cacheNotfound(trackId, title, artist, album, durationMs)
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.NotFound
                 return
             }
@@ -141,12 +197,17 @@ class LyricsRepository(private val database: AppDatabase) {
             var scored = candidates.map {
                 LyricMatcher.score(it, title, artist, album, durationMs)
             }
+            // DEBUG: dump every candidate's score breakdown
+            scored.forEach { c ->
+                Log.i(TAG, "Candidate: source=${c.source} title='${c.trackName}' artist='${c.artistName}' score=${c.score} synced=${!c.syncedLyrics.isNullOrEmpty()}")
+            }
             val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
 
             if (filtered.isEmpty()) {
                 Log.w(TAG, "All candidates rejected for: $title - $artist")
                 // Keep the scored list so the user can still manually choose if needed
                 _candidates.value = scored.sortedByDescending { it.score }
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.LowConfidence(0)
                 return
             }
@@ -159,24 +220,28 @@ class LyricsRepository(private val database: AppDatabase) {
             cacheResult(trackId, title, artist, album, durationMs, best)
 
             if (!LyricMatcher.isAutoAccept(best.score)) {
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.LowConfidence(best.score)
                 return
             }
 
             val syncedLyrics = best.syncedLyrics
             if (syncedLyrics.isNullOrEmpty()) {
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.PlainOnly
                 return
             }
 
             val lines = LrcParser.parse(syncedLyrics)
             if (lines.isEmpty()) {
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.ParseError
                 return
             }
 
             _parsedLyrics.value = lines
             _lyricStatus.value = LyricStatus.Synced(best.score)
+            _lyricSource.value = best.source
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch lyrics", e)
@@ -201,6 +266,7 @@ class LyricsRepository(private val database: AppDatabase) {
         } else {
             _lyricStatus.value = LyricStatus.PlainOnly
         }
+        _lyricSource.value = candidate.source
     }
 
     /** Re-fetch and re-score from network, then update candidates. */
@@ -222,7 +288,7 @@ class LyricsRepository(private val database: AppDatabase) {
             val searchArtist = artist.ifBlank { cached?.artist ?: return }
 
             val results = withContext(Dispatchers.IO) {
-                source.search(LyricsSearchRequest(
+                aggregateSearch(LyricsSearchRequest(
                     trackName = searchTitle,
                     artistName = searchArtist,
                     albumName = album.ifBlank { cached?.album ?: "" },
@@ -423,6 +489,41 @@ class LyricsRepository(private val database: AppDatabase) {
         _currentOffsetMs.value = 0L
         currentTrackId = ""
     }
+
+    /** Set status to indicate online search was skipped because of metered connection. */
+    fun setMobileDataRestricted() {
+        _lyricStatus.value = LyricStatus.MobileDataRestricted
+    }
+
+    /**
+     * Try to load cached lyrics for [trackId]. Returns true if cache was found and applied.
+     * Used as fallback when [forceOnline] search returns nothing.
+     */
+    private suspend fun tryFallbackToCache(trackId: String): Boolean {
+        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        if (cached == null) {
+            Log.d(TAG, "tryFallbackToCache: no cache entry for $trackId")
+            return false
+        }
+        if (cached.fetchStatus != "success" && cached.fetchStatus != "plain_only") {
+            Log.d(TAG, "tryFallbackToCache: cache entry status=${cached.fetchStatus}, no usable lyrics")
+            return false
+        }
+        val synced = cached.syncedLyrics
+        if (synced == null) {
+            Log.d(TAG, "tryFallbackToCache: cache has status=${cached.fetchStatus} but no syncedLyrics")
+            return false
+        }
+        val lines = LrcParser.parse(synced)
+        if (lines.isEmpty()) return false
+        _offsetMs = cached.offsetMs
+        _currentOffsetMs.value = _offsetMs
+        _parsedLyrics.value = lines
+        _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
+        _lyricSource.value = cached.source
+        Log.d(TAG, "Fallback to cache for $trackId (source=${cached.source})")
+        return true
+    }
 }
 
 sealed class LyricStatus {
@@ -434,4 +535,5 @@ sealed class LyricStatus {
     data object ParseError : LyricStatus()
     data class LowConfidence(val score: Int) : LyricStatus()
     data class Error(val message: String) : LyricStatus()
+    data object MobileDataRestricted : LyricStatus()
 }

@@ -16,10 +16,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -27,6 +31,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -36,6 +42,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
@@ -55,7 +63,8 @@ import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
 @Composable
 fun PlaylistScreen(
     viewModel: PlaylistViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenDrawer: () -> Unit = {}
 ) {
     val playlists by viewModel.playlists.collectAsState()
     val selectedPlaylist by viewModel.selectedPlaylist.collectAsState()
@@ -63,7 +72,16 @@ fun PlaylistScreen(
     val loadingPlaylists by viewModel.loadingPlaylists.collectAsState()
     val loadingTracks by viewModel.loadingTracks.collectAsState()
     val error by viewModel.error.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val trackProgress by viewModel.trackProgress.collectAsState()
+
+    val filteredTracks = remember(tracks, searchQuery) {
+        if (searchQuery.isBlank()) tracks
+        else tracks.filter { t ->
+            t.title.contains(searchQuery, ignoreCase = true) ||
+            t.artist.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -76,6 +94,9 @@ fun PlaylistScreen(
                             contentDescription = stringResource(R.string.correction_back)
                         )
                     }
+                },
+                actions = {
+                    // Search button placeholder
                 }
             )
         },
@@ -86,18 +107,75 @@ fun PlaylistScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Playlist carousel
-            PlaylistCarousel(
-                playlists = playlists,
-                selectedPlaylist = selectedPlaylist,
-                isLoading = loadingPlaylists,
-                error = error,
-                onSelectPlaylist = viewModel::selectPlaylist,
-                onRefresh = viewModel::loadPlaylists
+            // Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("搜索歌曲") },
+                leadingIcon = { Icon(Icons.Filled.Search, null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = viewModel::clearSearch) {
+                            Icon(Icons.Filled.Clear, "清空")
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color(0xFFF0F0F5),
+                    focusedContainerColor = Color(0xFFF0F0F5)
+                )
             )
+            // Search results — local filter of loaded tracks
+            if (searchQuery.isNotEmpty()) {
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    if (filteredTracks.isEmpty()) {
+                        item {
+                            Text(
+                                text = "未找到匹配歌曲",
+                                modifier = Modifier.padding(32.dp),
+                                color = Color(0xFF747B89),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    } else {
+                        itemsIndexed(filteredTracks) { _, track ->
+                            TrackRow(
+                                track = track,
+                                onClick = {
+                                    val idx = track.playlistIndex
+                                    if (idx >= 0) {
+                                        viewModel.playTrack(track, selectedPlaylist!!.id, idx)
+                                    } else {
+                                        // Fallback: URI-based match
+                                        val fallbackIdx = tracks.indexOfFirst { it.uri == track.uri }
+                                        if (fallbackIdx >= 0) {
+                                            selectedPlaylist?.let { p ->
+                                                viewModel.playTrack(track, p.id, fallbackIdx)
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Playlist carousel
+                PlaylistCarousel(
+                    playlists = playlists,
+                    selectedPlaylist = selectedPlaylist,
+                    isLoading = loadingPlaylists,
+                    error = error,
+                    onSelectPlaylist = viewModel::selectPlaylist,
+                    onRefresh = viewModel::loadPlaylists
+                )
+            }
 
             // Loading indicator for tracks
-            if (loadingTracks && trackProgress != null) {
+            if (loadingTracks && trackProgress != null && searchQuery.isEmpty()) {
                 val (loaded, total) = trackProgress!!
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     LinearProgressIndicator(
@@ -111,7 +189,7 @@ fun PlaylistScreen(
                         color = Color(0xFF747B89)
                     )
                 }
-            } else if (loadingTracks) {
+            } else if (loadingTracks && searchQuery.isEmpty()) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -126,8 +204,8 @@ fun PlaylistScreen(
                 }
             }
 
-            // Track list
-            if (selectedPlaylist != null) {
+            // Track list — hidden during search
+            if (selectedPlaylist != null && searchQuery.isEmpty()) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -146,12 +224,16 @@ fun PlaylistScreen(
                         }
                     }
                     items(tracks, key = { it.id }) { track ->
-                        val trackIndex = tracks.indexOf(track)
                         TrackRow(
                             track = track,
                             onClick = {
-                                selectedPlaylist?.let { playlist ->
-                                    viewModel.playTrack(track, playlist.id, trackIndex)
+                                val idx = track.playlistIndex
+                                if (idx >= 0) {
+                                    viewModel.playTrack(track, selectedPlaylist!!.id, idx)
+                                } else {
+                                    selectedPlaylist?.let { playlist ->
+                                        viewModel.playTrack(track, playlist.id, tracks.indexOf(track))
+                                    }
                                 }
                             }
                         )

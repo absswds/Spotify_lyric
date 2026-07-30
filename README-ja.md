@@ -6,9 +6,9 @@
 
 **Spotify の再生状態を読み取り、システム通知とメディアカードに同期した歌詞を表示します — root 化不要。**
 
-[English](README.md) · [简体中文](README-zh.md) · **日本語**
+**English** · [简体中文](README-zh.md) · [繁體中文](README-zh-TW.md) · [日本語](README-ja.md)
 
-[クイックスタート](#クイックスタート) · [機能](#機能) · [アーキテクチャ](#アーキテクチャ) · [免責事項](#免責事項)
+[クイックスタート](#クイックスタート) · [機能](#機能) · [アーキテクチャ](#アーキテクチャ) · [コンテンツソースとコンプライアンス](#コンテンツソースとコンプライアンス) · [免責事項](#免責事項)
 
 ---
 
@@ -239,6 +239,19 @@ Spotify PlayerState
 | 画像読み込み | Coil |
 | 歌詞翻訳 | ML Kit（デバイス上、オフライン） |
 | Spotify 統合 | Spotify Android SDK（App Remote + Auth） |
+
+---
+
+## コンテンツソースとコンプライアンス
+
+このリポジトリの [Apache-2.0](LICENSE) ライセンスは、本プロジェクトのコード、設定、文書だけを対象とします。歌詞、翻訳歌詞、アルバムアート、Spotify コンテンツ、第三者サービスの metadata を再配布、ミラー、学習、商用利用する権利は**付与しません**。
+
+- Spotify 連携では [Spotify Developer Terms](https://developer.spotify.com/terms) と [Design Guidelines](https://developer.spotify.com/documentation/design) に従い、Spotify の承認・提携を示唆してはいけません。
+- LRCLIB、NetEase Cloud Music、QQ Music は任意のオンデバイス歌詞ソースです。各サービスの利用規約、著作権規則、適用法は引き続き適用されます。エンドポイントにアクセスできることは、公開配布、プロキシ、ミラー、バルクダウンロード、公開 API の許可を意味しません。
+- 歌詞コーパス、アートワークのアーカイブ、再生履歴、token、鍵、ローカルキャッシュをリポジトリや公開リリースに含めてはいけません。APK 配布、ストア公開、有償化、バックエンド機能の前に、各サービスの最新規約と法的要件を確認してください。
+- NetEase adapter のプロトコル実装は [Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)（Apache-2.0）を参考にしました。コードや歌詞データは同梱・複製していません。
+
+詳細な境界、依存関係の帰属、公開前チェックリストは [Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIANCE.md) を参照してください。
 
 ---
 

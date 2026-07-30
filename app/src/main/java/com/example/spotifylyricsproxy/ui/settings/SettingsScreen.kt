@@ -26,6 +26,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -48,7 +52,9 @@ import com.example.spotifylyricsproxy.ui.theme.ThemePreferences
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    onBack: () -> Unit = {}
+) {
     val context = LocalContext.current
     var permissionGranted by remember {
         mutableStateOf(
@@ -64,7 +70,19 @@ fun SettingsScreen() {
     ) { granted -> permissionGranted = granted }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                }
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
@@ -111,6 +129,7 @@ fun SettingsScreen() {
                     listOf(
                         "system" to stringResource(R.string.settings_language_system),
                         "zh" to stringResource(R.string.settings_language_zh),
+                        "zh-TW" to stringResource(R.string.settings_language_tw),
                         "en" to stringResource(R.string.settings_language_en),
                         "ja" to stringResource(R.string.settings_language_ja)
                     ).forEach { (code, label) ->

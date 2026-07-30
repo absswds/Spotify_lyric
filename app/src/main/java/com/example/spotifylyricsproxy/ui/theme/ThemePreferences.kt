@@ -22,6 +22,7 @@ object ThemePreferences {
     private const val DEFAULT_LOCALE = "system"
     private const val LOCALE_SYSTEM = "system"
     const val LOCALE_ZH = "zh"
+    const val LOCALE_TW = "zh-TW"
     const val LOCALE_EN = "en"
     const val LOCALE_JA = "ja"
 
@@ -50,7 +51,7 @@ object ThemePreferences {
 
     /** Persist locale preference. Returns true if the value actually changed. */
     fun setLocale(localeCode: String): Boolean {
-        if (localeCode != LOCALE_SYSTEM && localeCode != LOCALE_ZH && localeCode != LOCALE_EN && localeCode != LOCALE_JA) return false
+        if (localeCode != LOCALE_SYSTEM && localeCode != LOCALE_ZH && localeCode != LOCALE_TW && localeCode != LOCALE_EN && localeCode != LOCALE_JA) return false
         val changed = localeCode != _locale.value
         prefs?.edit()?.putString(KEY_LOCALE, localeCode)?.apply()
         _locale.value = localeCode

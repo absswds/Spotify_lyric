@@ -8,6 +8,7 @@ data class LyricCandidate(
     val durationMs: Long = 0,
     val syncedLyrics: String? = null,
     val plainLyrics: String? = null,
+    val translation: String? = null,
     val source: String = "lrclib",
     val score: Int = 0
 )

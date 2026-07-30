@@ -12,6 +12,7 @@ import com.example.spotifylyricsproxy.spotify.webapi.SpotifyWebApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class PlaylistTrack(
@@ -20,7 +21,8 @@ data class PlaylistTrack(
     val title: String,
     val artist: String,
     val durationMs: Long,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val playlistIndex: Int = -1
 )
 
 class PlaylistViewModel(application: Application) : AndroidViewModel(application) {
@@ -52,14 +54,60 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
     val trackProgress: StateFlow<Pair<Int, Int>?> = _trackProgress.asStateFlow()
 
     init {
+        // Try to load playlists immediately; if token is null, trigger auth
+        triggerAuthIfNeeded()
         loadPlaylists()
+        // Retry when token becomes available after a fresh app start
+        viewModelScope.launch {
+            while (SpotifyAuthHolder.accessToken == null) {
+                delay(500)
+            }
+            loadPlaylists()
+        }
     }
 
-    private fun token(): String? = SpotifyAuthHolder.accessToken
+    private fun triggerAuthIfNeeded() {
+        if (SpotifyAuthHolder.accessToken != null) return
+        Log.i(TAG, "Token missing — requesting Spotify auth")
+        val request = com.spotify.sdk.android.auth.AuthorizationRequest.Builder(
+            com.example.spotifylyricsproxy.BuildConfig.SPOTIFY_CLIENT_ID,
+            com.spotify.sdk.android.auth.AuthorizationResponse.Type.TOKEN,
+            "spotifylyricsproxy://callback"
+        )
+            .setScopes(arrayOf(
+                "app-remote-control",
+                "playlist-read-private",
+                "playlist-read-collaborative",
+                "user-read-private"
+            ))
+            .build()
+        SpotifyAuthHolder.startAuth?.invoke(request)
+    }
+
+    private fun token(): String? {
+        val primary = SpotifyAuthHolder.accessToken
+        if (primary != null) return primary
+        Log.d(TAG, "token: SpotifyAuthHolder.accessToken is null")
+        return null
+    }
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    /** Local filter for tracks already loaded from the selected playlist. */
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+    }
 
     fun loadPlaylists() {
-        val t = token() ?: run {
-            _error.value = "未登录 Spotify"
+        val t = token()
+        Log.d(TAG, "loadPlaylists: token=${t?.take(10)}...")
+        if (t == null) {
+            _error.value = "未登录 Spotify，请先在播放页登录"
             return
         }
         _loadingPlaylists.value = true
@@ -69,10 +117,11 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                 val response = SpotifyWebApiClient.api.getPlaylists(
                     auth = SpotifyWebApiClient.authHeader(t)
                 )
-                _playlists.value = response.items
+                val playlists = response.items
+                _playlists.value = playlists
                 // Auto-select first if none selected
-                if (_selectedPlaylist.value == null && response.items.isNotEmpty()) {
-                    selectPlaylist(response.items.first())
+                if (_selectedPlaylist.value == null && playlists.isNotEmpty()) {
+                    selectPlaylist(playlists.first())
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load playlists", e)
@@ -96,7 +145,7 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                 var offset = 0
                 var total = Int.MAX_VALUE
 
-                while (offset < total && offset < 2000) { // safety cap
+                while (offset < total && offset < 2000) {
                     val response = SpotifyWebApiClient.api.getPlaylistTracks(
                         auth = SpotifyWebApiClient.authHeader(t),
                         playlistId = playlist.id,
@@ -104,9 +153,10 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                         offset = offset
                     )
                     if (total == Int.MAX_VALUE) total = response.total
-                    for (item in response.items) {
+                    for ((pageIdx, item) in response.items.withIndex()) {
                         val track = item.track ?: continue
                         if (track.id.isBlank()) continue
+                        val actualIndex = offset + pageIdx
                         val imageUrl = track.album?.images
                             ?.minByOrNull { it.width ?: Int.MAX_VALUE }
                             ?.url
@@ -117,7 +167,8 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                                 title = track.name,
                                 artist = track.artists.joinToString(", ") { it.name },
                                 durationMs = track.durationMs,
-                                imageUrl = imageUrl
+                                imageUrl = imageUrl,
+                                playlistIndex = actualIndex
                             )
                         )
                     }

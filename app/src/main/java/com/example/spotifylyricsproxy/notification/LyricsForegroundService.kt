@@ -17,10 +17,14 @@ import androidx.core.content.ContextCompat
 import com.example.spotifylyricsproxy.BuildConfig
 import com.example.spotifylyricsproxy.MainActivity
 import com.example.spotifylyricsproxy.R
+import com.example.spotifylyricsproxy.util.MeteredState
+import com.example.spotifylyricsproxy.SpotifyAuthHolder
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.lyrics.LyricsRepository
+import com.example.spotifylyricsproxy.lyrics.TranslationService
 import com.example.spotifylyricsproxy.mediasession.MediaSessionController
+import com.example.spotifylyricsproxy.ui.playback.LyricDisplayPreferences
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
@@ -61,7 +65,7 @@ class LyricsForegroundService : Service() {
             redirectUri = REDIRECT_URI,
             albumArtDimension = com.spotify.protocol.types.Image.Dimension.LARGE
         )
-        lyricsRepository = LyricsRepository(AppDatabase.getInstance(applicationContext))
+        lyricsRepository = LyricsRepository.getInstance(AppDatabase.getInstance(applicationContext))
         playbackClock = PlaybackClock()
         mediaSessionController = MediaSessionController(spotifyRepository)
         mediaSessionController.create(this)
@@ -185,30 +189,43 @@ class LyricsForegroundService : Service() {
     }
 
     private fun fetchLyricsWhenTrackChanges(track: SpotifyTrackInfo) {
-        if (track.trackId.isBlank() || track.trackId == lastFetchedTrackId) return
+        Log.i(TAG, "Track change received: id=${track.trackId.take(8)} title='${track.title}' artist='${track.artist}' album='${track.album}' dur=${track.durationMs} metered=${getMeteredState()}")
+        if (track.trackId.isBlank() || track.trackId == lastFetchedTrackId) {
+            Log.w(TAG, "Skipping fetch: blank=${track.trackId.isBlank()} sameAsLast=${track.trackId == lastFetchedTrackId}")
+            return
+        }
 
+        // Fetch lyrics to populate the shared LyricsRepository singleton.
+        // The ViewModel reads the same singleton for UI display.
+        // IMPORTANT: do NOT call lyricsRepository.reset() here.
         lastFetchedTrackId = track.trackId
+        val strategy = LyricDisplayPreferences.mobileDataStrategy.value
+        val isMetered = getMeteredState() == MeteredState.METERED
 
-        // Immediately clear the MediaSession card's lyrics so it shows the
-        // track title rather than stale lyrics from the previous track.
-        // This must happen BEFORE lyricsRepository.reset() so combine sees
-        // the cleared state consistently.
-        mediaSessionController.updateForTrack(
-            track = track,
-            currentLine = null,
-            albumArt = currentAlbumArt.value,
-            playbackPositionMs = track.playbackPositionMs
-        )
-
-        lyricsRepository.reset()
-        serviceScope.launch {
-            lyricsRepository.fetchLyrics(
-                trackId = track.trackId,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                durationMs = track.durationMs
-            )
+        when {
+            !isMetered || strategy == "allow" -> {
+                serviceScope.launch {
+                    Log.i(TAG, "Calling fetchLyrics forceOnline=${!isMetered} strategy=$strategy")
+                    lyricsRepository.fetchLyrics(
+                        trackId = track.trackId,
+                        title = track.title,
+                        artist = track.artist,
+                        album = track.album,
+                        durationMs = track.durationMs,
+                        forceOnline = !isMetered
+                    )
+                }
+            }
+            strategy == "deny" -> {
+                serviceScope.launch {
+                    lyricsRepository.setMobileDataRestricted()
+                }
+            }
+            else -> { // "ask" — ViewModel will show dialog and call confirmMobileDataFetch
+                serviceScope.launch {
+                    lyricsRepository.setMobileDataRestricted()
+                }
+            }
         }
     }
 
@@ -311,6 +328,16 @@ class LyricsForegroundService : Service() {
         private const val REQUEST_OPEN_APP = 4002
         private const val REDIRECT_URI = "spotifylyricsproxy://callback"
         private const val WAKE_LOCK_TAG = "SpotifyLyricProxy::WakeLock"
+
+        @Volatile
+        private var _meteredStateOverride: MeteredState = MeteredState.NONE
+
+        /** Called from PlaybackViewModel when connectivity type changes. */
+        @JvmStatic
+        fun setMeteredState(state: MeteredState) {
+            _meteredStateOverride = state
+        }
+        fun getMeteredState(): MeteredState = _meteredStateOverride
 
         const val ACTION_START = "com.example.spotifylyricsproxy.notification.START"
         const val ACTION_PLAY_PAUSE = "com.example.spotifylyricsproxy.notification.PLAY_PAUSE"

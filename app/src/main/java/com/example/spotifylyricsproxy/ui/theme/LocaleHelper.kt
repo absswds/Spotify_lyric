@@ -24,6 +24,7 @@ object LocaleHelper {
 
         val targetLocale = when (saved) {
             "zh" -> Locale.CHINESE
+            "zh-TW" -> Locale.forLanguageTag("zh-Hant-TW")
             "en" -> Locale.ENGLISH
             "ja" -> Locale.JAPANESE
             else -> return context
@@ -42,6 +43,17 @@ object LocaleHelper {
             context.resources.updateConfiguration(config, context.resources.displayMetrics)
             return context
         }
+    }
+
+    fun saveLocale(context: Context, locale: String) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_LOCALE, locale)
+            .apply()
+    }
+
+    fun getLocale(context: Context): String {
+        return getSavedLocale(context)
     }
 
     private fun getSavedLocale(context: Context): String {

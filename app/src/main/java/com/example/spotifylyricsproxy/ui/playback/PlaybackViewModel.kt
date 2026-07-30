@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.spotifylyricsproxy.core.model.LrcLine
@@ -15,6 +16,8 @@ import com.example.spotifylyricsproxy.lyrics.TranslationService
 import com.example.spotifylyricsproxy.notification.LyricsForegroundService
 import com.example.spotifylyricsproxy.ui.theme.TranslationPrefs
 import com.example.spotifylyricsproxy.SpotifyAuthHolder
+import com.example.spotifylyricsproxy.util.ConnectivityObserver
+import com.example.spotifylyricsproxy.util.MeteredState
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.PlaybackOptions
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
@@ -29,12 +32,16 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
 
+    companion object {
+        private const val TAG = "PlaybackVM"
+    }
+
     private val clientId = com.example.spotifylyricsproxy.BuildConfig.SPOTIFY_CLIENT_ID
     private val redirectUri = "spotifylyricsproxy://callback"
 
     private val repository = SpotifyRemoteRepository(application, clientId, redirectUri)
     private val db = AppDatabase.getInstance(application)
-    private val lyricsRepo = LyricsRepository(db)
+    private val lyricsRepo = LyricsRepository.getInstance(db)
     private val clock = PlaybackClock()
 
     private val _estimatedPositionMs = MutableStateFlow(0L)
@@ -67,12 +74,18 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     val currentOffsetMs: StateFlow<Long>
         get() = lyricsRepo.currentOffsetMs
 
+    val lyricSource: StateFlow<String>
+        get() = lyricsRepo.lyricSource
+
     // ---- Translation state ----
 
     private val translationService = TranslationService(application)
 
     private val _translatedLine = MutableStateFlow<String?>(null)
     val translatedLine: StateFlow<String?> = _translatedLine.asStateFlow()
+
+    private val _fullTranslation = MutableStateFlow<String?>(null)
+    private var translationMap: Map<Long, String> = emptyMap()
 
     private var translationJob: kotlinx.coroutines.Job? = null
 
@@ -93,6 +106,15 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private var authTokenReceived: Boolean = false
     private var pendingConnectionOnResume: Boolean = false
 
+    // ---- Mobile data / connectivity ----
+
+    private val _showMobileDataDialog = MutableStateFlow(false)
+    val showMobileDataDialog: StateFlow<Boolean> = _showMobileDataDialog.asStateFlow()
+
+    /** Track info saved while the user is being asked about mobile data. */
+    private var pendingFetchTrack: SpotifyTrackInfo? = null
+    private var currentMeteredState: MeteredState = MeteredState.NONE
+
     init {
         repository.tryConnect()
         startClock()
@@ -100,6 +122,12 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         observePlayRequests()
         observeCurrentLineForTranslation()
         autoReconnectOnFailure()
+        viewModelScope.launch {
+            ConnectivityObserver.observe(getApplication()).collect { state ->
+                currentMeteredState = state
+                LyricsForegroundService.setMeteredState(state)
+            }
+        }
     }
 
     /**
@@ -178,19 +206,18 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private fun observeTrackChanges() {
         viewModelScope.launch {
             repository.currentTrack.collect { track ->
+                Log.d(TAG, "observeTrackChanges: trackId=${track.trackId}, lastFetched=$lastFetchedTrackId, isEmpty=${track.trackId.isEmpty()}")
                 if (track.trackId.isNotEmpty() && track.trackId != lastFetchedTrackId) {
+                    Log.i(TAG, "Track changed → fetching lyrics for ${track.title}")
                     LyricsForegroundService.start(getApplication())
                     lastFetchedTrackId = track.trackId
-                    lyricsRepo.reset()
-                    viewModelScope.launch {
-                        lyricsRepo.fetchLyrics(
-                            trackId = track.trackId,
-                            title = track.title,
-                            artist = track.artist,
-                            album = track.album,
-                            durationMs = track.durationMs
-                        )
-                    }
+
+                    // Lyrics fetching is handled entirely by the foreground service.
+                    // The ViewModel starts the service above and reads the shared
+                    // LyricsRepository singleton for display. Do NOT call
+                    // lyricsRepo.fetchLyrics() here — that would race with the
+                    // service and can overwrite successfully-loaded lyrics with
+                    // a failed search result from a different source order.
                 }
             }
         }
@@ -331,11 +358,42 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         _showCandidatePicker.value = false
     }
 
+    // ---- Mobile data confirmation ----
+
+    /** User confirmed: fetch lyrics online even on mobile data. */
+    fun confirmMobileDataFetch() {
+        _showMobileDataDialog.value = false
+        val track = pendingFetchTrack ?: return
+        pendingFetchTrack = null
+        viewModelScope.launch {
+            lyricsRepo.fetchLyrics(
+                trackId = track.trackId,
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                durationMs = track.durationMs,
+                forceOnline = true
+            )
+        }
+    }
+
+    /** User declined: set restricted status, don't fetch. */
+    fun dismissMobileDataDialog() {
+        _showMobileDataDialog.value = false
+        pendingFetchTrack = null
+        viewModelScope.launch {
+            lyricsRepo.setMobileDataRestricted()
+        }
+    }
+
     /** Select a candidate by index and apply it. */
     fun selectCandidate(index: Int) {
         viewModelScope.launch {
             lyricsRepo.selectCandidate(index)
             _showCandidatePicker.value = false
+            // When user manually selects a different source, reset chinese form
+            // to original so the new lyrics are shown as-is from the source.
+            LyricDisplayPreferences.setChineseForm("original")
         }
     }
 
@@ -357,15 +415,28 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     fun setTranslationEnabled(enabled: Boolean) {
         _isTranslationEnabled.value = enabled
-        if (!enabled) {
+        if (enabled) {
+            // Sync chineseForm with the current translation target
+            syncChineseFormFromTarget(_targetTranslationLang.value)
+        } else {
             _translatedLine.value = null
             _detectedLyricsLang.value = null
+            // Reset chinese form to original when translation is off
+            LyricDisplayPreferences.setChineseForm("original")
         }
     }
 
     fun setTranslationTargetLang(lang: String) {
         _targetTranslationLang.value = lang
         TranslationPrefs.saveTargetLang(getApplication(), lang)
+        syncChineseFormFromTarget(lang)
+    }
+
+    private fun syncChineseFormFromTarget(lang: String) {
+        when (lang) {
+            "zh-TW" -> LyricDisplayPreferences.setChineseForm("traditional")
+            else -> LyricDisplayPreferences.setChineseForm("simplified")
+        }
     }
 
     // ---- Manual Lyrics Import ----
@@ -390,6 +461,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             lyricsRepo.currentLine.collect { line ->
                 if (line == null || !_isTranslationEnabled.value) {
                     _translatedLine.value = null
+                    return@collect
+                }
+                val tlyricText = translationMap[line.startMs]
+                if (tlyricText != null) {
+                    _translatedLine.value = tlyricText
                     return@collect
                 }
                 translationJob?.cancel()

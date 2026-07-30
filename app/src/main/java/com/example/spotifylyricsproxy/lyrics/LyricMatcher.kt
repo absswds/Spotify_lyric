@@ -1,11 +1,27 @@
 package com.example.spotifylyricsproxy.lyrics
 
 import com.example.spotifylyricsproxy.core.model.LyricCandidate
+import android.icu.text.Transliterator
 
 object LyricMatcher {
 
     private const val AUTO_ACCEPT_THRESHOLD = 75
     private const val MANUAL_REVIEW_THRESHOLD = 60
+
+    /**
+     * Normalize both Simplified and Traditional Chinese to Traditional via the
+     * system ICU transliterator (no hand-written map, covers all CJK variants).
+     * Spotify may deliver Traditional titles while Netease/QQ return Simplified,
+     * so we convert both sides to the same script before comparing.
+     */
+    private val toTraditional: Transliterator by lazy {
+        Transliterator.getInstance("Simplified-Traditional")
+    }
+    private val cnLock = Any()
+
+    private fun normalizeCN(s: String): String = synchronized(cnLock) {
+        try { toTraditional.transliterate(s) } catch (_: Exception) { s }
+    }
 
     fun score(
         candidate: LyricCandidate,
@@ -16,43 +32,47 @@ object LyricMatcher {
     ): LyricCandidate {
         var score = 0
 
-        // Title match
-        val cleanedExpected = cleanTitle(expectedTitle)
-        val cleanedCandidate = cleanTitle(candidate.trackName)
+        // Title match (max 30)
+        val cleanedExpected = cleanTitle(normalizeCN(expectedTitle))
+        val cleanedCandidate = cleanTitle(normalizeCN(candidate.trackName))
 
         if (cleanedExpected.equals(cleanedCandidate, ignoreCase = true)) {
-            score += 35
+            score += 30
         } else if (cleanedCandidate.contains(cleanedExpected, ignoreCase = true) ||
                    cleanedExpected.contains(cleanedCandidate, ignoreCase = true)) {
-            score += 22
+            score += 18
         }
 
-        // Artist match
-        val primaryArtist = expectedArtist.split(",", "&", "feat.", "ft.").first().trim()
-        if (candidate.artistName.contains(primaryArtist, ignoreCase = true)) {
-            score += 20
-        } else if (candidate.artistName.contains(expectedArtist.take(3), ignoreCase = true)) {
-            score += 8
+        // Artist match (max 30, big penalty for strong mismatch)
+        val primaryArtist = normalizeCN(expectedArtist.split(",", "&", "feat.", "ft.").first().trim())
+        val candidateArtist = normalizeCN(candidate.artistName)
+        if (candidateArtist.contains(primaryArtist, ignoreCase = true)) {
+            score += 30
+        } else if (candidateArtist.contains(normalizeCN(expectedArtist.take(3)), ignoreCase = true)) {
+            score += 10
+        } else {
+            // Artist mismatch — heavily penalize to avoid wrong-match lyrics
+            score -= 25
         }
 
-        // Duration match
+        // Duration match (max 15)
         if (expectedDurationMs > 0 && candidate.durationMs > 0) {
             val diff = kotlin.math.abs(expectedDurationMs - candidate.durationMs)
             when {
-                diff < 2_000 -> score += 18
-                diff < 5_000 -> score += 8
+                diff < 2_000 -> score += 15
+                diff < 5_000 -> score += 6
             }
         }
 
-        // Album match
+        // Album match (max 5)
         if (expectedAlbum.isNotEmpty() &&
-            candidate.albumName.contains(expectedAlbum, ignoreCase = true)) {
-            score += 8
+            normalizeCN(candidate.albumName).contains(normalizeCN(expectedAlbum), ignoreCase = true)) {
+            score += 5
         }
 
-        // Synced lyrics bonus
+        // Synced lyrics bonus (max 8)
         if (!candidate.syncedLyrics.isNullOrEmpty()) {
-            score += 12
+            score += 8
         } else if (!candidate.plainLyrics.isNullOrEmpty()) {
             score -= 20
         }
