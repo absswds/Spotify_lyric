@@ -1384,7 +1384,7 @@ private fun connectionHint(state: SpotifyConnectionState): String = when (state)
     is SpotifyConnectionState.Connecting -> stringResource(R.string.playback_hint_connecting)
     SpotifyConnectionState.SpotifyNotInstalled -> stringResource(R.string.playback_hint_not_installed)
     SpotifyConnectionState.SpotifyNotLoggedIn -> stringResource(R.string.playback_hint_not_logged_in)
-    is SpotifyConnectionState.Error -> "Spotify 没有连上：${state.message}"
+    is SpotifyConnectionState.Error -> stringResource(R.string.playback_hint_error, state.message)
     SpotifyConnectionState.Disconnected -> stringResource(R.string.playback_hint_disconnected)
     SpotifyConnectionState.Connected -> ""
 }
@@ -1670,7 +1670,7 @@ private fun LyricDisplaySettingsDialog(
 
                 Column {
                     Text(
-                        text = "当前行字号: ${currentSp.toInt()}sp",
+                        text = stringResource(R.string.lyric_settings_font_size_current, "${currentSp.toInt()}sp"),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1683,7 +1683,7 @@ private fun LyricDisplaySettingsDialog(
                 }
                 Column {
                     Text(
-                        text = "非当前行字号: ${otherSp.toInt()}sp",
+                        text = stringResource(R.string.lyric_settings_font_size_other, "${otherSp.toInt()}sp"),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

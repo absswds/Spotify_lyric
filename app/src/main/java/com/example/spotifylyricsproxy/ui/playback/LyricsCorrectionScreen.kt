@@ -335,11 +335,12 @@ private fun statusLabel(status: com.example.spotifylyricsproxy.lyrics.LyricStatu
 }
 
 /** Map internal source name to user-facing display label. */
+@Composable
 private fun sourceDisplayName(source: String): String = when (source) {
-    "netease" -> "🎵 网易云"
-    "qqmusic" -> "🎵 QQ音乐"
+    "netease" -> "🎵 ${stringResource(R.string.lyric_source_netease)}"
+    "qqmusic" -> "🎵 ${stringResource(R.string.lyric_source_qqmusic)}"
     "lrclib" -> "🌐 LRCLIB"
-    "cache" -> "💾 缓存"
-    "manual" -> "📝 手动导入"
+    "cache" -> "💾 ${stringResource(R.string.lyric_source_cache)}"
+    "manual" -> "📝 ${stringResource(R.string.lyric_source_manual)}"
     else -> source
 }

@@ -96,10 +96,10 @@ private fun FilterRow(
 ) {
     val filters = listOf(
         null to "${stringResource(R.string.cache_filter_all)} ${summary.total}",
-        "success" to "已缓存 ${summary.success}",
-        "plain_only" to "仅文本 ${summary.plainOnly}",
+        "success" to "${stringResource(R.string.cache_filter_synced)} ${summary.success}",
+        "plain_only" to "${stringResource(R.string.cache_filter_plain)} ${summary.plainOnly}",
         "not_found" to "${stringResource(R.string.cache_filter_not_found)} ${summary.notFound}",
-        "failed" to "失败 ${summary.failed}"
+        "failed" to "${stringResource(R.string.cache_filter_failed_fmt, summary.failed)}"
     )
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -219,13 +219,13 @@ private fun EmptyCacheState() {
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "暂无歌词缓存",
+                text = stringResource(R.string.cache_empty_all),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "播放或预缓存歌曲后，歌词缓存状态会显示在这里。",
+                text = stringResource(R.string.cache_empty_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -237,10 +237,10 @@ private fun EmptyCacheState() {
 @Composable
 private fun statusLabel(status: String): String =
     when (status) {
-        "success" -> "已缓存"
-        "plain_only" -> "仅文本"
+        "success" -> stringResource(R.string.cache_filter_synced)
+        "plain_only" -> stringResource(R.string.cache_filter_plain)
         "not_found" -> stringResource(R.string.cache_filter_not_found)
-        "failed" -> "失败"
+        "failed" -> stringResource(R.string.cache_filter_failed)
         else -> status
     }
 

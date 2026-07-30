@@ -114,6 +114,8 @@
     <string name="lyric_settings_align_left">靠左</string>
     <string name="lyric_settings_done">完成</string>
     <string name="lyric_settings_inactive_blur">非目前行模糊</string>
+    <string name="lyric_settings_font_size_current">目前行字型大小: %1$s</string>
+    <string name="lyric_settings_font_size_other">非目前行字型大小: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻譯</string>
@@ -199,6 +201,9 @@
     <string name="cache_cached_lines_format">%1$d 行同步歌詞</string>
     <string name="cache_updated_format">更新於 %1$s</string>
     <string name="cache_not_found_status">7天內不重複搜尋</string>
+    <string name="cache_filter_failed">失敗</string>
+    <string name="cache_filter_failed_fmt">失敗 %1$d</string>
+    <string name="cache_empty_desc">播放或預載歌曲後，歌詞快取狀態會顯示在這裡。</string>
 
     <!-- Playlist Screen -->
     <string name="playlist_loading">正在載入歌單…</string>

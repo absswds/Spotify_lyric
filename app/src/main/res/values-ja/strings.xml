@@ -114,6 +114,8 @@
     <string name="lyric_settings_align_left">左揃え</string>
     <string name="lyric_settings_done">完了</string>
     <string name="lyric_settings_inactive_blur">非アクティブ行をぼかす</string>
+    <string name="lyric_settings_font_size_current">現在行の文字サイズ: %1$s</string>
+    <string name="lyric_settings_font_size_other">他行の文字サイズ: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻訳</string>
@@ -199,6 +201,9 @@
     <string name="cache_cached_lines_format">%1$d行の同期歌詞</string>
     <string name="cache_updated_format">%1$sに更新</string>
     <string name="cache_not_found_status">7日間は再検索しません</string>
+    <string name="cache_filter_failed">失敗</string>
+    <string name="cache_filter_failed_fmt">失敗 %1$d</string>
+    <string name="cache_empty_desc">再生またはプリキャッシュ後に歌詞キャッシュの状態がここに表示されます。</string>
 
     <!-- Playlist Screen -->
     <string name="playlist_loading">プレイリストを読み込み中…</string>

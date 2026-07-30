@@ -117,7 +117,7 @@ fun PlaylistScreen(
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = viewModel::clearSearch) {
-                            Icon(Icons.Filled.Clear, "清空")
+                            Icon(Icons.Filled.Clear, stringResource(R.string.generic_cancel))
                         }
                     }
                 },

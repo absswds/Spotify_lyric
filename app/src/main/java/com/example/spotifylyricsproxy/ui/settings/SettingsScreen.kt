@@ -109,9 +109,9 @@ fun SettingsScreen(
                 Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                     val currentMode by ThemePreferences.themeMode
                     listOf(
-                        Triple("system", stringResource(R.string.settings_theme_system), "根据系统设置自动切换"),
-                        Triple("light", "浅色", "始终使用浅色模式"),
-                        Triple("dark", "深色", "始终使用深色模式")
+                        Triple("system", stringResource(R.string.settings_theme_system), stringResource(R.string.settings_theme_system_desc)),
+                        Triple("light", stringResource(R.string.settings_theme_light), stringResource(R.string.settings_theme_light_desc)),
+                        Triple("dark", stringResource(R.string.settings_theme_dark), stringResource(R.string.settings_theme_dark_desc))
                     ).forEach { (mode, label, _) ->
                         FilterChip(
                             selected = currentMode == mode,

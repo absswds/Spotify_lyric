@@ -407,7 +407,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     /** Mark current match as wrong and blacklist it. */
     fun rejectCurrentMatch() {
         viewModelScope.launch {
-            lyricsRepo.rejectCurrentMatch("用户手动标记为错误")
+            lyricsRepo.rejectCurrentMatch("User rejected manually")
         }
     }
 

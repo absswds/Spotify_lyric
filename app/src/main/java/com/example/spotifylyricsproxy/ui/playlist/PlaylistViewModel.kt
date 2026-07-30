@@ -107,7 +107,7 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
         val t = token()
         Log.d(TAG, "loadPlaylists: token=${t?.take(10)}...")
         if (t == null) {
-            _error.value = "未登录 Spotify，请先在播放页登录"
+            _error.value = getApplication<Application>().getString(R.string.error_not_logged_in)
             return
         }
         _loadingPlaylists.value = true
@@ -182,7 +182,7 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                 Log.i(TAG, "Loaded ${allTracks.size}/$total tracks for ${playlist.name}")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to load tracks", e)
-                _error.value = "歌曲加载失败"
+                _error.value = getApplication<Application>().getString(R.string.playlist_load_failed)
             } finally {
                 _loadingTracks.value = false
                 _trackProgress.value = null

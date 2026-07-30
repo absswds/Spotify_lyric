@@ -5,6 +5,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.spotifylyricsproxy.R
 import com.example.spotifylyricsproxy.SpotifyAuthHolder
 import com.example.spotifylyricsproxy.core.model.LyricCandidate
 import com.example.spotifylyricsproxy.database.AppDatabase
@@ -160,12 +161,12 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
                 true
             } else {
                 Log.e("PrecacheVM", "PKCE code exchange failed: token is null")
-                _toastMessage.value = "Spotify 授权失败，请重试"
+                _toastMessage.value = getApplication<Application>().getString(R.string.error_auth_required)
                 false
             }
         } catch (e: Exception) {
             Log.e("PrecacheVM", "PKCE code exchange failed", e)
-            _toastMessage.value = "Spotify 授权失败: ${e.message}"
+            _toastMessage.value = getApplication<Application>().getString(R.string.error_auth_required) + ": ${e.message}"
             false
         }
     }
@@ -249,7 +250,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
                     SpotifyAuthHolder.accessToken = null
                     _isAuthorized.value = false
                     _currentUserId.value = ""
-                    _toastMessage.value = "授权不足或已过期，请在歌单页重新登录 Spotify"
+                    _toastMessage.value = getApplication<Application>().getString(R.string.error_auth_required)
                 } else {
                     _playlists.value = emptyList()
                 }
@@ -272,7 +273,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
         val playlistId = playlist.id
         val playlistName = playlist.name
         if (!playlist.canReadItems(_currentUserId.value)) {
-            _toastMessage.value = "Spotify 只允许缓存你创建的歌单或协作歌单"
+            _toastMessage.value = getApplication<Application>().getString(R.string.precache_owner_only, 0)
             Log.w(
                 "PrecacheVM",
                 "Skip playlist=$playlistId owner=${playlist.owner?.id} collaborative=${playlist.collaborative}; " +
@@ -287,20 +288,20 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
             isRunning = true,
             totalTracks = estimatedTotal
         ))
-        _toastMessage.value = "开始缓存 $playlistName..."
+        _toastMessage.value = getApplication<Application>().getString(R.string.precache_cd_start) + " $playlistName..."
         Log.i("PrecacheVM", "Launch precache coroutine for $playlistName")
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // 1. Fetch all tracks from Spotify
-                updateProgress(playlistId, -1, 0, 0, 0, "正在获取歌单曲目...")
+                updateProgress(playlistId, -1, 0, 0, 0, getApplication<Application>().getString(R.string.playlist_loading_tracks))
                 val tracks = fetchTracks(token, playlistId)
                 val total = tracks.size
 
                 if (total == 0) {
                     withContext(Dispatchers.Main) {
                         saveJob(playlistId, playlistName, 0, 0, 0, 0)
-                        _toastMessage.value = "歌单为空"
+                        _toastMessage.value = getApplication<Application>().getString(R.string.precache_empty)
                         _progressMap.value = _progressMap.value - playlistId
                     }
                     return@launch
@@ -389,7 +390,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
                 // 3. Save result
                 withContext(Dispatchers.Main) {
                     saveJob(playlistId, playlistName, total, cached, failed, notFound)
-                    _toastMessage.value = "缓存完成: $cached/$total 首歌词"
+                    _toastMessage.value = getApplication<Application>().getString(R.string.precache_complete_format, cached, total)
                     _progressMap.value = _progressMap.value - playlistId
                 }
 
@@ -399,7 +400,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
                     _progressMap.value = _progressMap.value + (playlistId to PrecacheProgress(
                         isRunning = false, isError = true, errorMessage = e.message
                     ))
-                    _toastMessage.value = "缓存失败: ${e.message}"
+                    _toastMessage.value = getApplication<Application>().getString(R.string.error_precache_failed) + ": ${e.message}"
                 }
             }
         }
@@ -447,7 +448,7 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
             if (!resp.isSuccessful || body == null) {
                 val errorBody = body?.take(200) ?: "empty body"
                 if (resp.code == 403) {
-                    throw RuntimeException("HTTP 403: Spotify 只允许读取你创建的歌单或协作歌单；也可能需要重新登录刷新授权")
+                    throw RuntimeException(getApplication<Application>().getString(R.string.error_fetch_playlist))
                 }
                 throw RuntimeException("HTTP ${resp.code}: $errorBody")
             }

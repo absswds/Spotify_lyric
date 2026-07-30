@@ -114,6 +114,8 @@
     <string name="lyric_settings_align_left">左对齐</string>
     <string name="lyric_settings_done">完成</string>
     <string name="lyric_settings_inactive_blur">非当前行模糊</string>
+    <string name="lyric_settings_font_size_current">当前行字号: %1$s</string>
+    <string name="lyric_settings_font_size_other">非当前行字号: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻译</string>
@@ -183,8 +185,11 @@
     <string name="cache_filter_synced">已同步</string>
     <string name="cache_filter_plain">纯文本</string>
     <string name="cache_filter_not_found">未找到</string>
+    <string name="cache_filter_failed">失败</string>
+    <string name="cache_filter_failed_fmt">失败 %1$d</string>
     <string name="cache_search_placeholder">搜索已缓存的曲目</string>
     <string name="cache_empty_all">暂无缓存曲目</string>
+    <string name="cache_empty_desc">播放或预缓存歌曲后，歌词缓存状态会显示在这里。</string>
     <string name="cache_empty_synced">暂无已同步的歌词缓存</string>
     <string name="cache_empty_plain">暂无纯文本歌词缓存</string>
     <string name="cache_empty_not_found">暂无未找到的条目</string>

@@ -165,7 +165,9 @@ class LyricsForegroundService : Service() {
                     val snapshot = LyricsNotificationSnapshot.from(
                         track = track,
                         currentLine = line,
-                        hasAlbumArt = albumArt != null
+                        hasAlbumArt = albumArt != null,
+                        waitingTitle = getString(R.string.generic_waiting_for_playback),
+                        waitingSubtitle = getString(R.string.generic_waiting_subtitle)
                     )
                     snapshot to albumArt
                 }.collect { (snapshot, albumArt) ->

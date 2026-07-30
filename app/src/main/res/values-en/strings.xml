@@ -114,6 +114,8 @@
     <string name="lyric_settings_align_left">Left</string>
     <string name="lyric_settings_done">Done</string>
     <string name="lyric_settings_inactive_blur">Blur inactive lines</string>
+    <string name="lyric_settings_font_size_current">Current line font: %1$s</string>
+    <string name="lyric_settings_font_size_other">Other line font: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">Translate</string>
@@ -199,6 +201,9 @@
     <string name="cache_cached_lines_format">%1$d synced lines</string>
     <string name="cache_updated_format">Updated %1$s</string>
     <string name="cache_not_found_status">Not retrying for 7 days</string>
+    <string name="cache_filter_failed">Failed</string>
+    <string name="cache_filter_failed_fmt">Failed %1$d</string>
+    <string name="cache_empty_desc">Lyric cache status will appear here after playback or precaching.</string>
 
     <!-- Playlist Screen -->
     <string name="playlist_loading">Loading playlists…</string>

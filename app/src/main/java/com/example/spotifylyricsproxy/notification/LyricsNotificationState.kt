@@ -14,12 +14,14 @@ data class LyricsNotificationSnapshot(
         fun from(
             track: SpotifyTrackInfo,
             currentLine: LrcLine?,
-            hasAlbumArt: Boolean = false
+            hasAlbumArt: Boolean = false,
+            waitingTitle: String = "等待播放",
+            waitingSubtitle: String = "连接 Spotify 后显示歌词"
         ): LyricsNotificationSnapshot {
-            val trackTitle = track.title.ifBlank { "等待播放" }
+            val trackTitle = track.title.ifBlank { waitingTitle }
             val artist = track.artist.trim()
             val subtitle = if (currentLine?.text.isNullOrBlank()) {
-                artist.ifBlank { "连接 Spotify 后显示歌词" }
+                artist.ifBlank { waitingSubtitle }
             } else {
                 if (artist.isBlank()) trackTitle else "$trackTitle - $artist"
             }
