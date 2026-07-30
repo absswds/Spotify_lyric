@@ -131,6 +131,7 @@
     <string name="settings_language_desc">選擇 App 顯示語言</string>
     <string name="settings_language_system">跟隨系統</string>
     <string name="settings_language_zh">中文</string>
+    <string name="settings_language_tw">繁體中文</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_ja">日本語</string>
     <string name="settings_group_cache">快取與下載</string>

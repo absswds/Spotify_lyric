@@ -129,6 +129,7 @@ fun SettingsScreen(
                     listOf(
                         "system" to stringResource(R.string.settings_language_system),
                         "zh" to stringResource(R.string.settings_language_zh),
+                        "zh-TW" to stringResource(R.string.settings_language_tw),
                         "en" to stringResource(R.string.settings_language_en),
                         "ja" to stringResource(R.string.settings_language_ja)
                     ).forEach { (code, label) ->

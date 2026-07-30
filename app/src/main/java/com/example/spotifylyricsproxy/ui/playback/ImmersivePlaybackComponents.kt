@@ -86,16 +86,26 @@ import kotlinx.coroutines.launch
 private val cnTransliterator: Transliterator by lazy {
     Transliterator.getInstance("Simplified-Traditional")
 }
+private val cnToSimplified: Transliterator by lazy {
+    Transliterator.getInstance("Traditional-Simplified")
+}
 private val cnLock = Any()
 
 /**
  * Convert Chinese text between simplified and traditional forms based on [targetForm].
- * When targetForm is "traditional", converts simplified→traditional. "simplified" leaves as-is.
+ * - "traditional": converts simplified→traditional
+ * - "simplified": converts traditional→simplified
+ * - anything else: no-op
  */
 internal fun convertChineseForm(text: String, targetForm: String): String {
-    if (targetForm != "traditional") return text
     synchronized(cnLock) {
-        return try { cnTransliterator.transliterate(text) } catch (_: Exception) { text }
+        return try {
+            when (targetForm) {
+                "traditional" -> cnTransliterator.transliterate(text)
+                "simplified" -> cnToSimplified.transliterate(text)
+                else -> text
+            }
+        } catch (_: Exception) { text }
     }
 }
 

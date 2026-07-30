@@ -130,7 +130,8 @@
     <string name="settings_group_language">Language</string>
     <string name="settings_language_desc">Select the app display language</string>
     <string name="settings_language_system">System</string>
-    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_zh">Chinese</string>
+    <string name="settings_language_tw">Chinese (Traditional)</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_ja">日本語</string>
     <string name="settings_group_cache">Cache &amp; Downloads</string>
