@@ -95,6 +95,13 @@ fun LyricsCorrectionScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color(0xFF747B89)
                                 )
+                                // Show lyrics source provider
+                                Text(
+                                    text = "📡 " + sourceDisplayName(c.source),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF9AA0A6),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
                             }
                         }
                     }
@@ -325,4 +332,14 @@ private fun statusLabel(status: com.example.spotifylyricsproxy.lyrics.LyricStatu
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.ParseError -> stringResource(R.string.correction_status_parse_error)
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.Error -> stringResource(R.string.correction_status_error, status.message)
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.MobileDataRestricted -> stringResource(R.string.correction_status_mobile_restricted)
+}
+
+/** Map internal source name to user-facing display label. */
+private fun sourceDisplayName(source: String): String = when (source) {
+    "netease" -> "🎵 网易云"
+    "qqmusic" -> "🎵 QQ音乐"
+    "lrclib" -> "🌐 LRCLIB"
+    "cache" -> "💾 缓存"
+    "manual" -> "📝 手动导入"
+    else -> source
 }

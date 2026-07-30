@@ -328,4 +328,9 @@
     <!-- Other -->
     <string name="album_art_description">Album cover</string>
     <string name="correction_status_mobile_restricted">Mobile data restricted</string>
+
+    <!-- Chinese form selector -->
+    <string name="lyric_chinese_form">Chinese Form</string>
+    <string name="chinese_simplified">Simplified</string>
+    <string name="chinese_traditional">Traditional</string>
 </resources>

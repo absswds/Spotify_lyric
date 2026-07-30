@@ -176,8 +176,8 @@ fun AppNavigation(
             composable(NavRoute.Precache.route) {
                 PrecacheScreen(viewModel = precacheViewModel)
             }
-            composable(NavRoute.Settings.route) {
-                SettingsScreen()
+            composable(route = "settings") {
+                SettingsScreen(onBack = { navController.popBackStack() })
             }
             composable(NavRoute.Playlist.route) {
                 val playlistViewModel: PlaylistViewModel = viewModel()

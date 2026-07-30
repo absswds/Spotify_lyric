@@ -1757,6 +1757,30 @@ private fun LyricDisplaySettingsDialog(
                         }
                     }
 
+                // Chinese form (simplified/traditional)
+                Column {
+                    Text(
+                        text = stringResource(R.string.lyric_chinese_form),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val currentForm = LyricDisplayPreferences.chineseForm.value
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val formOptions = listOf(
+                            "simplified" to stringResource(R.string.chinese_simplified),
+                            "traditional" to stringResource(R.string.chinese_traditional)
+                        )
+                        formOptions.forEach { (value, label) ->
+                            FilterChip(
+                                selected = currentForm == value,
+                                onClick = { LyricDisplayPreferences.setChineseForm(value) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                }
+
                 Column {
                     Text(
                         text = stringResource(R.string.lyric_settings_alignment),

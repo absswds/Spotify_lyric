@@ -1,6 +1,7 @@
 package com.example.spotifylyricsproxy.ui.playback
 
 import android.graphics.Bitmap
+import android.icu.text.Transliterator
 import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -78,8 +79,27 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import com.example.spotifylyricsproxy.ui.theme.SeekGlassPill
 import com.example.spotifylyricsproxy.ui.theme.GlassSurface
+import com.example.spotifylyricsproxy.util.MeteredState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private val cnTransliterator: Transliterator by lazy {
+    Transliterator.getInstance("Simplified-Traditional")
+}
+private val cnLock = Any()
+
+/**
+ * Convert Chinese text between simplified and traditional forms based on [targetForm].
+ * When targetForm is "traditional", converts simplified→traditional. "simplified" leaves as-is.
+ */
+internal fun convertChineseForm(text: String, targetForm: String): String {
+    if (targetForm != "traditional") return text
+    synchronized(cnLock) {
+        return try { cnTransliterator.transliterate(text) } catch (_: Exception) { text }
+    }
+}
+
+fun Int.dpToPx() = (this * android.content.res.Resources.getSystem().displayMetrics.density).toInt()
 
 /**
  * Full-screen ambient layer behind the art stage.
@@ -435,10 +455,12 @@ internal fun LyricLine(
     config: com.example.spotifylyricsproxy.ui.playback.LyricDisplayConfig,
     onClick: () -> Unit
 ) {
+    // Convert chinese form (simplified/traditional) based on setting
+    val displayText = convertChineseForm(text, config.chineseForm)
     // Current line is one coherent phrase: a restrained single pop, never per-character.
     if (isCurrent && shouldAnimate && animationKey != null) {
         WholeLinePopLyric(
-            text = text,
+            text = displayText,
             animationKey = animationKey,
             fontSize = config.currentLineSp,
             lineHeight = config.currentLineSp * 1.38f,
@@ -448,7 +470,7 @@ internal fun LyricLine(
         )
     } else if (isCurrent) {
         Text(
-            text = text,
+            text = displayText,
             fontSize = config.currentLineSp,
             lineHeight = config.currentLineSp * 1.38f,
             fontWeight = config.currentLineWeight,
@@ -461,7 +483,7 @@ internal fun LyricLine(
         )
     } else {
         Text(
-            text = text,
+            text = displayText,
             fontSize = config.otherLineSp,
             lineHeight = config.otherLineSp * 1.38f,
             fontWeight = FontWeight.Normal,

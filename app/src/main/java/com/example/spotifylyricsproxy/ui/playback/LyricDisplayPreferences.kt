@@ -18,6 +18,7 @@ object LyricDisplayPreferences {
     private const val KEY_FONT_SIZE_CURRENT = "font_size_current"
     private const val KEY_FONT_SIZE_OTHER = "font_size_other"
     private const val KEY_MOBILE_STRATEGY = "mobile_data_strategy"
+    private const val KEY_CHINESE_FORM = "chinese_form"
 
     private var prefs: SharedPreferences? = null
 
@@ -29,6 +30,7 @@ object LyricDisplayPreferences {
     private val _fontSizeCurrent = mutableFloatStateOf(20f)
     private val _fontSizeOther = mutableFloatStateOf(15f)
     private val _mobileDataStrategy = mutableStateOf("ask")  // "ask" | "allow" | "deny"
+    private val _chineseForm = mutableStateOf("simplified")  // "simplified" | "traditional"
 
     val boldCurrentLine: State<Boolean> = _boldCurrentLine
     val dimLevel: State<String> = _dimLevel
@@ -37,6 +39,7 @@ object LyricDisplayPreferences {
     val fontSizeCurrent: State<Float> = _fontSizeCurrent
     val fontSizeOther: State<Float> = _fontSizeOther
     val mobileDataStrategy: State<String> = _mobileDataStrategy
+    val chineseForm: State<String> = _chineseForm
 
 
     /** @deprecated Use [fontSizeCurrent] slider instead. Kept for dialog compat. */
@@ -82,6 +85,7 @@ object LyricDisplayPreferences {
         _fontSizeCurrent.value = prefs?.getFloat(KEY_FONT_SIZE_CURRENT, 20f) ?: 20f
         _fontSizeOther.value = prefs?.getFloat(KEY_FONT_SIZE_OTHER, 15f) ?: 15f
         _mobileDataStrategy.value = prefs?.getString(KEY_MOBILE_STRATEGY, "ask") ?: "ask"
+        _chineseForm.value = prefs?.getString(KEY_CHINESE_FORM, "simplified") ?: "simplified"
     }
 
     fun setBoldCurrentLine(value: Boolean) {
@@ -127,6 +131,13 @@ object LyricDisplayPreferences {
         _mobileDataStrategy.value = value
     }
 
+    /** Set Chinese form: \"simplified\" or \"traditional\". */
+    fun setChineseForm(value: String) {
+        if (value !in listOf("simplified", "traditional")) return
+        prefs?.edit()?.putString(KEY_CHINESE_FORM, value)?.apply()
+        _chineseForm.value = value
+    }
+
     @Composable
     fun resolvedConfig(): LyricDisplayConfig {
         val bold = _boldCurrentLine.value
@@ -144,7 +155,8 @@ object LyricDisplayPreferences {
             pastLineAlpha = pastAlpha,
             futureLineAlpha = futureAlpha,
             textAlign = if (align == "start") TextAlign.Start else TextAlign.Center,
-            blurEnabled = _blurEnabled.value
+            blurEnabled = _blurEnabled.value,
+            chineseForm = _chineseForm.value
         )
     }
 
@@ -186,5 +198,6 @@ data class LyricDisplayConfig(
     val pastLineAlpha: Float,
     val futureLineAlpha: Float,
     val textAlign: TextAlign,
-    val blurEnabled: Boolean = true
+    val blurEnabled: Boolean = true,
+    val chineseForm: String = "simplified"
 )

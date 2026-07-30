@@ -331,4 +331,9 @@
     <!-- Other -->
     <string name="album_art_description">專輯封面</string>
     <string name="correction_status_mobile_restricted">行動數據限制</string>
+
+    <!-- Chinese form selector -->
+    <string name="lyric_chinese_form">歌詞繁簡</string>
+    <string name="chinese_simplified">簡體</string>
+    <string name="chinese_traditional">繁體</string>
 </resources>

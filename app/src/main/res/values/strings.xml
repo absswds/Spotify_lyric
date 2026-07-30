@@ -333,4 +333,9 @@
 
     <!-- Correction screen - mobile restricted -->
     <string name="correction_status_mobile_restricted">移动数据限制</string>
+
+    <!-- Chinese form selector -->
+    <string name="lyric_chinese_form">歌词简繁</string>
+    <string name="chinese_simplified">简体</string>
+    <string name="chinese_traditional">繁体</string>
 </resources>
