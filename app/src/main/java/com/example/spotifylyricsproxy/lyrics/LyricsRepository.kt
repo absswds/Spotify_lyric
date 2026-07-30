@@ -370,6 +370,11 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 }
             } else if (best != null) {
                 _lyricStatus.value = LyricStatus.LowConfidence(best.score)
+                // Still apply the lyrics so the user can see them, even if confidence is low.
+                val synced = best.syncedLyrics
+                if (!synced.isNullOrEmpty()) {
+                    _parsedLyrics.value = LrcParser.parse(synced)
+                }
             } else if (scored.isNotEmpty()) {
                 _lyricStatus.value = LyricStatus.LowConfidence(scored.first().score)
             }

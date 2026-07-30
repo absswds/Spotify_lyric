@@ -37,6 +37,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,6 +66,7 @@ fun LyricsCorrectionScreen(
 
     // Candidate picker dialog
     if (showCandidatePicker && candidates.size > 1) {
+        val selectedIndex = remember { mutableStateOf(-1) }
         AlertDialog(
             onDismissRequest = viewModel::dismissCandidatePicker,
             title = {
@@ -73,20 +76,23 @@ fun LyricsCorrectionScreen(
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(candidates.size) { index ->
                         val c = candidates[index]
+                        val isSelected = selectedIndex.value == index
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { viewModel.selectCandidate(index) },
+                                .clickable {
+                                    selectedIndex.value = if (isSelected) -1 else index
+                                },
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (index == 0) Color(0xFF4F5EDC).copy(alpha = 0.12f)
+                                containerColor = if (isSelected) Color(0xFF4F5EDC).copy(alpha = 0.12f)
                                 else Color.White
                             )
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
                                     text = stringResource(R.string.correction_candidate_format, index + 1, c.trackName),
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -95,7 +101,6 @@ fun LyricsCorrectionScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color(0xFF747B89)
                                 )
-                                // Show lyrics source provider
                                 Text(
                                     text = "📡 " + sourceDisplayName(c.source),
                                     style = MaterialTheme.typography.labelSmall,
@@ -107,9 +112,21 @@ fun LyricsCorrectionScreen(
                     }
                 }
             },
-            confirmButton = {
+            dismissButton = {
                 TextButton(onClick = viewModel::dismissCandidatePicker) {
                     Text(stringResource(R.string.generic_cancel))
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (selectedIndex.value >= 0) {
+                            viewModel.selectCandidate(selectedIndex.value)
+                        }
+                    },
+                    enabled = selectedIndex.value >= 0
+                ) {
+                    Text(stringResource(R.string.generic_ok))
                 }
             }
         )
