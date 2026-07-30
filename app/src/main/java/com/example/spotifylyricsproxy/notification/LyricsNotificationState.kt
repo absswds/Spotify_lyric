@@ -15,8 +15,8 @@ data class LyricsNotificationSnapshot(
             track: SpotifyTrackInfo,
             currentLine: LrcLine?,
             hasAlbumArt: Boolean = false,
-            waitingTitle: String = "等待播放",
-            waitingSubtitle: String = "连接 Spotify 后显示歌词"
+            waitingTitle: String = "Waiting for playback",
+            waitingSubtitle: String = "Connect to Spotify to see lyrics"
         ): LyricsNotificationSnapshot {
             val trackTitle = track.title.ifBlank { waitingTitle }
             val artist = track.artist.trim()

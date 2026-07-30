@@ -134,7 +134,7 @@ fun PlaylistScreen(
                     if (filteredTracks.isEmpty()) {
                         item {
                             Text(
-                                text = "未找到匹配歌曲",
+                                text = stringResource(R.string.correction_status_notfound),
                                 modifier = Modifier.padding(32.dp),
                                 color = Color(0xFF747B89),
                                 style = MaterialTheme.typography.bodyMedium
