@@ -17,10 +17,14 @@ import androidx.core.content.ContextCompat
 import com.example.spotifylyricsproxy.BuildConfig
 import com.example.spotifylyricsproxy.MainActivity
 import com.example.spotifylyricsproxy.R
+import com.example.spotifylyricsproxy.util.MeteredState
+import com.example.spotifylyricsproxy.SpotifyAuthHolder
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.database.AppDatabase
 import com.example.spotifylyricsproxy.lyrics.LyricsRepository
+import com.example.spotifylyricsproxy.lyrics.TranslationService
 import com.example.spotifylyricsproxy.mediasession.MediaSessionController
+import com.example.spotifylyricsproxy.ui.playback.LyricDisplayPreferences
 import com.example.spotifylyricsproxy.playback.clock.PlaybackClock
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
@@ -188,18 +192,34 @@ class LyricsForegroundService : Service() {
         if (track.trackId.isBlank() || track.trackId == lastFetchedTrackId) return
 
         // Fetch lyrics to populate the shared LyricsRepository singleton.
-        // The ViewModel also fetches; both share the same repo instance.
-        // IMPORTANT: do NOT call lyricsRepository.reset() here — that would
-        // clear the UI's currently displayed lyrics between tracks.
+        // The ViewModel reads the same singleton for UI display.
+        // IMPORTANT: do NOT call lyricsRepository.reset() here.
         lastFetchedTrackId = track.trackId
-        serviceScope.launch {
-            lyricsRepository.fetchLyrics(
-                trackId = track.trackId,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                durationMs = track.durationMs
-            )
+        val strategy = LyricDisplayPreferences.mobileDataStrategy.value
+        val isMetered = getMeteredState() == MeteredState.METERED
+
+        when {
+            !isMetered || strategy == "allow" -> {
+                serviceScope.launch {
+                    lyricsRepository.fetchLyrics(
+                        trackId = track.trackId,
+                        title = track.title,
+                        artist = track.artist,
+                        album = track.album,
+                        durationMs = track.durationMs
+                    )
+                }
+            }
+            strategy == "deny" -> {
+                serviceScope.launch {
+                    lyricsRepository.setMobileDataRestricted()
+                }
+            }
+            else -> { // "ask" — ViewModel will show dialog and call confirmMobileDataFetch
+                serviceScope.launch {
+                    lyricsRepository.setMobileDataRestricted()
+                }
+            }
         }
     }
 
@@ -302,6 +322,16 @@ class LyricsForegroundService : Service() {
         private const val REQUEST_OPEN_APP = 4002
         private const val REDIRECT_URI = "spotifylyricsproxy://callback"
         private const val WAKE_LOCK_TAG = "SpotifyLyricProxy::WakeLock"
+
+        @Volatile
+        private var _meteredStateOverride: MeteredState = MeteredState.NONE
+
+        /** Called from PlaybackViewModel when connectivity type changes. */
+        @JvmStatic
+        fun setMeteredState(state: MeteredState) {
+            _meteredStateOverride = state
+        }
+        fun getMeteredState(): MeteredState = _meteredStateOverride
 
         const val ACTION_START = "com.example.spotifylyricsproxy.notification.START"
         const val ACTION_PLAY_PAUSE = "com.example.spotifylyricsproxy.notification.PLAY_PAUSE"

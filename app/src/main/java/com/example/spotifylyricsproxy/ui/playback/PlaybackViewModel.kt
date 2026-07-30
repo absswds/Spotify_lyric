@@ -125,6 +125,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             ConnectivityObserver.observe(getApplication()).collect { state ->
                 currentMeteredState = state
+                LyricsForegroundService.setMeteredState(state)
             }
         }
     }
@@ -211,44 +212,12 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     LyricsForegroundService.start(getApplication())
                     lastFetchedTrackId = track.trackId
 
-                    // If the service already fetched lyrics for this track,
-                    // skip the ViewModel's fetch to avoid overwriting the state.
-                    val currentStatus = lyricsRepo.lyricStatus.value
-                    if (currentStatus is LyricStatus.Synced && lyricsRepo.parsedLyrics.value.isNotEmpty()) {
-                        Log.d(TAG, "Service already loaded lyrics for ${track.title}, skipping VM fetch")
-                        return@collect
-                    }
-
-                    // Don't reset lyrics here — old lyrics stay visible until
-                    // fetchLyrics overwrites them. This prevents a blank gap
-                    // on cross-device track changes.
-
-                    val strategy = LyricDisplayPreferences.mobileDataStrategy.value
-                    val isMetered = currentMeteredState == MeteredState.METERED
-
-                    when {
-                        !isMetered || strategy == "allow" -> {
-                            viewModelScope.launch {
-                                lyricsRepo.fetchLyrics(
-                                    trackId = track.trackId,
-                                    title = track.title,
-                                    artist = track.artist,
-                                    album = track.album,
-                                    durationMs = track.durationMs,
-                                    forceOnline = !isMetered
-                                )
-                            }
-                        }
-                        strategy == "deny" -> {
-                            viewModelScope.launch {
-                                lyricsRepo.setMobileDataRestricted()
-                            }
-                        }
-                        else -> { // "ask"
-                            pendingFetchTrack = track
-                            _showMobileDataDialog.value = true
-                        }
-                    }
+                    // Lyrics fetching is handled entirely by the foreground service.
+                    // The ViewModel starts the service above and reads the shared
+                    // LyricsRepository singleton for display. Do NOT call
+                    // lyricsRepo.fetchLyrics() here — that would race with the
+                    // service and can overwrite successfully-loaded lyrics with
+                    // a failed search result from a different source order.
                 }
             }
         }
