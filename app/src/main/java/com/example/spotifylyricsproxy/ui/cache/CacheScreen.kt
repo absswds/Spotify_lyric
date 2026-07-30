@@ -64,7 +64,6 @@ fun CacheScreen(viewModel: CacheViewModel) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            SearchPlaceholder()
             Spacer(modifier = Modifier.height(12.dp))
             FilterRow(
                 summary = summary,
@@ -84,32 +83,6 @@ fun CacheScreen(viewModel: CacheViewModel) {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SearchPlaceholder() {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Search,
-                contentDescription = "搜索",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "搜索歌曲 / 歌手 / 专辑",
-                modifier = Modifier.padding(start = 8.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

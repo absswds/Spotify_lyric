@@ -165,7 +165,8 @@
     <string name="settings_translate_lyrics">启用歌词翻译</string>
     <string name="settings_translate_lyrics_desc">自动检测歌词语言并翻译</string>
     <string name="settings_translate_target">目标语言</string>
-    <string name="settings_translate_target_zh">中文</string>
+    <string name="settings_translate_target_zh">中文（简体）</string>
+    <string name="settings_translate_target_tw">中文（繁体）</string>
     <string name="settings_translate_target_en">English</string>
     <string name="settings_translate_target_ja">日本語</string>
 

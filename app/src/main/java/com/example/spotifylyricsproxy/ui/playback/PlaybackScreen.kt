@@ -1757,51 +1757,27 @@ private fun LyricDisplaySettingsDialog(
                         }
                     }
 
-                // Chinese form (simplified/traditional)
-                Column {
-                    Text(
-                        text = stringResource(R.string.lyric_chinese_form),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val currentForm = LyricDisplayPreferences.chineseForm.value
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val formOptions = listOf(
-                            "simplified" to stringResource(R.string.chinese_simplified),
-                            "traditional" to stringResource(R.string.chinese_traditional)
+                    Column {
+                        Text(
+                            text = stringResource(R.string.lyric_settings_alignment),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        formOptions.forEach { (value, label) ->
-                            FilterChip(
-                                selected = currentForm == value,
-                                onClick = { LyricDisplayPreferences.setChineseForm(value) },
-                                label = { Text(label) }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val alignLabels = listOf(
+                                "center" to stringResource(R.string.lyric_settings_align_center),
+                                "start" to stringResource(R.string.lyric_settings_align_left)
                             )
+                            alignLabels.forEach { (value, label) ->
+                                FilterChip(
+                                    selected = currentAlign == value,
+                                    onClick = { LyricDisplayPreferences.setAlignment(value) },
+                                    label = { Text(label) }
+                                )
+                            }
                         }
                     }
-                }
-
-                Column {
-                    Text(
-                        text = stringResource(R.string.lyric_settings_alignment),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val alignLabels = listOf(
-                            "center" to stringResource(R.string.lyric_settings_align_center),
-                            "start" to stringResource(R.string.lyric_settings_align_left)
-                        )
-                        alignLabels.forEach { (value, label) ->
-                            FilterChip(
-                                selected = currentAlign == value,
-                                onClick = { LyricDisplayPreferences.setAlignment(value) },
-                                label = { Text(label) }
-                            )
-                        }
-                    }
-                }
 
                 // Translation toggle
                 Column {
@@ -1859,6 +1835,7 @@ private fun LyricDisplaySettingsDialog(
                                         Text(
                                             when (targetTranslationLang) {
                                                 "zh" -> stringResource(R.string.settings_translate_target_zh)
+                                                "zh-TW" -> stringResource(R.string.settings_translate_target_tw)
                                                 "en" -> stringResource(R.string.settings_translate_target_en)
                                                 "ja" -> stringResource(R.string.settings_translate_target_ja)
                                                 else -> targetTranslationLang
@@ -1882,6 +1859,7 @@ private fun LyricDisplaySettingsDialog(
                                 ) {
                                     listOf(
                                         "zh" to stringResource(R.string.settings_translate_target_zh),
+                                        "zh-TW" to stringResource(R.string.settings_translate_target_tw),
                                         "en" to stringResource(R.string.settings_translate_target_en),
                                         "ja" to stringResource(R.string.settings_translate_target_ja)
                                     ).forEach { (code, label) ->

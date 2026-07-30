@@ -421,6 +421,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun setTranslationTargetLang(lang: String) {
         _targetTranslationLang.value = lang
         TranslationPrefs.saveTargetLang(getApplication(), lang)
+        // When user selects Traditional Chinese as translation target,
+        // automatically set lyrics display to Traditional Chinese form.
+        if (lang == "zh-TW") {
+            LyricDisplayPreferences.setChineseForm("traditional")
+        } else {
+            LyricDisplayPreferences.setChineseForm("simplified")
+        }
     }
 
     // ---- Manual Lyrics Import ----

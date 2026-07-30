@@ -165,7 +165,8 @@
     <string name="settings_translate_lyrics">Enable lyrics translation</string>
     <string name="settings_translate_lyrics_desc">Auto-detect lyric language and translate</string>
     <string name="settings_translate_target">Target language</string>
-    <string name="settings_translate_target_zh">中文</string>
+    <string name="settings_translate_target_zh">Chinese (Simplified)</string>
+    <string name="settings_translate_target_tw">Chinese (Traditional)</string>
     <string name="settings_translate_target_en">English</string>
     <string name="settings_translate_target_ja">日本語</string>
 
