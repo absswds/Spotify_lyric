@@ -216,7 +216,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                                     title = track.title,
                                     artist = track.artist,
                                     album = track.album,
-                                    durationMs = track.durationMs
+                                    durationMs = track.durationMs,
+                                    forceOnline = !isMetered
                                 )
                             }
                         }
@@ -383,7 +384,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 title = track.title,
                 artist = track.artist,
                 album = track.album,
-                durationMs = track.durationMs
+                durationMs = track.durationMs,
+                forceOnline = true
             )
         }
     }

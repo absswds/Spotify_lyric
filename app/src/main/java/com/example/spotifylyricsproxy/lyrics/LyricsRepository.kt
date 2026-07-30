@@ -81,7 +81,8 @@ class LyricsRepository(private val database: AppDatabase) {
         title: String,
         artist: String,
         album: String = "",
-        durationMs: Long = 0
+        durationMs: Long = 0,
+        forceOnline: Boolean = false
     ) {
         if (title.isEmpty() || artist.isEmpty()) return
         currentTrackId = trackId
@@ -92,8 +93,12 @@ class LyricsRepository(private val database: AppDatabase) {
             rejectedDao.getRejectedSourceLyricIds(trackId).toSet()
         }
 
-        // Check cache first
-        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        // On forced-online (WiFi), skip cache check and go straight to online search.
+        // Cache is only a fallback when online returns nothing.
+        var cached: LyricCacheEntity? = null
+        if (!forceOnline) {
+            cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        }
         if (cached != null) {
             _offsetMs = cached.offsetMs
             _currentOffsetMs.value = _offsetMs
@@ -158,6 +163,8 @@ class LyricsRepository(private val database: AppDatabase) {
 
             if (candidates.isEmpty()) {
                 Log.w(TAG, "No lyrics found for: $title - $artist")
+                // Fall back to cache on forceOnline, so WiFi users still see cached lyrics when online fails
+                if (tryFallbackToCache(trackId)) return
                 cacheNotfound(trackId, title, artist, album, durationMs)
                 _lyricStatus.value = LyricStatus.NotFound
                 return
@@ -454,6 +461,25 @@ class LyricsRepository(private val database: AppDatabase) {
     /** Set status to indicate online search was skipped because of metered connection. */
     fun setMobileDataRestricted() {
         _lyricStatus.value = LyricStatus.MobileDataRestricted
+    }
+
+    /**
+     * Try to load cached lyrics for [trackId]. Returns true if cache was found and applied.
+     * Used as fallback when [forceOnline] search returns nothing.
+     */
+    private suspend fun tryFallbackToCache(trackId: String): Boolean {
+        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) } ?: return false
+        if (cached.fetchStatus != "success" && cached.fetchStatus != "plain_only") return false
+        val synced = cached.syncedLyrics ?: return false
+        val lines = LrcParser.parse(synced)
+        if (lines.isEmpty()) return false
+        _offsetMs = cached.offsetMs
+        _currentOffsetMs.value = _offsetMs
+        _parsedLyrics.value = lines
+        _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
+        _lyricSource.value = cached.source
+        Log.d(TAG, "Fallback to cache for $trackId (source=${cached.source})")
+        return true
     }
 }
 
