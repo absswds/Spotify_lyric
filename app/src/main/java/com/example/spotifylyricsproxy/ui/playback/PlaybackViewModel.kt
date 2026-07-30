@@ -415,6 +415,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         if (!enabled) {
             _translatedLine.value = null
             _detectedLyricsLang.value = null
+            // Reset chinese form to original when translation is off,
+            // so lyrics display the source text without conversion.
+            LyricDisplayPreferences.setChineseForm("original")
         }
     }
 

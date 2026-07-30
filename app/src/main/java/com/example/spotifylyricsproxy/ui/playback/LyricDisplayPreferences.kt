@@ -131,9 +131,9 @@ object LyricDisplayPreferences {
         _mobileDataStrategy.value = value
     }
 
-    /** Set Chinese form: \"simplified\" or \"traditional\". */
+    /** Set Chinese form: "original", "simplified" or "traditional". */
     fun setChineseForm(value: String) {
-        if (value !in listOf("simplified", "traditional")) return
+        if (value !in listOf("original", "simplified", "traditional")) return
         prefs?.edit()?.putString(KEY_CHINESE_FORM, value)?.apply()
         _chineseForm.value = value
     }
