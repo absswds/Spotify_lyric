@@ -33,6 +33,7 @@ google-services.json
 *.ap_
 *.aab
 *.aar
+*.bak
 !app/libs/*.aar
 
 # Kotlin / Java
@@ -66,10 +67,12 @@ CLAUDE.md
 .codex/
 .agents/
 
-# Development notes and plans (internal use only)
+# Development notes, agent workspaces, backups and plans (internal use only)
+.hermes/
 findings.md
 progress.md
 task_plan.md
+
 test_output.txt
 last-task-context.md
 

@@ -6,16 +6,18 @@
 
 **Reads Spotify playback state and displays synchronized lyrics on system notifications and media cards — no root required.**
 
-**English** · [简体中文](README-zh.md) · [日本語](README-ja.md)
+**English** · [简体中文](README-zh.md) · [繁體中文](README-zh-TW.md) · [日本語](README-ja.md)
 
-[Quick Start](#quick-start) · [Features](#features) · [Architecture](#architecture) · [Disclaimer](#disclaimer)
+[Quick Start](#quick-start) · [Features](#features) · [Architecture](#architecture) · [Content Sources & Compliance](#content-sources-references-and-compliance) · [Disclaimer](#disclaimer)
 
 ---
 
 ## News
 
 - **2026-07** — Project initialized. Core pipeline: App Remote connection, LRCLIB lyrics fetch, Room cache, MediaSession display, notification, playlist precache, lyrics correction.
-- **2026-07** — Added manual lyrics import (import .lrc file via SAF), translation target language selector (zh/en/ja), and Japanese (ja) interface localization.
+- **2026-07** — Added immersive playback UI, a right-side lyric settings drawer, portrait/landscape layouts, and display controls for font size, weight, alignment, and inactive-line blur.
+- **2026-07** — Added online lyrics sources: NetEase Cloud Music, QQ Music, and LRCLIB; results are searched concurrently, scored against Spotify metadata, and can be manually switched in Lyrics Correction.
+- **2026-07** — Added Simplified Chinese, Traditional Chinese, English, and Japanese interface localization, plus Simplified/Traditional conversion while lyric translation is enabled.
 
 ---
 
@@ -23,7 +25,7 @@
 
 Spotify Lyrics Proxy is an Android application that bridges Spotify's playback state with third-party lyrics sources. It does not play audio, does not modify the Spotify APK, and does not call private Spotify APIs.
 
-The app reads the currently playing track via Spotify App Remote, fetches synchronized lyrics from LRCLIB (or local cache), and renders the current line on:
+The app reads the currently playing track via Spotify App Remote, queries local cache and compatible third-party sources for synchronized lyrics, and renders the current line on:
 
 - System notification (foreground service)
 - MediaSession media card (lock screen, control center)
@@ -46,13 +48,14 @@ The app reads the currently playing track via Spotify App Remote, fetches synchr
 |---------|-|
 | Notification | Foreground service notification showing the current lyric line |
 | MediaSession | Media card with synchronized lyrics on lock screen and control center |
-| Customization | Adjustable font size, bold toggle, dim mode, text alignment |
+| Customization | Immersive portrait/landscape layouts; adjustable font size, current-line weight, inactive-line blur, dimming, and alignment |
+| Localization | Simplified Chinese, Traditional Chinese, English, and Japanese interface options |
 
 ### Caching
 
 | Feature | |
 |---------|-|
-| Auto-cache | First playback fetches lyrics from LRCLIB and persists to Room database |
+| Auto-cache | First playback searches compatible third-party sources and persists accepted lyrics to Room |
 | Playlist precache | Background WorkManager task precaches lyrics for selected playlists (Wi-Fi / charging) |
 | Offline | Cached lyrics available without network |
 
@@ -60,10 +63,10 @@ The app reads the currently playing track via Spotify App Remote, fetches synchr
 
 | Feature | |
 |---------|-|
-| Correction | Mark incorrect matches and re-search candidates |
+| Correction | Inspect candidates with their provider, select a preferred match, mark incorrect matches, and re-search |
 | Offset | Adjust lyric timing forward or backward |
 | Import | Load local `.lrc` files via system file picker |
-| Manual override | Manually imported lyrics always take priority over LRCLIB |
+| Manual override | Manually imported lyrics always take priority over online results |
 | Cleanup | Clear lyric cache and album art cache |
 
 ### Lyrics Translation
@@ -71,7 +74,8 @@ The app reads the currently playing track via Spotify App Remote, fetches synchr
 | Feature | |
 |---------|-|
 | Auto-detect | Detects lyrics language and translates on the fly |
-| Target selector | Choose target language: Chinese, English, or Japanese |
+| Target selector | Choose Simplified Chinese, Traditional Chinese, English, or Japanese |
+| Chinese conversion | Convert original lyric text between Simplified and Traditional Chinese while translation is enabled |
 | ML Kit | On-device translation engine, no network required after model download |
 
 ### UI
@@ -196,7 +200,9 @@ app/src/main/java/com/example/spotifylyricsproxy/
 ├── core/model/          Data models
 ├── database/            Room database and DAOs
 ├── lyrics/              Lyrics fetching, parsing, matching, sync
-│   └── lrclib/         LRCLIB API implementation
+│   ├── lrclib/         LRCLIB source
+│   ├── netease/        NetEase Cloud Music source
+│   └── qqmusic/        QQ Music source
 ├── mediasession/        MediaSession controls
 ├── notification/        Foreground service notification
 ├── playback/clock/      Playback position estimation
@@ -242,6 +248,38 @@ Spotify PlayerState
 
 ---
 
+## Content Sources, References, and Compliance
+
+### What this repository includes
+
+- Original application code, configuration, and documentation released under the repository's [Apache-2.0 license](LICENSE).
+- A source adapter interface and optional adapters for LRCLIB, NetEase Cloud Music, and QQ Music. The adapters search and render lyrics only on the user's device; this repository does **not** include a lyrics corpus, track metadata dump, album-art archive, or hosted lyrics API.
+- Spotify integration through the official Spotify Android SDK / Web API dependencies declared in `gradle/libs.versions.toml`.
+
+### What it does **not** grant
+
+The Apache-2.0 license covers this repository's code only. It does **not** grant any right to redistribute, publish, sublicense, train on, mirror, or commercially exploit lyrics, translations, album artwork, Spotify content, or metadata returned by third-party services.
+
+### Third-party sources and legal risk
+
+| Item | How the app uses it | Important limit |
+|------|---------------------|-----------------|
+| Spotify Android SDK / Web API | Reads playback state, controls playback, obtains playlist metadata after user authorization | Spotify remains the playback provider. Follow the [Spotify Developer Terms](https://developer.spotify.com/terms) and [design guidelines](https://developer.spotify.com/documentation/design). Do not imply Spotify endorsement. |
+| LRCLIB | Optional on-device synchronized-lyrics lookup | Check LRCLIB's current terms and API policy before distribution or commercial use. |
+| NetEase Cloud Music / QQ Music | Optional on-device lookup adapters, based on endpoints that may be undocumented or change | Availability and authorization are not guaranteed. These adapters are provided for personal interoperability experiments only; they should be disabled or removed if the provider's terms, copyright rules, or local law prohibit the use. Do not operate a proxy, mirror, bulk downloader, public lyrics API, or prebuilt lyric database. |
+| ML Kit Translation | On-device lyric-language detection and translation | Translation does not remove underlying lyrics copyright restrictions. |
+
+**Before publishing an APK, app-store listing, paid product, server feature, or public hosted service:** obtain legal review and re-check the current terms of every provider and the law applicable to your jurisdiction. The maintainers make no claim that any optional third-party lyrics adapter is suitable for public distribution.
+
+### Reference implementations and attribution
+
+See [Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIANCE.md) for the detailed source-by-source boundary, dependency attribution, and public-release checklist.
+
+- [Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper) — consulted as a protocol/reference implementation for the NetEase lyrics adapter. Its repository is Apache-2.0; this project does not copy its lyric data or bundle its code.
+- Spotify Android SDK/Auth SDK, AndroidX, Jetpack Compose, Room, WorkManager, Coil, OkHttp, Retrofit, Gson, and Google ML Kit — declared dependencies; their respective licenses and notices remain applicable.
+
+---
+
 ## Disclaimer
 
 **This project is not affiliated with Spotify AB and is not an official Spotify product.**
@@ -249,10 +287,12 @@ Spotify PlayerState
 - This application does not play audio or replace the Spotify player
 - All audio playback remains handled by the Spotify App
 - This application only reads playback state and displays lyrics
-- Lyrics are sourced from LRCLIB (third-party) or user-provided local files
+- Lyrics are sourced from compatible third-party services or user-provided local files; provider terms and copyright restrictions remain applicable
+- This repository license covers only this project's code, not externally sourced lyrics, artwork, or metadata
+- The app is intended for personal on-device use and must not be used to host, mirror, bulk-export, or redistribute third-party lyrics or artwork
 - This application does not call private Spotify APIs or modify the Spotify APK
-- This application does not collect, store, or transmit user listening history
-- Users must comply with Spotify Developer Terms and LRCLIB terms of service
+- This application does not collect, store, or transmit user listening history outside the user's device
+- Users must comply with Spotify Developer Terms, provider terms, and applicable copyright law
 
 ---
 
