@@ -33,7 +33,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Code
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -48,6 +47,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -202,7 +203,7 @@ fun SettingsScreen(
                 SettingsItemRow(
                     label = stringResource(R.string.settings_github),
                     description = stringResource(R.string.settings_github_desc),
-                    icon = Icons.Default.Code,
+                    iconRes = R.drawable.ic_github_mark,
                     trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
                     enabled = true,
                     onClick = { openProjectPage(context) }
@@ -260,8 +261,8 @@ private fun ToggleRow(label: String, description: String, checked: Boolean) {
 private fun SettingsItemRow(
     label: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    iconRes: Int? = null,
+    trailingIcon: ImageVector? = null,
     enabled: Boolean = false,
     onClick: () -> Unit = {}
 ) {
@@ -273,9 +274,9 @@ private fun SettingsItemRow(
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (icon != null) {
+        if (iconRes != null) {
             Icon(
-                imageVector = icon,
+                painter = painterResource(iconRes),
                 contentDescription = null,
                 tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = 14.dp)
