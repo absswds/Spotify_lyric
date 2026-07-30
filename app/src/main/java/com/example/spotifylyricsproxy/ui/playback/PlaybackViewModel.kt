@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.content.Intent
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.spotifylyricsproxy.core.model.LrcLine
@@ -30,6 +31,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class PlaybackViewModel(application: Application) : AndroidViewModel(application) {
+
+    companion object {
+        private const val TAG = "PlaybackVM"
+    }
 
     private val clientId = com.example.spotifylyricsproxy.BuildConfig.SPOTIFY_CLIENT_ID
     private val redirectUri = "spotifylyricsproxy://callback"
@@ -200,7 +205,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private fun observeTrackChanges() {
         viewModelScope.launch {
             repository.currentTrack.collect { track ->
+                Log.d(TAG, "observeTrackChanges: trackId=${track.trackId}, lastFetched=$lastFetchedTrackId, isEmpty=${track.trackId.isEmpty()}")
                 if (track.trackId.isNotEmpty() && track.trackId != lastFetchedTrackId) {
+                    Log.i(TAG, "Track changed → fetching lyrics for ${track.title}")
                     LyricsForegroundService.start(getApplication())
                     lastFetchedTrackId = track.trackId
                     // Don't reset lyrics here — old lyrics stay visible until
