@@ -267,19 +267,34 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         val list = _candidates.value
         if (index < 0 || index >= list.size) return
         val candidate = list[index]
-        Log.i(TAG, "Manual select: ${candidate.trackName} (score=${candidate.score})")
+        Log.i(TAG, "Manual select: source=${candidate.source} title=${candidate.trackName} score=${candidate.score} hasSynced=${!candidate.syncedLyrics.isNullOrEmpty()}")
+
+        // Clear the previous provider's line before applying the new candidate.
+        // Without this, a plain-only or invalid LRC candidate left the old NetEase
+        // line visible in MediaSession/notification while the playback UI was empty.
+        _parsedLyrics.value = emptyList()
+        _currentLine.value = null
+        _lyricSource.value = candidate.source
 
         cacheResult(currentTrackId, "", "", "", 0, candidate)
 
         val synced = candidate.syncedLyrics
-        if (!synced.isNullOrEmpty()) {
-            val lines = LrcParser.parse(synced)
-            _parsedLyrics.value = lines
-            _lyricStatus.value = LyricStatus.Synced(candidate.score)
-        } else {
+        if (synced.isNullOrEmpty()) {
+            Log.w(TAG, "Manual select has no synced lyrics: source=${candidate.source}")
             _lyricStatus.value = LyricStatus.PlainOnly
+            return
         }
-        _lyricSource.value = candidate.source
+
+        val lines = LrcParser.parse(synced)
+        if (lines.isEmpty()) {
+            Log.w(TAG, "Manual select LRC parsed 0 lines: source=${candidate.source}")
+            _lyricStatus.value = LyricStatus.ParseError
+            return
+        }
+
+        _parsedLyrics.value = lines
+        _lyricStatus.value = LyricStatus.Synced(candidate.score)
+        Log.i(TAG, "Manual select applied ${lines.size} synced lines: source=${candidate.source}")
     }
 
     /** Re-fetch and re-score from network, then update candidates. */
