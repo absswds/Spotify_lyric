@@ -105,7 +105,7 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
 
     fun loadPlaylists() {
         val t = token()
-        Log.d(TAG, "loadPlaylists: token=${t?.take(10)}...")
+        Log.d(TAG, "loadPlaylists: tokenPresent=${t != null}")
         if (t == null) {
             _error.value = getApplication<Application>().getString(R.string.error_not_logged_in)
             return

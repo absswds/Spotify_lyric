@@ -107,13 +107,14 @@ Spotify Lyrics Proxy は、Spotify の再生状態とサードパーティの歌
    | **App description** | 例："Personal lyrics display app" |
    | **Website** | 空欄のまま |
    | **Redirect URIs** | 以下の URI を追加（**完全に一致**にする必要があります）：`spotifylyricsproxy://callback` |
-   | **Android packages** | **空欄のまま**（不要です。下記の説明を参照） |
-   | **iOS app bundles** | 空欄のまま |
-   | **Which API/SDKs are you planning to use?** | **Web API** にチェック |
+   | **Android packages** | `com.example.spotifylyricsproxy` を追加 |
+   | **Android SHA-1 fingerprint** | 使用する APK 署名証明書の SHA-1 フィンガープリントを追加 |
+   | **iOS app bundles** | 空欄 |
+   | **Which API/SDKs are you planning to use?** | **Web API** を選択 |
 
-   > **Redirect URI** は、アプリが OAuth トークンを受け取るためのコールバック URL です。**完全に一致**させる必要があります。末尾のスラッシュやスペースは不可です。
+   > **Redirect URI** は認可後に OAuth トークンを受け取るコールバック URL です。末尾のスラッシュや余分な空白を含めず、完全に一致させてください。
 
-   > **Android packages** — パッケージ名や SHA フィンガープリントの登録は不要です。このアプリは Spotify Auth SDK（ブラウザベースの OAuth）を使用するため、Redirect URI の設定のみで動作します。パッケージ名/フィンガープリントは Spotify App Remote SDK のディープリンクにのみ必要で、このアプリでは使用しません。
+   > **Android パッケージ名と SHA-1** — Spotify Android SDK の公式ドキュメントでは、Dashboard のアプリ設定に両方を登録するよう案内されています。パッケージ名は `com.example.spotifylyricsproxy` です。デバッグ版では debug 署名証明書、公開リリースでは release 署名証明書の SHA-1 も登録してください。Spotify はこれらで Android アプリの身元を確認します。
 
 4. ページ下部の **Save** をクリック
 5. ページ上部の **Client ID** をコピー（32文字の16進数文字列、例：`81a57006ff4a4d5d96cb72f180aa4ab5`）

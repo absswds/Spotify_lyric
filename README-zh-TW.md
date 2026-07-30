@@ -93,11 +93,14 @@ Spotify Lyrics Proxy 是一個 Android 應用，連接 Spotify 播放狀態與�
 
 1. 前往 [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)，用 Spotify 帳號登入。
 2. 點擊 **Create App**。
-3. 在 **Redirect URIs** 加入且必須完全一致的：`spotifylyricsproxy://callback`。
-4. 勾選 **Web API** 後儲存。
-5. 複製頁面頂部的 **Client ID**。
+3. 填寫應用資料，並加入以下設定：
+   - **Redirect URIs**：`spotifylyricsproxy://callback`（必須完全一致）
+   - **Android packages**：`com.example.spotifylyricsproxy`
+   - **Android SHA-1 fingerprint**：加入你用來簽署 APK 的憑證 SHA-1 指紋
+   - 勾選 **Web API** 後儲存。
+4. 複製頁面頂部的 **Client ID**。
 
-> Client ID 不是 client secret，但仍不要將你的個人設定檔或 token 提交到公開倉庫。
+> Spotify Android SDK 官方文件建議同時登記 Android 包名和 SHA-1。公開 release 時，要登記 release 簽名憑證的 SHA-1；調試時則使用 debug 簽名憑證。Client ID 不是 client secret，但仍不要將個人設定檔或 token 提交到公開倉庫。
 
 ### 從原始碼建置
 

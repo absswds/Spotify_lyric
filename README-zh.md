@@ -107,13 +107,14 @@ Spotify Lyrics Proxy 是一个 Android 应用，在 Spotify 播放状态与第�
    | **App description** | 例如 "Personal lyrics display app" |
    | **Website** | 留空 |
    | **Redirect URIs** | 添加以下地址（**必须完全一致**，不能多斜杠或空格）：`spotifylyricsproxy://callback` |
-   | **Android packages** | **留空**（不需要填写，见下方说明） |
+   | **Android packages** | 填写 `com.example.spotifylyricsproxy` |
+   | **Android SHA-1 fingerprint** | 填写你将用于签名 APK 的证书 SHA-1 指纹 |
    | **iOS app bundles** | 留空 |
    | **Which API/SDKs are you planning to use?** | 勾选 **Web API** |
 
    > **Redirect URI** 是 App 授权后接收 OAuth token 的回调地址，必须**完全一致**——末尾不能有斜杠或空格。
 
-   > **Android packages** — 不需要填写包名或 SHA 指纹。本应用使用 Spotify Auth SDK（浏览器 OAuth），只需配置 Redirect URI。包名/指纹字段仅在使用 Spotify App Remote SDK 深度链接时才需要，本应用不需要。
+   > **Android 包名和 SHA-1** — Spotify Android SDK 官方文档要求在 Dashboard 的应用设置中登记两者。包名填 `com.example.spotifylyricsproxy`。调试构建使用 debug 签名证书；准备公开发布时，还要登记 release 签名证书的 SHA-1。Spotify 会用这些信息验证 Android 应用身份。
 
 4. 点击页面底部的 **Save**
 5. 从页面顶部复制 **Client ID**（32 位十六进制字符串，例如 `81a57006ff4a4d5d96cb72f180aa4ab5`）

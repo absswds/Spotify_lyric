@@ -111,13 +111,14 @@ This app connects to Spotify using Spotify's Android SDK, which requires a regis
    | **App description** | e.g. "Personal lyrics display app" |
    | **Website** | Leave empty |
    | **Redirect URIs** | Add exactly: `spotifylyricsproxy://callback` |
-   | **Android packages** | Leave empty (not required — see note below) |
+   | **Android packages** | Add `com.example.spotifylyricsproxy` |
+   | **Android SHA-1 fingerprint** | Add the SHA-1 fingerprint of the APK signing certificate you will use |
    | **iOS app bundles** | Leave empty |
    | **Which API/SDKs are you planning to use?** | Check **Web API** |
 
    > The **Redirect URI** is the callback URL the app uses to receive the OAuth token after you authorize. It must match **character-for-character** — no trailing slash, no extra spaces.
 
-   > **Android packages** — You do NOT need to add your package name or SHA fingerprint here. This app uses Spotify's Auth SDK (browser-based OAuth), which only requires the redirect URI. The package/SHA fields are only needed if you use Spotify's App Remote SDK with deep links, which this app does not require.
+   > **Android package and SHA-1** — Spotify's Android SDK documentation says to register both under the dashboard's app settings. Use `com.example.spotifylyricsproxy`. For a debug build, Android Studio/Gradle uses the debug signing certificate; for a public release, register the SHA-1 of the release signing certificate too. Spotify uses these values to verify the identity of the Android app.
 
 4. Click **Save** at the bottom of the page
 5. Copy the **Client ID** from the top of the page (a 32-character hex string, e.g. `81a57006ff4a4d5d96cb72f180aa4ab5`)
