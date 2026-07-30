@@ -52,8 +52,20 @@ class LrclibLyricsSource : LyricsSource {
         return try {
             val query = "${request.trackName} ${request.artistName}"
             android.util.Log.i("Lrclib", "Searching with query: $query")
-            val searchResults = api.search(query).map { it.toCandidate() }
-            android.util.Log.i("Lrclib", "Search returned ${searchResults.size} results")
+            val rawResults = api.search(query)
+            android.util.Log.i("Lrclib", "Search returned ${rawResults.size} raw results")
+            // Enrich each search result with the full record (getById) so syncedLyrics
+            // and plainLyrics are always populated — the search endpoint may omit them
+            // for some entries depending on the API's internal state.
+            val searchResults = rawResults.mapNotNull { result ->
+                try {
+                    val full = api.getById(result.id)
+                    full?.toCandidate() ?: result.toCandidate()
+                } catch (_: Exception) {
+                    result.toCandidate()
+                }
+            }
+            android.util.Log.i("Lrclib", "Enriched ${searchResults.size} candidates")
             if (searchResults.isNotEmpty()) searchResults
             else if (preciseResult != null) listOf(preciseResult.toCandidate())
             else emptyList()
