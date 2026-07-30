@@ -203,7 +203,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 if (track.trackId.isNotEmpty() && track.trackId != lastFetchedTrackId) {
                     LyricsForegroundService.start(getApplication())
                     lastFetchedTrackId = track.trackId
-                    lyricsRepo.reset()
+                    // Don't reset lyrics here — old lyrics stay visible until
+                    // fetchLyrics overwrites them. This prevents a blank gap
+                    // on cross-device track changes.
 
                     val strategy = LyricDisplayPreferences.mobileDataStrategy.value
                     val isMetered = currentMeteredState == MeteredState.METERED

@@ -25,8 +25,8 @@ class LyricsRepository(private val database: AppDatabase) {
     }
 
     private val sources: List<LyricsSource> = listOf(
-        LrclibLyricsSource(),
-        NeteaseLyricsSource()
+        NeteaseLyricsSource(),
+        LrclibLyricsSource()
     )
 
     /** Query every source in order, returning the first non-empty result. */
