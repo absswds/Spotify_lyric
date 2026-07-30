@@ -26,7 +26,13 @@ The application may store data locally on the user's device for its cache featur
 | QQ Music adapter | Optional on-device lyric lookup | The same boundary applies: availability is not authorization. Do not run a proxy, mirror, downloader, public API, or central cache for QQ Music content. |
 | Google ML Kit | On-device language identification and translation | A translation does not remove the copyright or contractual restrictions applicable to the source lyric. |
 
-## 3. Explicitly out of scope
+## 3. Spotify account and playback-control requirements
+
+- Creating a Spotify Developer Dashboard account/app follows Spotify's current account requirements. As of Spotify's February 2026 Developer Access update, the owner of a Development Mode app must have a **Spotify Premium** account; re-check the [current quota-mode rules](https://developer.spotify.com/documentation/web-api/concepts/quota-modes) before release.
+- This app forwards play, pause, previous, next, seek, shuffle, and repeat commands to the installed Spotify app through Spotify App Remote. It does not bypass Spotify account entitlements. **Previous/next and other playback controls have the same Premium restriction as Spotify's native remote/player controls.** A free account may still be able to use Spotify normally according to Spotify's own product rules, but this project must not promise remote playback control for it.
+- The app subscribes to the Spotify client installed on the Android device running this app. Spotify Connect playback transferred to another device (for example, a tablet) can have delayed or missing App Remote state callbacks on the phone. Cross-device synchronisation is therefore a known compatibility boundary, not a guarantee.
+
+## 4. Explicitly out of scope
 
 The project must not add features that:
 
@@ -36,7 +42,7 @@ The project must not add features that:
 4. bundle a copied lyric catalogue, a user playback-history dump, or cached artwork in an APK/release; or
 5. claim that third-party service data is licensed under Apache-2.0 merely because this repository's code is Apache-2.0.
 
-## 4. Third-party code, protocol references, and dependencies
+## 5. Third-party code, protocol references, and dependencies
 
 ### Reference implementation
 
@@ -46,7 +52,7 @@ The project must not add features that:
 
 The dependency catalog is in [`gradle/libs.versions.toml`](../gradle/libs.versions.toml). Notable dependencies include the Spotify Android SDK/Auth SDK, AndroidX, Jetpack Compose, Room, WorkManager, Coil, Gson, OkHttp, Retrofit, and Google ML Kit. Each dependency retains its own license and notice requirements.
 
-## 5. Release checklist
+## 6. Release checklist
 
 Before creating a public release, APK, app-store listing, paid offering, or backend service:
 
