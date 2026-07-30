@@ -14,7 +14,7 @@ It does **not** grant a license to redistribute, republish, sublicense, train on
 - Spotify content, trademarks, or user data; or
 - content returned by LRCLIB, NetEase Cloud Music, QQ Music, or another provider.
 
-The application stores data locally on the user's device for its cache feature. This repository must not contain cached lyrics, sample lyric collections, album-art archives, user listening history, credentials, tokens, or a hosted lyrics database.
+The application may store data locally on the user's device for its cache feature. This repository must not contain cached lyrics, sample lyric collections, album-art archives, user listening history, credentials, tokens, or a hosted lyrics database. **NetEase lyrics are deliberately session-only in this build:** they can be displayed during the current app process but are not written to Room; any old `netease` cache row is deleted when the shared lyric repository starts.
 
 ## 2. External services and risk boundaries
 

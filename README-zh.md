@@ -248,7 +248,7 @@ Spotify PlayerState
 
 - Spotify 集成须遵守 [Spotify Developer Terms](https://developer.spotify.com/terms) 与 [Design Guidelines](https://developer.spotify.com/documentation/design)，不得暗示 Spotify 背书。
 - LRCLIB、网易云音乐和 QQ 音乐均为可选设备端来源；各来源的条款、版权规则和当地法律仍然适用。端点可用不代表有公开分发、代理、镜像、批量下载或建立公共 API 的授权。
-- 本项目不得包含或发布歌词库、封面归档、用户播放历史、token、密钥或本地缓存。公开 APK、上架、收费、服务端功能前须重新核对各来源的当前条款并取得必要的法律意见。
+- 本项目可在用户自己的设备上本地显示和缓存允许持久化的来源；仓库、公开 APK、服务器和公共 API 不得预装、收集、导出、镜像或分发歌词库、封面归档、用户播放历史、token、密钥或本地缓存。**网易云歌词在当前版本只保留于本次 App 运行内存，不写入本地数据库，旧的网易云缓存会在歌词仓库启动时清除。** 公开 APK、上架、收费、服务端功能前须重新核对各来源的当前条款并取得必要的法律意见。
 - 网页云 adapter 的协议实现参考了 [Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)（Apache-2.0）；未复制其代码或歌词数据。
 
 完整边界、依赖致谢与发布检查清单见：[Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIANCE.md)。
