@@ -443,13 +443,55 @@ fun ImmersiveLyricsBlock(
                     color = Color.White.copy(alpha = 0.55f)
                 )
             }
-            else -> {
+            is LyricStatus.LowConfidence -> {
+                // Show lyrics even for low-confidence matches, with a status banner
+                if (allLines.isNotEmpty()) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.playback_lyrics_low_confidence),
+                            fontSize = 13.sp,
+                            color = Color(0xFFFF9500),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(22.dp)
+                        ) {
+                            itemsIndexed(allLines, key = { index, line -> "${line.startMs}_$index" }) { index, line ->
+                                val isCurrent = index == currentIndex
+                                val lineEndMs = allLines.getOrNull(index + 1)?.startMs ?: (line.startMs + 4000L)
+                                LyricLine(
+                                    text = line.text,
+                                    isCurrent = isCurrent,
+                                    shouldAnimate = isCurrent && isPlaying,
+                                    animationKey = if (isCurrent) line.startMs else null,
+                                    lineStartMs = line.startMs,
+                                    lineEndMs = lineEndMs,
+                                    positionMs = positionMs,
+                                    config = config,
+                                    onClick = { onSeek(line.startMs) }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.playback_lyrics_not_found),
+                        fontSize = 18.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+            }
+            is LyricStatus.PlainOnly, is LyricStatus.NotFound, is LyricStatus.ParseError -> {
                 Text(
                     text = stringResource(R.string.playback_lyrics_not_found),
                     fontSize = 18.sp,
                     color = Color.White.copy(alpha = 0.5f)
                 )
             }
+            is LyricStatus.Error -> {}
         }
     }
 }

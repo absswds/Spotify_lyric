@@ -378,6 +378,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 if (!synced.isNullOrEmpty()) {
                     _parsedLyrics.value = LrcParser.parse(synced)
                     _lyricStatus.value = LyricStatus.Synced(best.score)
+                    Log.i(TAG, "reSearch auto-accepted: ${best.trackName} score=${best.score} lines=${_parsedLyrics.value.size}")
                 } else {
                     _lyricStatus.value = LyricStatus.PlainOnly
                 }

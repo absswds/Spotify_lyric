@@ -32,7 +32,7 @@ class NeteaseLyricsSource : LyricsSource {
 
     companion object {
         private const val TAG = "Netease"
-        private const val SEARCH_URL = "https://music.163.com/api/search/get/web"
+        private const val SEARCH_URL = "https://music.163.com/api/cloudsearch/pc"
         private const val LYRIC_URL = "https://music.163.com/api/song/lyric"
         private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
