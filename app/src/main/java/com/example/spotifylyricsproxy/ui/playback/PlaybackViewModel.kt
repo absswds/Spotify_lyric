@@ -25,6 +25,7 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyRemoteRepository
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -126,6 +127,18 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             ConnectivityObserver.observe(getApplication()).collect { state ->
                 currentMeteredState = state
                 LyricsForegroundService.setMeteredState(state)
+            }
+        }
+        // Auto-search on startup: wait for App Remote to connect, then re-search
+        // if lyrics haven't been loaded yet. This handles cases where the service's
+        // fetchLyrics was skipped (e.g. blank track ID at startup).
+        viewModelScope.launch {
+            delay(3000)
+            if (lyricsRepo.parsedLyrics.value.isEmpty() &&
+                lyricsRepo.getCurrentTrackId().isNotBlank()
+            ) {
+                Log.i(TAG, "Auto-search on startup for ${lyricsRepo.getCurrentTrackId()}")
+                reSearchLyrics()
             }
         }
     }

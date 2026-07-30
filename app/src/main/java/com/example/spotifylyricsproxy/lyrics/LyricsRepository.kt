@@ -240,12 +240,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             // Cache the result
             cacheResult(trackId, title, artist, album, durationMs, best)
 
-            if (!LyricMatcher.isAutoAccept(best.score)) {
-                _parsedLyrics.value = emptyList()
-                _lyricStatus.value = LyricStatus.LowConfidence(best.score)
-                return
-            }
-
+            // Show lyrics regardless of score. Score is only for candidate ranking,
+            // never for hiding content.
             val syncedLyrics = best.syncedLyrics
             if (syncedLyrics.isNullOrEmpty()) {
                 _parsedLyrics.value = emptyList()
@@ -383,11 +379,14 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                     _lyricStatus.value = LyricStatus.PlainOnly
                 }
             } else if (best != null) {
-                _lyricStatus.value = LyricStatus.LowConfidence(best.score)
-                // Still apply the lyrics so the user can see them, even if confidence is low.
+                // Show lyrics regardless of score. Score is for candidate ranking only.
                 val synced = best.syncedLyrics
                 if (!synced.isNullOrEmpty()) {
                     _parsedLyrics.value = LrcParser.parse(synced)
+                    _lyricStatus.value = LyricStatus.Synced(best.score)
+                    Log.i(TAG, "reSearch accepted ${best.trackName} score=${best.score} lines=${_parsedLyrics.value.size}")
+                } else {
+                    _lyricStatus.value = LyricStatus.PlainOnly
                 }
             } else if (scored.isNotEmpty()) {
                 _lyricStatus.value = LyricStatus.LowConfidence(scored.first().score)

@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +64,13 @@ fun LyricsCorrectionScreen(
     val candidates by viewModel.candidates.collectAsState()
     val currentOffsetMs by viewModel.currentOffsetMs.collectAsState()
     val showCandidatePicker by viewModel.showCandidatePicker.collectAsState()
+
+    // Auto-search when entering the correction screen if no lyrics are loaded.
+    LaunchedEffect(Unit) {
+        if (parsedLyrics.isEmpty() && lyricStatus !is com.example.spotifylyricsproxy.lyrics.LyricStatus.Searching) {
+            viewModel.reSearchLyrics()
+        }
+    }
 
     // Candidate picker dialog
     if (showCandidatePicker && candidates.size > 1) {

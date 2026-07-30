@@ -214,7 +214,7 @@ fun PlaybackScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (lyricsExpanded && lyricStatus is LyricStatus.Synced) {
+            if (lyricsExpanded && parsedLyrics.isNotEmpty()) {
                 ExpandedLyricsView(
                     lines = parsedLyrics,
                     currentLine = currentLyricLine,
