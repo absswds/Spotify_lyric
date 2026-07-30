@@ -135,7 +135,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 OPPO ColorOS、小米 MIUI、華為 HarmonyOS、vivo OriginOS 等系統可能積極停止背景應用。若通知歌詞停止更新，請關閉本應用的電池最佳化、開啟自動啟動（如有），並在最近任務中鎖定 App。
 
-> 如果 App 播放器頁面變成空白（Spotify 原生播放器搶佔了畫面），在最近任務中滑掉 App 重新打開即可恢復。
+> 如果 App 播放器頁面變成空白（Spotify 原生播放器搶佔了畫面），或回到 App 後歌詞沒有及時更新，在最近任務中滑掉 App 重新打開即可恢復。
 
 ---
 

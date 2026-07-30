@@ -191,7 +191,7 @@ This app runs a foreground service to display lyrics in the notification. Some A
 | Lyrics not showing in notification | Notification permission denied | Grant permission in Settings → Notifications |
 | Auth redirect closes immediately | Wrong redirect URI in Dashboard | Verify `spotifylyricsproxy://callback` is set |
 | Notification disappears after a while | System killed the background service | Disable battery optimization, enable auto-start, lock in recent tasks (see [Keep the App Alive](#keep-the-app-alive-in-background)) |
-| Lyrics page shows blank / player loses focus | App entered background and Spotify UI took over | Swipe the app away from recent tasks and reopen it. The player reconnects and displays lyrics. |
+| Lyrics page shows blank / player loses focus / lyrics not updating after returning from background | App entered background and Spotify UI took over, or playback clock drifted | Swipe the app away from recent tasks and reopen it. The player reconnects and displays lyrics. |
 
 ---
 
