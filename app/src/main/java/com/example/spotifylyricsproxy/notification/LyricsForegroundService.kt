@@ -189,7 +189,11 @@ class LyricsForegroundService : Service() {
     }
 
     private fun fetchLyricsWhenTrackChanges(track: SpotifyTrackInfo) {
-        if (track.trackId.isBlank() || track.trackId == lastFetchedTrackId) return
+        Log.i(TAG, "Track change received: id=${track.trackId.take(8)} title='${track.title}' artist='${track.artist}' album='${track.album}' dur=${track.durationMs} metered=${getMeteredState()}")
+        if (track.trackId.isBlank() || track.trackId == lastFetchedTrackId) {
+            Log.w(TAG, "Skipping fetch: blank=${track.trackId.isBlank()} sameAsLast=${track.trackId == lastFetchedTrackId}")
+            return
+        }
 
         // Fetch lyrics to populate the shared LyricsRepository singleton.
         // The ViewModel reads the same singleton for UI display.
@@ -201,6 +205,7 @@ class LyricsForegroundService : Service() {
         when {
             !isMetered || strategy == "allow" -> {
                 serviceScope.launch {
+                    Log.i(TAG, "Calling fetchLyrics forceOnline=${!isMetered} strategy=$strategy")
                     lyricsRepository.fetchLyrics(
                         trackId = track.trackId,
                         title = track.title,

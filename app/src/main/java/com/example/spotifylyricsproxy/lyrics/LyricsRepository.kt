@@ -191,6 +191,10 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             var scored = candidates.map {
                 LyricMatcher.score(it, title, artist, album, durationMs)
             }
+            // DEBUG: dump every candidate's score breakdown
+            scored.forEach { c ->
+                Log.i(TAG, "Candidate: source=${c.source} title='${c.trackName}' artist='${c.artistName}' score=${c.score} synced=${!c.syncedLyrics.isNullOrEmpty()}")
+            }
             val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
 
             if (filtered.isEmpty()) {
