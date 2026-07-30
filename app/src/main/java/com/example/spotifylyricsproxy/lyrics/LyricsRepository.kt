@@ -127,6 +127,10 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         lastSearchAlbum = album
         lastSearchDurationMs = durationMs
         _candidates.value = emptyList()
+        // Clear previous song's lyrics immediately; show "Searching…" while
+        // we check cache and query online sources.
+        _parsedLyrics.value = emptyList()
+        _lyricStatus.value = LyricStatus.Searching
 
         // Load rejected lyric IDs for blacklist filtering
         val rejectedIds = withContext(Dispatchers.IO) {
