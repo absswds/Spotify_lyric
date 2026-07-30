@@ -64,9 +64,9 @@ class NeteaseLyricsSource : LyricsSource {
         val candidate = LyricCandidate(
             id = bestSong.id,
             trackName = bestSong.name,
-            artistName = bestSong.artists?.firstOrNull()?.name ?: "",
-            albumName = bestSong.album?.name ?: "",
-            durationMs = bestSong.duration,
+            artistName = bestSong.resolvedArtists.joinToString(", ") { it.name },
+            albumName = bestSong.resolvedAlbum?.name ?: "",
+            durationMs = bestSong.resolvedDuration,
             syncedLyrics = lrcText?.lyric,
             plainLyrics = null,
             translation = lrcText?.translation,

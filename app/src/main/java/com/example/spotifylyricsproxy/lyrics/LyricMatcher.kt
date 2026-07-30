@@ -43,16 +43,24 @@ object LyricMatcher {
             score += 18
         }
 
-        // Artist match (max 30, big penalty for strong mismatch)
-        val primaryArtist = normalizeCN(expectedArtist.split(",", "&", "feat.", "ft.").first().trim())
-        val candidateArtist = normalizeCN(candidate.artistName)
-        if (candidateArtist.contains(primaryArtist, ignoreCase = true)) {
-            score += 30
-        } else if (candidateArtist.contains(normalizeCN(expectedArtist.take(3)), ignoreCase = true)) {
-            score += 10
-        } else {
-            // Artist mismatch — heavily penalize to avoid wrong-match lyrics
-            score -= 25
+        // Artist match (max 30, penalize only when both sides have usable artists)
+        val expectedArtists = splitArtists(expectedArtist).map { normalizeCN(it) }.filter { it.length >= 2 }
+        val candidateArtists = splitArtists(candidate.artistName).map { normalizeCN(it) }.filter { it.length >= 2 }
+        when {
+            expectedArtists.isEmpty() || candidateArtists.isEmpty() -> {
+                // Missing artist metadata should not punish a good title/duration match.
+            }
+            expectedArtists.any { expected ->
+                candidateArtists.any { candidate ->
+                    candidate.contains(expected, ignoreCase = true) || expected.contains(candidate, ignoreCase = true)
+                }
+            } -> score += 30
+            expectedArtists.any { expected ->
+                candidateArtists.any { candidate ->
+                    expected.take(2).let { it.length >= 2 && candidate.contains(it, ignoreCase = true) }
+                }
+            } -> score += 10
+            else -> score -= 18
         }
 
         // Duration match (max 15)
@@ -94,6 +102,11 @@ object LyricMatcher {
     ): List<LyricCandidate> = candidates.filter { candidate ->
         candidate.id.toString() !in rejectedIds
     }
+
+    private fun splitArtists(artists: String): List<String> =
+        artists.split(Regex("""\s*(?:,|，|&|、|/|feat\.?|ft\.?)\s*""", RegexOption.IGNORE_CASE))
+            .map(String::trim)
+            .filter(String::isNotEmpty)
 
     private fun cleanTitle(title: String): String {
         return title
