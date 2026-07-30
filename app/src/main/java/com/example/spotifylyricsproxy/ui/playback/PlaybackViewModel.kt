@@ -412,11 +412,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     fun setTranslationEnabled(enabled: Boolean) {
         _isTranslationEnabled.value = enabled
-        if (!enabled) {
+        if (enabled) {
+            // Sync chineseForm with the current translation target
+            syncChineseFormFromTarget(_targetTranslationLang.value)
+        } else {
             _translatedLine.value = null
             _detectedLyricsLang.value = null
-            // Reset chinese form to original when translation is off,
-            // so lyrics display the source text without conversion.
+            // Reset chinese form to original when translation is off
             LyricDisplayPreferences.setChineseForm("original")
         }
     }
@@ -424,12 +426,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     fun setTranslationTargetLang(lang: String) {
         _targetTranslationLang.value = lang
         TranslationPrefs.saveTargetLang(getApplication(), lang)
-        // When user selects Traditional Chinese as translation target,
-        // automatically set lyrics display to Traditional Chinese form.
-        if (lang == "zh-TW") {
-            LyricDisplayPreferences.setChineseForm("traditional")
-        } else {
-            LyricDisplayPreferences.setChineseForm("simplified")
+        syncChineseFormFromTarget(lang)
+    }
+
+    private fun syncChineseFormFromTarget(lang: String) {
+        when (lang) {
+            "zh-TW" -> LyricDisplayPreferences.setChineseForm("traditional")
+            else -> LyricDisplayPreferences.setChineseForm("simplified")
         }
     }
 
