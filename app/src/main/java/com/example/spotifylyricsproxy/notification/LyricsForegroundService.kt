@@ -185,31 +185,10 @@ class LyricsForegroundService : Service() {
     }
 
     private fun fetchLyricsWhenTrackChanges(track: SpotifyTrackInfo) {
-        if (track.trackId.isBlank() || track.trackId == lastFetchedTrackId) return
-
-        lastFetchedTrackId = track.trackId
-
-        // Immediately clear the MediaSession card's lyrics so it shows the
-        // track title rather than stale lyrics from the previous track.
-        // This must happen BEFORE lyricsRepository.reset() so combine sees
-        // the cleared state consistently.
-        mediaSessionController.updateForTrack(
-            track = track,
-            currentLine = null,
-            albumArt = currentAlbumArt.value,
-            playbackPositionMs = track.playbackPositionMs
-        )
-
-        lyricsRepository.reset()
-        serviceScope.launch {
-            lyricsRepository.fetchLyrics(
-                trackId = track.trackId,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                durationMs = track.durationMs
-            )
-        }
+        // Fetch is handled by PlaybackViewModel. This service only reads
+        // the shared LyricsRepository singleton for notification display.
+        // Resetting or re-fetching here would race with the ViewModel.
+        lyricsRepository.updatePosition(track.playbackPositionMs)
     }
 
     private fun publishNotification(snapshot: LyricsNotificationSnapshot, albumArt: Bitmap?) {
