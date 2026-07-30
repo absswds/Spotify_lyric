@@ -5,7 +5,7 @@
     <!-- Navigation -->
     <string name="nav_playback">播放</string>
     <string name="nav_cache">快取</string>
-    <string name="nav_precache">預先快取</string>
+    <string name="nav_precache">預載</string>
     <string name="nav_settings">設定</string>
     <string name="nav_playlist">歌單</string>
     <string name="nav_correction">修正</string>
@@ -253,34 +253,34 @@
     <string name="correction_status_error">錯誤: %1$s</string>
 
     <!-- Precache Screen -->
-    <string name="precache_title">預先快取歌詞</string>
+    <string name="precache_title">預載歌詞</string>
     <string name="precache_auth_required">需要 Spotify 授權</string>
     <string name="precache_auth_button">去授權</string>
     <string name="precache_select_playlist">選擇一個歌單</string>
     <string name="precache_progress_format">正在處理 %1$d/%2$d…</string>
-    <string name="precache_complete_format">快取完成: %1$d/%2$d 首歌詞</string>
+    <string name="precache_complete_format">預載完成: %1$d/%2$d 首歌詞</string>
     <string name="precache_error_fetch">取得歌單失敗</string>
-    <string name="precache_error_cache">快取歌詞失敗</string>
+    <string name="precache_error_cache">預載歌詞失敗</string>
     <string name="precache_loading">正在載入…</string>
     <string name="precache_empty">沒有找到歌單</string>
-    <string name="precache_cached_label">已快取</string>
+    <string name="precache_cached_label">已預載</string>
     <string name="precache_total_label">總計</string>
-    <string name="precache_cd_start">開始快取</string>
+    <string name="precache_cd_start">開始預載</string>
     <string name="precache_cd_stop">停止</string>
     <string name="precache_playlist_progress">%1$d/%2$d 首</string>
     <string name="precache_auth_prompt">授權後即可選擇歌單</string>
-    <string name="precache_screen_title">歌單預先快取</string>
+    <string name="precache_screen_title">歌單預載</string>
     <string name="precache_your_playlists">你的歌單</string>
     <string name="precache_logout">退出</string>
     <string name="precache_login_spotify">登入 Spotify</string>
     <string name="precache_login_description">登入 Spotify 後選擇歌單，App 會自動補齊歌詞快取</string>
     <string name="precache_no_playlists">未取得歌單</string>
     <string name="precache_retry">重試</string>
-    <string name="precache_cached_format">%1$d/%2$d 已快取</string>
+    <string name="precache_cached_format">%1$d/%2$d 已預載</string>
     <string name="precache_processing">處理中 %1$d%%</string>
     <string name="precache_tracks_count">%1$d 首歌曲</string>
     <string name="precache_owner_only">%1$d 首歌曲 · 僅建立者/協作歌單可快取</string>
-    <string name="precache_cache_button">快取</string>
+    <string name="precache_cache_button">預載</string>
 
     <!-- Toast / Error messages -->
     <string name="error_auth_required">需要先授權，請重試</string>
@@ -290,7 +290,7 @@
     <string name="error_no_network">網路不可用</string>
     <string name="error_not_logged_in">請先登入 Spotify</string>
     <string name="error_no_spotify">請先安裝 Spotify</string>
-    <string name="error_precache_failed">預先快取失敗</string>
+    <string name="error_precache_failed">預載失敗</string>
     <string name="error_blacklist_failed">加入黑名單失敗</string>
     <string name="error_search_failed">搜尋歌詞失敗</string>
     <string name="error_unknown">未知錯誤</string>
