@@ -26,6 +26,7 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -129,15 +130,17 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 LyricsForegroundService.setMeteredState(state)
             }
         }
-        // Auto-search on startup: wait for App Remote to connect, then re-search
-        // if lyrics haven't been loaded yet. This handles cases where the service's
-        // fetchLyrics was skipped (e.g. blank track ID at startup).
+        // Auto-search on startup: wait for App Remote to connect and provide a
+        // valid track, then search for lyrics. Uses a reactive observe approach
+        // so it works regardless of timing (App Remote may fire late).
         viewModelScope.launch {
-            delay(3000)
-            if (lyricsRepo.parsedLyrics.value.isEmpty() &&
-                lyricsRepo.getCurrentTrackId().isNotBlank()
-            ) {
-                Log.i(TAG, "Auto-search on startup for ${lyricsRepo.getCurrentTrackId()}")
+            // Give the initial connection a moment
+            delay(2000)
+            val track: SpotifyTrackInfo = repository.currentTrack.first { t ->
+                t.trackId.isNotBlank() && t.title.isNotBlank()
+            }
+            if (lyricsRepo.parsedLyrics.value.isEmpty()) {
+                Log.i(TAG, "Auto-search triggered for '${track.title}' (${track.trackId.take(8)})")
                 reSearchLyrics()
             }
         }
@@ -399,12 +402,20 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** User declined: set restricted status, don't fetch. */
+    /** User declined mobile data — try cache only. */
     fun dismissMobileDataDialog() {
         _showMobileDataDialog.value = false
+        val track = pendingFetchTrack ?: return
         pendingFetchTrack = null
         viewModelScope.launch {
-            lyricsRepo.setMobileDataRestricted()
+            lyricsRepo.fetchLyrics(
+                trackId = track.trackId,
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                durationMs = track.durationMs,
+                forceOnline = false
+            )
         }
     }
 

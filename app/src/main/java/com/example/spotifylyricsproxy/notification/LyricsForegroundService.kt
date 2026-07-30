@@ -201,13 +201,13 @@ class LyricsForegroundService : Service() {
         // The ViewModel reads the same singleton for UI display.
         // IMPORTANT: do NOT call lyricsRepository.reset() here.
         lastFetchedTrackId = track.trackId
-        val strategy = LyricDisplayPreferences.mobileDataStrategy.value
+        val todayChoice = LyricDisplayPreferences.getTodayMobileDataChoice()
         val isMetered = getMeteredState() == MeteredState.METERED
 
         when {
-            !isMetered || strategy == "allow" -> {
+            !isMetered || todayChoice == "allow" -> {
                 serviceScope.launch {
-                    Log.i(TAG, "Calling fetchLyrics forceOnline=${!isMetered} strategy=$strategy")
+                    Log.i(TAG, "Calling fetchLyrics forceOnline=${!isMetered} todayChoice=$todayChoice")
                     lyricsRepository.fetchLyrics(
                         trackId = track.trackId,
                         title = track.title,
@@ -218,12 +218,21 @@ class LyricsForegroundService : Service() {
                     )
                 }
             }
-            strategy == "deny" -> {
+            todayChoice == "deny" -> {
+                // Use cache only — try cache first, skip online search
                 serviceScope.launch {
-                    lyricsRepository.setMobileDataRestricted()
+                    Log.i(TAG, "Denied mobile data, trying cache for ${track.title}")
+                    lyricsRepository.fetchLyrics(
+                        trackId = track.trackId,
+                        title = track.title,
+                        artist = track.artist,
+                        album = track.album,
+                        durationMs = track.durationMs,
+                        forceOnline = false
+                    )
                 }
             }
-            else -> { // "ask" — ViewModel will show dialog and call confirmMobileDataFetch
+            else -> { // no todayChoice — ViewModel will show dialog
                 serviceScope.launch {
                     lyricsRepository.setMobileDataRestricted()
                 }

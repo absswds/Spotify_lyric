@@ -124,6 +124,36 @@ object LyricDisplayPreferences {
         _fontSizeOther.value = clamped
     }
 
+    /** Mobile data choice that persists for the current day: "allow" or "deny". */
+    private const val KEY_MOBILE_TODAY_CHOICE = "mobile_today_choice"
+    private const val KEY_MOBILE_TODAY_DATE = "mobile_today_date"
+    private val _mobileTodayChoice = mutableStateOf<String?>(null)
+    val mobileTodayChoice: State<String?> = _mobileTodayChoice
+
+    /** Get today's stored mobile data decision, or null if not set today. */
+    fun getTodayMobileDataChoice(): String? {
+        val date = prefs?.getString(KEY_MOBILE_TODAY_DATE, null) ?: return null
+        if (date != java.time.LocalDate.now().toString()) {
+            prefs?.edit()?.remove(KEY_MOBILE_TODAY_CHOICE)?.remove(KEY_MOBILE_TODAY_DATE)?.apply()
+            return null
+        }
+        val choice = prefs?.getString(KEY_MOBILE_TODAY_CHOICE, null)
+        return if (choice in listOf("allow", "deny")) choice else null
+    }
+
+    /** Store today's mobile data decision. */
+    fun setTodayMobileDataChoice(value: String) {
+        if (value !in listOf("allow", "deny")) return
+        prefs?.edit()
+            ?.putString(KEY_MOBILE_TODAY_CHOICE, value)
+            ?.putString(KEY_MOBILE_TODAY_DATE, java.time.LocalDate.now().toString())
+            ?.apply()
+        _mobileTodayChoice.value = value
+    }
+
+    @Composable
+    fun todayMobileDataChoice(): String? = _mobileTodayChoice.value
+
     /** Strategy for mobile data: "ask" (default) | "allow" | "deny" */
     fun setMobileDataStrategy(value: String) {
         if (value !in listOf("ask", "allow", "deny")) return

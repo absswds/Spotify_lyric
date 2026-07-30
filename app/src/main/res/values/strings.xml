@@ -321,10 +321,10 @@
 
     <!-- Mobile data dialog -->
     <string name="mobile_data_dialog_title">使用移动数据搜索歌词？</string>
-    <string name="mobile_data_dialog_message">当前为移动数据/热点网络。是否使用在线搜索歌词？（将产生流量费用）</string>
-    <string name="mobile_data_dialog_always_allow">不再询问，始终允许</string>
-    <string name="mobile_data_dialog_confirm">使用移动数据</string>
-    <string name="mobile_data_restricted">移动数据已限制在线搜索，请在设置中允许或连接到WiFi</string>
+    <string name="mobile_data_dialog_message">当前为移动数据/热点网络。选择后当天不再询问。</string>
+    <string name="mobile_data_allow">允许</string>
+    <string name="mobile_data_deny">拒绝，仅用缓存</string>
+    <string name="mobile_data_restricted">未允许使用移动数据搜索，请在弹出对话框中选择“允许”</string>
     <string name="mobile_data_restricted_short">移动数据已限制在线搜索</string>
 
     <!-- Lyric source labels (shown in settings dialog) -->
@@ -337,9 +337,8 @@
 
     <!-- Mobile data settings -->
     <string name="mobile_data_search_section">移动数据搜索</string>
-    <string name="mobile_data_strategy_ask">每次询问</string>
-    <string name="mobile_data_strategy_allow">始终允许</string>
-    <string name="mobile_data_strategy_deny">仅缓存</string>
+    <string name="mobile_data_settings_today_allow">✓ 今天已允许使用移动数据</string>
+    <string name="mobile_data_settings_today_deny">✓ 今天已选择仅用缓存</string>
 
     <!-- Album art content description -->
     <string name="album_art_description">专辑封面</string>

@@ -370,37 +370,24 @@ fun PlaybackScreen(
         }
 
         if (showMobileDataDialog) {
-            var dontAskAgain by remember { mutableStateOf(false) }
             AlertDialog(
                 onDismissRequest = { viewModel.dismissMobileDataDialog() },
                 title = { Text(stringResource(R.string.mobile_data_dialog_title)) },
-                text = {
-                    Column {
-                        Text(stringResource(R.string.mobile_data_dialog_message))
-                        Spacer(modifier = Modifier.height(12.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = dontAskAgain,
-                                    onCheckedChange = { checked -> dontAskAgain = checked }
-                                )
-                            Text(stringResource(R.string.mobile_data_dialog_always_allow))
-                        }
-                    }
-                },
+                text = { Text(stringResource(R.string.mobile_data_dialog_message)) },
                 confirmButton = {
                     TextButton(onClick = {
-                        if (dontAskAgain) LyricDisplayPreferences.setMobileDataStrategy("allow")
+                        LyricDisplayPreferences.setTodayMobileDataChoice("allow")
                         viewModel.confirmMobileDataFetch()
                     }) {
-                        Text(stringResource(R.string.mobile_data_dialog_confirm))
+                        Text(stringResource(R.string.mobile_data_allow))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = {
-                        if (dontAskAgain) LyricDisplayPreferences.setMobileDataStrategy("deny")
+                        LyricDisplayPreferences.setTodayMobileDataChoice("deny")
                         viewModel.dismissMobileDataDialog()
                     }) {
-                        Text(stringResource(R.string.generic_cancel))
+                        Text(stringResource(R.string.mobile_data_deny))
                     }
                 }
             )
@@ -1877,28 +1864,18 @@ private fun LyricDisplaySettingsDialog(
                     }
                 }
 
-                // Mobile data strategy
-                val currentStrategy = LyricDisplayPreferences.mobileDataStrategy.value
-                Column {
-                    Text(
-                        text = stringResource(R.string.mobile_data_search_section),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val strategies = listOf(
-                            "ask" to stringResource(R.string.mobile_data_strategy_ask),
-                                                        "allow" to stringResource(R.string.mobile_data_strategy_allow),
-                                                        "deny" to stringResource(R.string.mobile_data_strategy_deny)
+                // Mobile data — show today's choice info
+                val todayChoice = LyricDisplayPreferences.getTodayMobileDataChoice()
+                if (todayChoice != null) {
+                    Column(modifier = Modifier.padding(top = 8.dp)) {
+                        Text(
+                            text = stringResource(
+                                if (todayChoice == "allow") R.string.mobile_data_settings_today_allow
+                                else R.string.mobile_data_settings_today_deny
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        strategies.forEach { (value, label) ->
-                            FilterChip(
-                                selected = currentStrategy == value,
-                                onClick = { LyricDisplayPreferences.setMobileDataStrategy(value) },
-                                label = { Text(label) }
-                            )
-                        }
                     }
                 }
             }
