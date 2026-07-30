@@ -157,9 +157,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 if (req != null && req.uri.isNotBlank()) {
                     if (req.contextTrackIndex >= 0) {
                         // Play context (playlist/album) starting at this track.
-                        // App Remote queues the full playlist then skips to the
-                        // selected track index.
-                        repository.playContext(req.uri, req.contextTrackIndex)
+                        // Pass the specific track URI for reliable playback.
+                        repository.playContext(req.uri, req.contextTrackIndex, req.trackUri)
                     } else {
                         repository.playUri(req.uri)
                     }
@@ -347,8 +346,14 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     /** Trigger a fresh search and show the candidate picker if multiple candidates found. */
     fun reSearchLyrics() {
+        val track = repository.currentTrack.value
         viewModelScope.launch {
-            lyricsRepo.reSearch()
+            lyricsRepo.reSearch(
+                title = track.title,
+                artist = track.artist,
+                album = track.album,
+                durationMs = track.durationMs
+            )
             _showCandidatePicker.value = lyricsRepo.candidates.value.size > 1
         }
     }

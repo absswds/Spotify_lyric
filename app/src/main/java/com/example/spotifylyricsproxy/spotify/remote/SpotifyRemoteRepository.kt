@@ -281,10 +281,31 @@ class SpotifyRemoteRepository(
     /** Play a context URI (playlist/album) starting at [startIndex].
      *  When shuffle is active, temporarily disable it so skipToIndex
      *  uses the original playlist order, then re-enable shuffle after
-     *  the target track starts playing. */
-    fun playContext(contextUri: String, startIndex: Int) {
+     *  the target track starts playing.
+     *
+     *  [specificTrackUri] is the individual track URI. When provided,
+     *  use it directly (more reliable than play + skipToIndex which
+     *  suffers from a race condition on slow connections). */
+    fun playContext(contextUri: String, startIndex: Int, specificTrackUri: String = "") {
         if (contextUri.isBlank()) return
         val api = spotifyAppRemote?.playerApi ?: return
+
+        // Playing a specific track URI is always more reliable.
+        // App Remote automatically loads the track's context (playlist/album)
+        // so skip-next/previous still work within the correct playlist.
+        if (specificTrackUri.isNotBlank()) {
+            val wasShuffling = _playbackOptions.value.isShuffling
+            if (wasShuffling) {
+                api.setShuffle(false).setResultCallback {
+                    api.play(specificTrackUri)
+                    api.setShuffle(true)
+                }
+            } else {
+                api.play(specificTrackUri)
+            }
+            return
+        }
+
         val wasShuffling = _playbackOptions.value.isShuffling
 
         if (wasShuffling) {
