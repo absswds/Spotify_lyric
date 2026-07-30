@@ -354,7 +354,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 album = track.album,
                 durationMs = track.durationMs
             )
-            _showCandidatePicker.value = lyricsRepo.candidates.value.size > 1
+            // Only show the picker if the result wasn't auto-accepted.
+            // Auto-accept already sets parsedLyrics and Synced status.
+            val status = lyricsRepo.lyricStatus.value
+            _showCandidatePicker.value = status is LyricStatus.LowConfidence &&
+                lyricsRepo.candidates.value.size > 1
         }
     }
 
