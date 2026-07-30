@@ -162,6 +162,10 @@
     <string name="settings_group_about">关于</string>
     <string name="settings_about_version">版本</string>
     <string name="settings_open_source_licenses">开源许可</string>
+    <string name="settings_github">GitHub 项目主页</string>
+    <string name="settings_github_desc">github.com/absswds/Spotify_lyric</string>
+    <string name="settings_author">作者</string>
+    <string name="settings_author_detail">absswds · Binbin Li</string>
     <string name="settings_group_translation">歌词翻译</string>
     <string name="settings_translate_lyrics">启用歌词翻译</string>
     <string name="settings_translate_lyrics_desc">自动检测歌词语言并翻译</string>

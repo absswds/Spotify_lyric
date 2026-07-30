@@ -1,6 +1,8 @@
 package com.example.spotifylyricsproxy.ui.settings
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.Build
 import android.app.Activity
@@ -26,8 +28,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -186,7 +192,25 @@ fun SettingsScreen(
             SettingsGroup(title = stringResource(R.string.settings_group_storage)) {
                 SettingsItemRow(stringResource(R.string.settings_clear_cache), stringResource(R.string.settings_clear_cache_desc))
                 SettingsItemRow(stringResource(R.string.scan_lyrics_folder), stringResource(R.string.scan_lyrics_folder_desc))
-                SettingsItemRow(stringResource(R.string.settings_about_app), stringResource(R.string.settings_about_version_detail))
+            }
+
+            SettingsGroup(title = stringResource(R.string.settings_group_about)) {
+                SettingsItemRow(
+                    label = stringResource(R.string.settings_about_app),
+                    description = stringResource(R.string.settings_about_version_detail)
+                )
+                SettingsItemRow(
+                    label = stringResource(R.string.settings_github),
+                    description = stringResource(R.string.settings_github_desc),
+                    icon = Icons.Default.Code,
+                    trailingIcon = Icons.AutoMirrored.Filled.OpenInNew,
+                    enabled = true,
+                    onClick = { openProjectPage(context) }
+                )
+                SettingsItemRow(
+                    label = stringResource(R.string.settings_author),
+                    description = stringResource(R.string.settings_author_detail)
+                )
             }
         }
     }
@@ -236,25 +260,58 @@ private fun ToggleRow(label: String, description: String, checked: Boolean) {
 private fun SettingsItemRow(
     label: String,
     description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     enabled: Boolean = false,
     onClick: () -> Unit = {}
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(durationMillis = 180))
             .clickable(enabled = enabled) { onClick() }
-            .padding(vertical = 8.dp)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 14.dp)
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (trailingIcon != null) {
+            Icon(
+                imageVector = trailingIcon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 12.dp)
+            )
+        }
     }
 }
+
+private fun openProjectPage(context: android.content.Context) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_URL))
+    try {
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        // No browser/activity can handle the URL; keep the settings screen usable.
+    }
+}
+
+private const val PROJECT_URL = "https://github.com/absswds/Spotify_lyric"

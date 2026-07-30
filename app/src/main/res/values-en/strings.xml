@@ -162,6 +162,10 @@
     <string name="settings_group_about">About</string>
     <string name="settings_about_version">Version</string>
     <string name="settings_open_source_licenses">Open source licenses</string>
+    <string name="settings_github">GitHub project</string>
+    <string name="settings_github_desc">github.com/absswds/Spotify_lyric</string>
+    <string name="settings_author">Author</string>
+    <string name="settings_author_detail">absswds · Binbin Li</string>
     <string name="settings_group_translation">Lyrics Translation</string>
     <string name="settings_translate_lyrics">Enable lyrics translation</string>
     <string name="settings_translate_lyrics_desc">Auto-detect lyric language and translate</string>
