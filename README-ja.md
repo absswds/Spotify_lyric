@@ -110,7 +110,7 @@ Spotify Lyrics Proxy は、Spotify の再生状態とサードパーティの歌
    | **Android packages** | `com.example.spotifylyricsproxy` を追加 |
    | **Android SHA-1 fingerprint** | 使用する APK 署名証明書の SHA-1 フィンガープリントを追加 |
    | **iOS app bundles** | 空欄 |
-   | **Which API/SDKs are you planning to use?** | **Web API** を選択 |
+   | **Which API/SDKs are you planning to use?** | **Android** を選択 |
 
    > **Redirect URI** は認可後に OAuth トークンを受け取るコールバック URL です。末尾のスラッシュや余分な空白を含めず、完全に一致させてください。
 

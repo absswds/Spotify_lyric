@@ -110,7 +110,7 @@ Spotify Lyrics Proxy 是一个 Android 应用，在 Spotify 播放状态与第�
    | **Android packages** | 填写 `com.example.spotifylyricsproxy` |
    | **Android SHA-1 fingerprint** | 填写你将用于签名 APK 的证书 SHA-1 指纹 |
    | **iOS app bundles** | 留空 |
-   | **Which API/SDKs are you planning to use?** | 勾选 **Web API** |
+   | **Which API/SDKs are you planning to use?** | 选 **Android**（不是 Web API） |
 
    > **Redirect URI** 是 App 授权后接收 OAuth token 的回调地址，必须**完全一致**——末尾不能有斜杠或空格。
 

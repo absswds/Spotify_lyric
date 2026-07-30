@@ -114,7 +114,7 @@ This app connects to Spotify using Spotify's Android SDK, which requires a regis
    | **Android packages** | Add `com.example.spotifylyricsproxy` |
    | **Android SHA-1 fingerprint** | Add the SHA-1 fingerprint of the APK signing certificate you will use |
    | **iOS app bundles** | Leave empty |
-   | **Which API/SDKs are you planning to use?** | Check **Web API** |
+   | **Which API/SDKs are you planning to use?** | Select **Android** |
 
    > The **Redirect URI** is the callback URL the app uses to receive the OAuth token after you authorize. It must match **character-for-character** — no trailing slash, no extra spaces.
 
