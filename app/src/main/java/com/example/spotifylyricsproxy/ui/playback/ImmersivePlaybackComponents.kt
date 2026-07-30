@@ -45,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -371,6 +372,8 @@ fun ImmersiveLyricsBlock(
     positionMs: Long = 0L,
     config: com.example.spotifylyricsproxy.ui.playback.LyricDisplayConfig,
     onSeek: (Long) -> Unit,
+    onAllowMobileData: () -> Unit = {},
+    onDenyMobileData: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = remember(allLines) { LazyListState() }
@@ -437,11 +440,18 @@ fun ImmersiveLyricsBlock(
                 }
             }
             is LyricStatus.MobileDataRestricted -> {
-                Text(
-                    text = stringResource(R.string.mobile_data_restricted),
-                    fontSize = 16.sp,
-                    color = Color.White.copy(alpha = 0.55f)
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.mobile_data_restricted),
+                        fontSize = 16.sp,
+                        color = Color.White.copy(alpha = 0.55f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        TextButton(onClick = onAllowMobileData) { Text(stringResource(R.string.mobile_data_allow)) }
+                        TextButton(onClick = onDenyMobileData) { Text(stringResource(R.string.mobile_data_deny)) }
+                    }
+                }
             }
             is LyricStatus.LowConfidence -> {
                 // Show lyrics even for low-confidence matches, with a status banner

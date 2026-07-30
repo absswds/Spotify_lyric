@@ -259,7 +259,15 @@ fun PlaybackScreen(
                     onDisconnect = viewModel::disconnect,
                     onToggleShuffle = viewModel::toggleShuffle,
                     onCycleRepeat = viewModel::cycleRepeat,
-                    onLyricDisplaySettings = { showLyricDisplaySettings = true }
+                    onLyricDisplaySettings = { showLyricDisplaySettings = true },
+                    onAllowMobileData = {
+                        LyricDisplayPreferences.setTodayMobileDataChoice("allow")
+                        viewModel.confirmMobileDataFetch()
+                    },
+                    onDenyMobileData = {
+                        LyricDisplayPreferences.setTodayMobileDataChoice("deny")
+                        viewModel.dismissMobileDataDialog()
+                    }
                 )
             } else {
                 // Immersive portrait layout
@@ -338,6 +346,14 @@ fun PlaybackScreen(
                                 positionMs = estimatedPositionMs,
                                 config = LyricDisplayPreferences.resolvedConfig(),
                                 onSeek = viewModel::seekTo,
+                                onAllowMobileData = {
+                                    LyricDisplayPreferences.setTodayMobileDataChoice("allow")
+                                    viewModel.confirmMobileDataFetch()
+                                },
+                                onDenyMobileData = {
+                                    LyricDisplayPreferences.setTodayMobileDataChoice("deny")
+                                    viewModel.dismissMobileDataDialog()
+                                },
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 24.dp)
@@ -701,7 +717,9 @@ private fun CompactLyricsBlock(
     translatedLine: String?,
     isTranslationEnabled: Boolean,
     onExpand: () -> Unit,
-    onImportLyrics: (String) -> Unit = {}
+    onImportLyrics: (String) -> Unit = {},
+    onAllowMobileData: () -> Unit = {},
+    onDenyMobileData: () -> Unit = {}
 ) {
     val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
     val previous = allLines.getOrNull(currentIndex - 1)?.text
@@ -789,7 +807,21 @@ private fun CompactLyricsBlock(
                 is LyricStatus.LowConfidence -> LyricMessage(stringResource(R.string.playback_lyrics_low_confidence))
                 is LyricStatus.ParseError -> LyricMessage(stringResource(R.string.playback_lyrics_parse_error))
                 is LyricStatus.Error -> LyricMessage(stringResource(R.string.playback_lyrics_load_error))
-                is LyricStatus.MobileDataRestricted -> LyricMessage(stringResource(R.string.mobile_data_restricted_short))
+                is LyricStatus.MobileDataRestricted -> {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = stringResource(R.string.mobile_data_restricted_short),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White.copy(alpha = 0.78f),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            TextButton(onClick = onAllowMobileData) { Text(stringResource(R.string.mobile_data_allow)) }
+                            TextButton(onClick = onDenyMobileData) { Text(stringResource(R.string.mobile_data_deny)) }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1416,7 +1448,9 @@ private fun LandscapePlaybackLayout(
     onDisconnect: () -> Unit,
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
-    onLyricDisplaySettings: () -> Unit
+    onLyricDisplaySettings: () -> Unit,
+    onAllowMobileData: () -> Unit = {},
+    onDenyMobileData: () -> Unit = {}
 ) {
     val dominant = palette.deep
     val secondary = palette.mid
@@ -1479,6 +1513,8 @@ private fun LandscapePlaybackLayout(
                         positionMs = estimatedPositionMs,
                         config = LyricDisplayPreferences.resolvedConfig(),
                         onSeek = onSeek,
+                        onAllowMobileData = onAllowMobileData,
+                        onDenyMobileData = onDenyMobileData,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
