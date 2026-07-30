@@ -13,6 +13,8 @@ import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
 import com.example.spotifylyricsproxy.lyrics.netease.NeteaseLyricsSource
 import com.example.spotifylyricsproxy.lyrics.qqmusic.QQMusicLyricsSource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,21 +43,25 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         LrclibLyricsSource()
     )
 
-    /** Query every source, collect all candidates, return all for scoring. */
-    private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> {
+    /** Query every source IN PARALLEL, collect all candidates, return all for scoring. */
+    private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> = coroutineScope {
         val allCandidates = mutableListOf<LyricCandidate>()
-        for (source in sources) {
-            try {
-                val result = source.search(request)
-                if (result.isNotEmpty()) {
-                    Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
-                    allCandidates.addAll(result)
+        val deferred = sources.map { source ->
+            async {
+                try {
+                    val result = source.search(request)
+                    if (result.isNotEmpty()) {
+                        Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
+                        result
+                    } else emptyList()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Source '${source.name}' failed: ${e.message}")
+                    emptyList()
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Source '${source.name}' failed: ${e.message}")
             }
         }
-        return allCandidates
+        deferred.forEach { allCandidates.addAll(it.await()) }
+        allCandidates
     }
 
     private val cacheDao = database.lyricCacheDao()
