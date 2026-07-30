@@ -210,6 +210,15 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     Log.i(TAG, "Track changed → fetching lyrics for ${track.title}")
                     LyricsForegroundService.start(getApplication())
                     lastFetchedTrackId = track.trackId
+
+                    // If the service already fetched lyrics for this track,
+                    // skip the ViewModel's fetch to avoid overwriting the state.
+                    val currentStatus = lyricsRepo.lyricStatus.value
+                    if (currentStatus is LyricStatus.Synced && lyricsRepo.parsedLyrics.value.isNotEmpty()) {
+                        Log.d(TAG, "Service already loaded lyrics for ${track.title}, skipping VM fetch")
+                        return@collect
+                    }
+
                     // Don't reset lyrics here — old lyrics stay visible until
                     // fetchLyrics overwrites them. This prevents a blank gap
                     // on cross-device track changes.
