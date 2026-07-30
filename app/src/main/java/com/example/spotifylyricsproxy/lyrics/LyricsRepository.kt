@@ -301,6 +301,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         }
 
         val lines = LrcParser.parse(synced)
+        Log.i(TAG, "Manual select: source=${candidate.source} syncedLen=${synced.length} parsedLines=${lines.size}")
         if (lines.isEmpty()) {
             Log.w(TAG, "Manual select LRC parsed 0 lines: source=${candidate.source}")
             _lyricStatus.value = LyricStatus.ParseError
