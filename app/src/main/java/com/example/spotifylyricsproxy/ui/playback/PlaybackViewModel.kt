@@ -36,7 +36,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private val repository = SpotifyRemoteRepository(application, clientId, redirectUri)
     private val db = AppDatabase.getInstance(application)
-    private val lyricsRepo = LyricsRepository(db)
+    private val lyricsRepo = LyricsRepository.getInstance(db)
     private val clock = PlaybackClock()
 
     private val _estimatedPositionMs = MutableStateFlow(0L)

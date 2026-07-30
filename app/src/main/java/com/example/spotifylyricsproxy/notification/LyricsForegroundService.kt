@@ -61,7 +61,7 @@ class LyricsForegroundService : Service() {
             redirectUri = REDIRECT_URI,
             albumArtDimension = com.spotify.protocol.types.Image.Dimension.LARGE
         )
-        lyricsRepository = LyricsRepository(AppDatabase.getInstance(applicationContext))
+        lyricsRepository = LyricsRepository.getInstance(AppDatabase.getInstance(applicationContext))
         playbackClock = PlaybackClock()
         mediaSessionController = MediaSessionController(spotifyRepository)
         mediaSessionController.create(this)

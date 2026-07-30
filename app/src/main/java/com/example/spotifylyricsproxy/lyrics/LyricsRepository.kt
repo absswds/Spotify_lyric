@@ -11,21 +11,33 @@ import com.example.spotifylyricsproxy.lyrics.LyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LrclibLyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
 import com.example.spotifylyricsproxy.lyrics.netease.NeteaseLyricsSource
+import com.example.spotifylyricsproxy.lyrics.qqmusic.QQMusicLyricsSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
-class LyricsRepository(private val database: AppDatabase) {
+class LyricsRepository private constructor(private val database: AppDatabase) {
 
     companion object {
         private const val TAG = "LyricsRepo"
         private const val RETRY_DELAY_MS = 60 * 60 * 1000L // 1 hour
+
+        @Volatile
+        private var instance: LyricsRepository? = null
+
+        /** Get or create the shared singleton, bound to the database. */
+        fun getInstance(database: AppDatabase): LyricsRepository {
+            return instance ?: synchronized(this) {
+                instance ?: LyricsRepository(database).also { instance = it }
+            }
+        }
     }
 
     private val sources: List<LyricsSource> = listOf(
         NeteaseLyricsSource(),
+        QQMusicLyricsSource(),
         LrclibLyricsSource()
     )
 
@@ -93,14 +105,10 @@ class LyricsRepository(private val database: AppDatabase) {
             rejectedDao.getRejectedSourceLyricIds(trackId).toSet()
         }
 
-        // On forced-online (WiFi), skip cache check and go straight to online search.
-        // Cache is only a fallback when online returns nothing.
-        var cached: LyricCacheEntity? = null
-        if (!forceOnline) {
-            cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
-        } else {
-            Log.d(TAG, "forceOnline=true — skipping cache for $title")
-        }
+        // Always check cache first, even on unmetered (WiFi).
+        // Cache hit → use it immediately (works offline, no duplicate network calls).
+        // Only search online when there's no cache or the cached status is not_found/failed.
+        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
         if (cached != null) {
             _offsetMs = cached.offsetMs
             _currentOffsetMs.value = _offsetMs
