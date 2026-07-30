@@ -99,6 +99,10 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     val lyricSource: StateFlow<String> = _lyricSource.asStateFlow()
 
     private var currentTrackId: String = ""
+    private var lastSearchTitle: String = ""
+    private var lastSearchArtist: String = ""
+    private var lastSearchAlbum: String = ""
+    private var lastSearchDurationMs: Long = 0L
     private var _offsetMs: Long = 0L
 
     // Expose offset so UI can display it
@@ -118,6 +122,10 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     ) {
         if (title.isEmpty() || artist.isEmpty()) return
         currentTrackId = trackId
+        lastSearchTitle = title
+        lastSearchArtist = artist
+        lastSearchAlbum = album
+        lastSearchDurationMs = durationMs
         _candidates.value = emptyList()
 
         // Load rejected lyric IDs for blacklist filtering
@@ -319,15 +327,21 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         _lyricStatus.value = LyricStatus.Searching
         try {
             val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(t) }
-            val searchTitle = title.ifBlank { cached?.title ?: return }
-            val searchArtist = artist.ifBlank { cached?.artist ?: return }
+            val searchTitle = title.ifBlank {
+                cached?.title?.takeIf { it.isNotBlank() } ?: lastSearchTitle.ifBlank { return }
+            }
+            val searchArtist = artist.ifBlank {
+                cached?.artist?.takeIf { it.isNotBlank() } ?: lastSearchArtist.ifBlank { return }
+            }
+            val searchAlbum = album.ifBlank { cached?.album?.takeIf { it.isNotBlank() } ?: lastSearchAlbum }
+            val searchDuration = if (durationMs > 0) durationMs else (cached?.durationMs ?: lastSearchDurationMs)
 
             val results = withContext(Dispatchers.IO) {
                 aggregateSearch(LyricsSearchRequest(
                     trackName = searchTitle,
                     artistName = searchArtist,
-                    albumName = album.ifBlank { cached?.album ?: "" },
-                    durationMs = if (durationMs > 0) durationMs else (cached?.durationMs ?: 0)
+                    albumName = searchAlbum,
+                    durationMs = searchDuration
                 ))
             }
             if (results.isEmpty()) {
@@ -336,7 +350,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 return
             }
             var scored = results.map {
-                LyricMatcher.score(it, searchTitle, searchArtist, album, durationMs)
+                LyricMatcher.score(it, searchTitle, searchArtist, searchAlbum, searchDuration)
             }.sortedByDescending { it.score }
             val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
 
@@ -344,7 +358,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
 
             val best = filtered.maxByOrNull { it.score }
             if (best != null && LyricMatcher.isAutoAccept(best.score)) {
-                cacheResult(t, searchTitle, searchArtist, album, durationMs, best)
+                cacheResult(t, searchTitle, searchArtist, searchAlbum, searchDuration, best)
                 val synced = best.syncedLyrics
                 if (!synced.isNullOrEmpty()) {
                     _parsedLyrics.value = LrcParser.parse(synced)
