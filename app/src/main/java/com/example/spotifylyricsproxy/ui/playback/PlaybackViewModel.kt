@@ -388,16 +388,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     /** User confirmed: fetch lyrics online even on mobile data. */
     fun confirmMobileDataFetch() {
         _showMobileDataDialog.value = false
-        val track = pendingFetchTrack ?: return
         pendingFetchTrack = null
+        val t = repository.currentTrack.value
+        if (t.trackId.isBlank()) return
         viewModelScope.launch {
             lyricsRepo.fetchLyrics(
-                trackId = track.trackId,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                durationMs = track.durationMs,
-                forceOnline = true
+                trackId = t.trackId, title = t.title, artist = t.artist,
+                album = t.album, durationMs = t.durationMs, forceOnline = true
             )
         }
     }
@@ -405,16 +402,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     /** User declined mobile data — try cache only. */
     fun dismissMobileDataDialog() {
         _showMobileDataDialog.value = false
-        val track = pendingFetchTrack ?: return
         pendingFetchTrack = null
+        val t = repository.currentTrack.value
+        if (t.trackId.isBlank()) return
         viewModelScope.launch {
             lyricsRepo.fetchLyrics(
-                trackId = track.trackId,
-                title = track.title,
-                artist = track.artist,
-                album = track.album,
-                durationMs = track.durationMs,
-                forceOnline = false
+                trackId = t.trackId, title = t.title, artist = t.artist,
+                album = t.album, durationMs = t.durationMs, forceOnline = false
             )
         }
     }
