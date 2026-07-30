@@ -105,10 +105,13 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             rejectedDao.getRejectedSourceLyricIds(trackId).toSet()
         }
 
-        // Always check cache first, even on unmetered (WiFi).
-        // Cache hit → use it immediately (works offline, no duplicate network calls).
-        // Only search online when there's no cache or the cached status is not_found/failed.
-        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        // On unmetered (WiFi), skip cache and go directly to online sources.
+        // Cache is only a fallback when every online source returns nothing.
+        // On metered (mobile data), cache-first is still the default.
+        var cached: LyricCacheEntity? = null
+        if (!forceOnline) {
+            cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        }
         if (cached != null) {
             _offsetMs = cached.offsetMs
             _currentOffsetMs.value = _offsetMs

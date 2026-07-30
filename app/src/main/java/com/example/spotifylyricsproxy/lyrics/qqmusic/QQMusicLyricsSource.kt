@@ -67,7 +67,7 @@ class QQMusicLyricsSource : LyricsSource {
                 } else null
 
                 candidates.add(LyricCandidate(
-                    id = songmid,
+                    id = songmid.hashCode().toLong(),
                     trackName = songName,
                     artistName = singer,
                     albumName = albumName,
