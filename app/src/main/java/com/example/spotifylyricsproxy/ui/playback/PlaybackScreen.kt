@@ -147,6 +147,7 @@ fun PlaybackScreen(
     val translatedLine by viewModel.translatedLine.collectAsState()
     val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
     val targetTranslationLang by viewModel.targetTranslationLang.collectAsState()
+    val lyricSource by viewModel.lyricSource.collectAsState()
     val palette = remember(albumArt) { albumPalette(albumArt) }
     val showCandidatePicker by viewModel.showCandidatePicker.collectAsState()
     val showMobileDataDialog by viewModel.showMobileDataDialog.collectAsState()
@@ -363,6 +364,7 @@ fun PlaybackScreen(
                 onSetTranslationEnabled = viewModel::setTranslationEnabled,
                 targetTranslationLang = targetTranslationLang,
                 onSetTargetTranslationLang = viewModel::setTranslationTargetLang,
+                currentSource = lyricSource,
                 onDismiss = { showLyricDisplaySettings = false }
             )
         }
@@ -1621,6 +1623,7 @@ private fun LyricDisplaySettingsDialog(
     onSetTranslationEnabled: (Boolean) -> Unit = {},
     targetTranslationLang: String = "zh",
     onSetTargetTranslationLang: (String) -> Unit = {},
+    currentSource: String = "",
     onDismiss: () -> Unit
 ) {
     val currentFontSize by LyricDisplayPreferences.fontSize
@@ -1642,6 +1645,23 @@ private fun LyricDisplaySettingsDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                // Current lyrics source
+                if (currentSource.isNotEmpty()) {
+                    val sourceLabel = when (currentSource) {
+                        "cache" -> "💾 缓存"
+                        "lrclib" -> "🌐 LRCLIB"
+                        "netease" -> "🎵 网易云"
+                        "manual" -> "📝 手动导入"
+                        else -> currentSource
+                    }
+                    Text(
+                        text = "当前来源: $sourceLabel",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
 
                 // Font size sliders
                 val currentSp = LyricDisplayPreferences.fontSizeCurrent.value

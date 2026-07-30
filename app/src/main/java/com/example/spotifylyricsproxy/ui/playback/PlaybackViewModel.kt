@@ -69,6 +69,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     val currentOffsetMs: StateFlow<Long>
         get() = lyricsRepo.currentOffsetMs
 
+    val lyricSource: StateFlow<String>
+        get() = lyricsRepo.lyricSource
+
     // ---- Translation state ----
 
     private val translationService = TranslationService(application)

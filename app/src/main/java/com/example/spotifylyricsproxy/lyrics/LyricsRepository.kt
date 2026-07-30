@@ -62,6 +62,10 @@ class LyricsRepository(private val database: AppDatabase) {
     private val _candidates = MutableStateFlow<List<LyricCandidate>>(emptyList())
     val candidates: StateFlow<List<LyricCandidate>> = _candidates.asStateFlow()
 
+    /** Source of the currently displayed lyrics: "cache", "lrclib", "netease", "manual", or empty. */
+    private val _lyricSource = MutableStateFlow("")
+    val lyricSource: StateFlow<String> = _lyricSource.asStateFlow()
+
     private var currentTrackId: String = ""
     private var _offsetMs: Long = 0L
 
@@ -103,6 +107,7 @@ class LyricsRepository(private val database: AppDatabase) {
                     if (lines.isNotEmpty()) {
                         _parsedLyrics.value = lines
                         _lyricStatus.value = LyricStatus.Synced(100)
+                        _lyricSource.value = cached.source
                         return
                     }
                 }
@@ -115,6 +120,7 @@ class LyricsRepository(private val database: AppDatabase) {
                         if (lines.isNotEmpty()) {
                             _parsedLyrics.value = lines
                             _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
+                            _lyricSource.value = cached.source
                             return
                         }
                     }
@@ -129,6 +135,7 @@ class LyricsRepository(private val database: AppDatabase) {
                         if (lines.isNotEmpty()) {
                             _parsedLyrics.value = lines
                             _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
+                            _lyricSource.value = cached.source
                             return
                         }
                     }
@@ -196,6 +203,7 @@ class LyricsRepository(private val database: AppDatabase) {
 
             _parsedLyrics.value = lines
             _lyricStatus.value = LyricStatus.Synced(best.score)
+            _lyricSource.value = best.source
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch lyrics", e)
