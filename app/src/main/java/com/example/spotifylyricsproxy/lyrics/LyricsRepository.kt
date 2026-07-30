@@ -15,6 +15,7 @@ import com.example.spotifylyricsproxy.lyrics.qqmusic.QQMusicLyricsSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     companion object {
         private const val TAG = "LyricsRepo"
         private const val RETRY_DELAY_MS = 60 * 60 * 1000L // 1 hour
+        private const val NETEASE_SOURCE = "netease"
 
         @Volatile
         private var instance: LyricsRepository? = null
@@ -44,7 +46,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     )
 
     /** Providers whose lyrics may be displayed during the current process but never written to Room. */
-    private val memoryOnlySources = setOf("netease")
+    private val memoryOnlySources = setOf(NETEASE_SOURCE)
 
     /** Query every source IN PARALLEL, collect all candidates, return all for scoring. */
     private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> = coroutineScope {
@@ -70,6 +72,14 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     private val cacheDao = database.lyricCacheDao()
     private val historyDao = database.trackPlayHistoryDao()
     private val rejectedDao = database.rejectedLyricMatchDao()
+
+    init {
+        // Enforce the session-only NetEase policy on existing installations too.
+        // This runs once for the shared repository instance.
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            cacheDao.deleteBySource(NETEASE_SOURCE)
+        }
+    }
 
     private val _parsedLyrics = MutableStateFlow<List<LrcLine>>(emptyList())
     val parsedLyrics: StateFlow<List<LrcLine>> = _parsedLyrics.asStateFlow()

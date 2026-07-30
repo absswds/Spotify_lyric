@@ -22,6 +22,9 @@ interface LyricCacheDao {
     @Query("DELETE FROM lyric_cache WHERE spotify_track_id = :trackId")
     suspend fun delete(trackId: String)
 
+    @Query("DELETE FROM lyric_cache WHERE source = :source")
+    suspend fun deleteBySource(source: String)
+
     @Query("SELECT COUNT(*) FROM lyric_cache")
     suspend fun count(): Int
 
