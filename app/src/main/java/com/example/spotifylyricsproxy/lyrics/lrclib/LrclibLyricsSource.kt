@@ -19,12 +19,23 @@ class LrclibLyricsSource : LyricsSource {
     private val enrichClient = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(8, TimeUnit.SECONDS)
+        .addInterceptor { chain ->
+            // lrclib.net's Cloudflare rejects the default "okhttp/4.x" UA with HTTP 520.
+            chain.proceed(chain.request().newBuilder()
+                .header("User-Agent", BROWSER_UA)
+                .build())
+        }
         .build()
 
     init {
         val client = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                chain.proceed(chain.request().newBuilder()
+                    .header("User-Agent", BROWSER_UA)
+                    .build())
+            }
             .build()
         api = Retrofit.Builder()
             .baseUrl("https://lrclib.net/")
@@ -35,6 +46,7 @@ class LrclibLyricsSource : LyricsSource {
     }
 
     companion object {
+        private const val BROWSER_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
         private val cnSimplifier: Transliterator by lazy {
             Transliterator.getInstance("Traditional-Simplified")
         }

@@ -212,7 +212,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             launch {
                 clock.tick(300).collect { pos ->
                     _estimatedPositionMs.value = pos
-                    lyricsRepo.updatePosition(pos)
+                    // Do NOT call lyricsRepo.updatePosition() here.
+                    // The LyricsForegroundService owns the single source of truth for
+                    // position tracking and lyric sync. Having two independent clocks
+                    // (one in the VM, one in the service) both calling updatePosition()
+                    // causes the currentLine to twitch when the app returns from background
+                    // — the VM's fresh clock and the service's drifted clock fight over
+                    // which position to use.
                 }
             }
         }
@@ -370,11 +376,12 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 album = track.album,
                 durationMs = track.durationMs
             )
-            // Only show the picker if the result wasn't auto-accepted.
-            // Auto-accept already sets parsedLyrics and Synced status.
-            val status = lyricsRepo.lyricStatus.value
-            _showCandidatePicker.value = status is LyricStatus.LowConfidence &&
-                lyricsRepo.candidates.value.size > 1
+            // Always show the picker when there are multiple candidates.
+            // The user explicitly asked to re-search — they want to see all options.
+            val count = lyricsRepo.candidates.value.size
+            if (count > 1) {
+                _showCandidatePicker.value = true
+            }
         }
     }
 

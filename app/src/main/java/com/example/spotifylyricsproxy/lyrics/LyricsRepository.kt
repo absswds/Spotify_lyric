@@ -222,6 +222,14 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             var scored = candidates.map {
                 LyricMatcher.score(it, title, artist, album, durationMs)
             }
+            // Penalize cover/remix/fan versions so original recordings rank higher.
+            // The NetEase cloudsearch/pc endpoint frequently returns covers as top results,
+            // and artist matching via contains() can let wrong matches through (e.g., "周杰伦-" vs "周杰伦").
+            scored = scored.map { c ->
+                if (LyricMatcher.looksLikeCover(c.trackName)) {
+                    c.copy(score = c.score - 30)
+                } else c
+            }
             // DEBUG: dump every candidate's score breakdown
             scored.forEach { c ->
                 Log.i(TAG, "Candidate: source=${c.source} title='${c.trackName}' artist='${c.artistName}' score=${c.score} synced=${!c.syncedLyrics.isNullOrEmpty()}")
@@ -366,7 +374,14 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             }
             var scored = results.map {
                 LyricMatcher.score(it, searchTitle, searchArtist, searchAlbum, searchDuration)
-            }.sortedByDescending { it.score }
+            }
+            // Penalize cover/remix/fan versions so original recordings rank higher.
+            scored = scored.map { c ->
+                if (LyricMatcher.looksLikeCover(c.trackName)) {
+                    c.copy(score = c.score - 30)
+                } else c
+            }
+            scored = scored.sortedByDescending { it.score }
             val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
 
             _candidates.value = scored

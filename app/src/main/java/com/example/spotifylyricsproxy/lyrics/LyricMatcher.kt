@@ -106,7 +106,8 @@ object LyricMatcher {
     private fun splitArtists(artists: String): List<String> =
         artists.split(Regex("""\s*(?:,|，|&|、|/|feat\.?|ft\.?)\s*""", RegexOption.IGNORE_CASE))
             .map(String::trim)
-            .filter(String::isNotEmpty)
+            .map { it.trimEnd('-', '—', '–', '.', '。', '、', ' ') }
+            .filter { it.isNotEmpty() }
 
     private fun cleanTitle(title: String): String {
         return title
@@ -115,5 +116,22 @@ object LyricMatcher {
             .replace(Regex("""\s{2,}"""), " ")
             .trim()
             .lowercase()
+    }
+
+    /**
+     * Returns true if the title looks like a cover/remix/fan version rather than the original.
+     *
+     * IMPORTANT: this check must be specific. Using broad markers like parentheses
+     * would falsely flag legitimate releases such as "海阔天空 (Live)", "孤勇者（主题曲）",
+     * or any song whose official title includes version info in brackets.
+     */
+    fun looksLikeCover(title: String): Boolean {
+        val coverKeywords = listOf(
+            "cover", "翻唱", "翻弹", "翻奏", "remix", "混音",
+            "dj版", "dj version", "dj mix", "beat", "instrumental", "纯音乐",
+            "钢琴版", "古筝版", "吉他版", "小提琴版", "改编"
+        )
+        val lower = title.lowercase()
+        return coverKeywords.any { lower.contains(it) }
     }
 }

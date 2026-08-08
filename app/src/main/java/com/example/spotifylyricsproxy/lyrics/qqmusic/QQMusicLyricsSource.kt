@@ -48,14 +48,17 @@ class QQMusicLyricsSource : LyricsSource {
 
                 // Step 2: fetch lyrics for the first song only (best match)
                 val song = songList.getJSONObject(0)
-                val songmid = song.optString("mid", "")
-                val songName = song.optString("name", "")
+                val songid = song.optLong("songid", 0L)
+                val songmid = song.optString("songmid", "")
+                val songName = song.optString("songname", "")
                 val singer = song.optJSONArray("singer")?.optJSONObject(0)?.optString("name", "") ?: ""
                 val albumName = song.optJSONObject("album")?.optString("name", "") ?: ""
                 val duration = song.optInt("interval", 0) * 1000L
 
-                if (songmid.isNotEmpty()) {
-                    val lyricUrl = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=$songmid&g_tk=5381&format=json"
+                // The lyric API only works with the numeric musicid; passing the
+                // alphabetic songmid returns retcode 1101 ("login required").
+                if (songid > 0) {
+                    val lyricUrl = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?musicid=$songid&g_tk=5381&format=json"
                     val response = client.newCall(
                         Request.Builder().url(lyricUrl)
                             .header("Referer", "https://y.qq.com/")
