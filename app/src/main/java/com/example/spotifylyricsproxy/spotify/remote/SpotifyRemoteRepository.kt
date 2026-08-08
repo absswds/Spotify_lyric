@@ -278,50 +278,74 @@ class SpotifyRemoteRepository(
         spotifyAppRemote?.playerApi?.play(uri)
     }
 
-    /** Play a context URI (playlist/album) starting at [startIndex].
-     *  When shuffle is active, temporarily disable it so skipToIndex
-     *  uses the original playlist order, then re-enable shuffle after
-     *  the target track starts playing.
+    /** Play a track from a playlist context.
      *
-     *  [specificTrackUri] is the individual track URI. When provided,
-     *  use it directly (more reliable than play + skipToIndex which
-     *  suffers from a race condition on slow connections). */
+     *  Plays the exact track URI first — `api.play(playlistUri)` silently
+     *  fails / never calls back on some Spotify clients (observed on-device:
+     *  no result/error callback fired, playback did not change), while a
+     *  bare track URI always plays. After the track starts, `skipToIndex`
+     *  binds the playlist as the playback context so the queue continues
+     *  with the NEXT playlist track instead of Spotify autoplay (random
+     *  songs).
+     *
+     *  When shuffle is active, temporarily disable it so the skip lands
+     *  on the tapped track, then re-enable. */
     fun playContext(contextUri: String, startIndex: Int, specificTrackUri: String = "") {
         if (contextUri.isBlank()) return
         val api = spotifyAppRemote?.playerApi ?: return
 
-        // Playing a specific track URI is always more reliable.
-        // App Remote automatically loads the track's context (playlist/album)
-        // so skip-next/previous still work within the correct playlist.
-        if (specificTrackUri.isNotBlank()) {
-            val wasShuffling = _playbackOptions.value.isShuffling
-            if (wasShuffling) {
-                api.setShuffle(false).setResultCallback {
-                    api.play(specificTrackUri)
-                    api.setShuffle(true)
-                }
-            } else {
-                api.play(specificTrackUri)
+        Log.i(TAG, "playContext: context=$contextUri index=$startIndex track=$specificTrackUri")
+        val wasShuffling = _playbackOptions.value.isShuffling
+        if (wasShuffling) {
+            api.setShuffle(false).setErrorCallback { e ->
+                Log.w(TAG, "playContext: setShuffle(false) failed: ${e.message}")
             }
-            return
         }
 
-        val wasShuffling = _playbackOptions.value.isShuffling
-
-        if (wasShuffling) {
-            api.setShuffle(false).setResultCallback {
-                api.play(contextUri)
-                if (startIndex > 0) {
+        if (specificTrackUri.isNotBlank()) {
+            // Reliable path: play the exact track, then bind the playlist
+            // context so playback continues within the playlist.
+            api.play(specificTrackUri).setResultCallback {
+                Log.i(TAG, "playContext: track playing, binding playlist context")
+                if (startIndex >= 0) {
                     api.skipToIndex(contextUri, startIndex)
+                        .setResultCallback {
+                            Log.i(TAG, "playContext: bound to playlist index $startIndex in $contextUri")
+                        }
+                        .setErrorCallback { e ->
+                            Log.w(TAG, "playContext: skipToIndex failed: ${e.message}")
+                        }
                 }
-                api.setShuffle(true).setResultCallback {
-                    Log.i(TAG, "Shuffle re-enabled after playContext")
+                if (wasShuffling) {
+                    api.setShuffle(true).setResultCallback {
+                        Log.i(TAG, "Shuffle re-enabled after playContext")
+                    }
+                }
+            }.setErrorCallback { e ->
+                Log.w(TAG, "playContext: play(track) failed: ${e.message}, falling back to playlist")
+                api.play(contextUri).setResultCallback {
+                    if (startIndex > 0) {
+                        api.skipToIndex(contextUri, startIndex).setResultCallback {
+                            Log.i(TAG, "playContext: skipped to index $startIndex in $contextUri")
+                        }.setErrorCallback { e2 ->
+                            Log.w(TAG, "playContext: skipToIndex failed: ${e2.message}")
+                        }
+                    }
+                }.setErrorCallback { e2 ->
+                    Log.w(TAG, "playContext: play(playlist) failed: ${e2.message}")
                 }
             }
         } else {
-            api.play(contextUri)
-            if (startIndex > 0) {
-                api.skipToIndex(contextUri, startIndex)
+            api.play(contextUri).setResultCallback {
+                if (startIndex > 0) {
+                    api.skipToIndex(contextUri, startIndex).setResultCallback {
+                        Log.i(TAG, "playContext: skipped to index $startIndex in $contextUri")
+                    }.setErrorCallback { e ->
+                        Log.w(TAG, "playContext: skipToIndex failed: ${e.message}")
+                    }
+                }
+            }.setErrorCallback { e ->
+                Log.w(TAG, "playContext: play failed: ${e.message}")
             }
         }
     }
