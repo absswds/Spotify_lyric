@@ -240,7 +240,8 @@ fun PlaybackScreen(
                     estimatedPositionMs = estimatedPositionMs,
                     durationMs = trackInfo.durationMs,
                     isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
-                    isConnected = connectionState is SpotifyConnectionState.Connected,
+                    isConnected = connectionState is SpotifyConnectionState.Connected
+                            || trackInfo.trackId.isNotEmpty(),
                     parsedLyrics = parsedLyrics,
                     currentLyricLine = currentLyricLine,
                     lyricStatus = lyricStatus,
@@ -317,7 +318,8 @@ fun PlaybackScreen(
                             trackInfo = trackInfo,
                             connectionState = connectionState,
                             isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
-                            isConnected = connectionState is SpotifyConnectionState.Connected,
+                            isConnected = connectionState is SpotifyConnectionState.Connected
+                                    || trackInfo.trackId.isNotEmpty(),
                             onPlayPause = viewModel::togglePlayPause,
                             onSkipNext = viewModel::skipNext,
                             onSkipPrevious = viewModel::skipPrevious,
@@ -334,8 +336,13 @@ fun PlaybackScreen(
                                 .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 14.dp)
                         )
 
-                        // Lyrics (fixed anchor, uniform blur)
-                        if (connectionState is SpotifyConnectionState.Connected) {
+                        // Lyrics (fixed anchor, uniform blur). Show them whenever
+                        // a track is known — including the offline fallback where
+                        // App Remote is disconnected but the system MediaSession
+                        // supplies the track.
+                        val showLyrics = connectionState is SpotifyConnectionState.Connected ||
+                                trackInfo.trackId.isNotEmpty()
+                        if (showLyrics) {
                             ImmersiveLyricsBlock(
                                 currentLine = currentLyricLine,
                                 allLines = parsedLyrics,

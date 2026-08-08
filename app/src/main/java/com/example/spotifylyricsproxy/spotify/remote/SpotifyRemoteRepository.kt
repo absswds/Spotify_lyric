@@ -73,6 +73,15 @@ class SpotifyRemoteRepository(
     private var lastImageUri: String = ""
     private var connectionTimeoutJob: Job? = null
 
+    /**
+     * Offline fallback: App Remote requires a network to connect, so when the
+     * device is offline we read the track from Spotify's system MediaSession
+     * instead. This keeps the lyric pipeline (and LRCLIB cache) working.
+     */
+    private val systemTrackSource = SystemMediaSessionTrackSource(context)
+    private var systemTrackJob: Job? = null
+    private var systemAlbumArtJob: Job? = null
+
     private val _connectionState = MutableStateFlow<SpotifyConnectionState>(
         SpotifyConnectionState.Disconnected
     )
@@ -134,6 +143,13 @@ class SpotifyRemoteRepository(
 
         Log.i(TAG, "tryConnect: state=${_connectionState.value}, attempting connection")
 
+        // Start the system-MediaSession fallback immediately — do NOT wait for
+        // the 15s timeout or onFailure. Offline users get the current track
+        // right away; when App Remote connects, onConnected stops the fallback
+        // and App Remote takes over. Idempotent, and harmless while online
+        // (the same trackId means the fallback never overwrites App Remote).
+        startSystemTrackFallback()
+
         // Cancel any pending connection timeout
         connectionTimeoutJob?.cancel()
 
@@ -148,6 +164,10 @@ class SpotifyRemoteRepository(
             if (_connectionState.value is SpotifyConnectionState.Connecting) {
                 Log.w(TAG, "Connection timed out after ${CONNECTION_TIMEOUT_MS}ms")
                 _connectionState.value = SpotifyConnectionState.Disconnected
+                // Offline devices usually hit this path: the SDK hangs in the
+                // handshake and never calls onFailure. Fall back to Spotify's
+                // system MediaSession so cached lyrics still work.
+                startSystemTrackFallback()
             }
         }
 
@@ -165,6 +185,9 @@ class SpotifyRemoteRepository(
                     Log.i(TAG, "Connected to Spotify")
                     spotifyAppRemote = appRemote
                     _connectionState.value = SpotifyConnectionState.Connected
+                    // App Remote is now the source of truth — stop the
+                    // offline MediaSession fallback.
+                    stopSystemTrackFallback()
                     subscribeToPlayerState()
                 }
 
@@ -191,6 +214,12 @@ class SpotifyRemoteRepository(
 
                         else -> SpotifyConnectionState.Error(message)
                     }
+                    // App Remote cannot connect offline (its handshake needs a
+                    // network). Fall back to Spotify's system MediaSession so
+                    // cached lyrics still work while the device is offline.
+                    // startSystemTrackFallback is idempotent and no-ops when
+                    // no Spotify session exists, so try it on any failure.
+                    startSystemTrackFallback()
                 }
             }
         )
@@ -199,6 +228,7 @@ class SpotifyRemoteRepository(
     fun disconnect() {
         connectionTimeoutJob?.cancel()
         albumArtJob?.cancel()
+        stopSystemTrackFallback()
         spotifyAppRemote?.let {
             SpotifyAppRemote.disconnect(it)
         }
@@ -207,6 +237,41 @@ class SpotifyRemoteRepository(
         _connectionState.value = SpotifyConnectionState.Disconnected
         _currentTrack.value = SpotifyTrackInfo()
         _albumArt.value = null
+    }
+
+    /** Start reading the current track from Spotify's system MediaSession. */
+    private fun startSystemTrackFallback() {
+        if (systemTrackJob?.isActive == true) return
+        systemTrackSource.start()
+        systemTrackJob = repositoryScope.launch {
+            systemTrackSource.currentTrack.collect { track ->
+                // Update on EVERY emission, not just track changes: the system
+                // MediaSession also emits paused/position updates, which must
+                // reach the clock so seek/pause in Spotify syncs to our UI and
+                // lyrics stay aligned.
+                if (track.trackId.isNotBlank()) {
+                    _currentTrack.value = track
+                }
+            }
+        }
+        // Forward album art from the system MediaSession (embedded bitmap works
+        // offline; the URI is kept for online fetch attempts).
+        systemAlbumArtJob = repositoryScope.launch {
+            systemTrackSource.albumArt.collect { art ->
+                if (art != null) {
+                    _albumArt.value = art
+                }
+            }
+        }
+    }
+
+    /** Stop the system MediaSession fallback and clear its state. */
+    private fun stopSystemTrackFallback() {
+        systemTrackJob?.cancel()
+        systemTrackJob = null
+        systemAlbumArtJob?.cancel()
+        systemAlbumArtJob = null
+        systemTrackSource.stop()
     }
 
     /** Force a fresh connection — disconnect first, then reconnect.
@@ -270,7 +335,12 @@ class SpotifyRemoteRepository(
     }
 
     fun play() {
-        spotifyAppRemote?.playerApi?.resume()
+        if (spotifyAppRemote != null) {
+            spotifyAppRemote?.playerApi?.resume()
+        } else {
+            // Offline fallback: drive Spotify's system MediaSession directly.
+            systemTrackSource.play()
+        }
     }
 
     fun playUri(uri: String) {
@@ -351,19 +421,35 @@ class SpotifyRemoteRepository(
     }
 
     fun pause() {
-        spotifyAppRemote?.playerApi?.pause()
+        if (spotifyAppRemote != null) {
+            spotifyAppRemote?.playerApi?.pause()
+        } else {
+            systemTrackSource.pause()
+        }
     }
 
     fun skipNext() {
-        spotifyAppRemote?.playerApi?.skipNext()
+        if (spotifyAppRemote != null) {
+            spotifyAppRemote?.playerApi?.skipNext()
+        } else {
+            systemTrackSource.skipNext()
+        }
     }
 
     fun skipPrevious() {
-        spotifyAppRemote?.playerApi?.skipPrevious()
+        if (spotifyAppRemote != null) {
+            spotifyAppRemote?.playerApi?.skipPrevious()
+        } else {
+            systemTrackSource.skipPrevious()
+        }
     }
 
     fun seekTo(positionMs: Long) {
-        spotifyAppRemote?.playerApi?.seekTo(positionMs)
+        if (spotifyAppRemote != null) {
+            spotifyAppRemote?.playerApi?.seekTo(positionMs)
+        } else {
+            systemTrackSource.seekTo(positionMs)
+        }
     }
 
     fun toggleShuffle() {

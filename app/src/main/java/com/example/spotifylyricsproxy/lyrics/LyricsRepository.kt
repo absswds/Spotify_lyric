@@ -27,6 +27,14 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         private const val TAG = "LyricsRepo"
         private const val RETRY_DELAY_MS = 60 * 60 * 1000L // 1 hour
         private const val NETEASE_SOURCE = "netease"
+        private const val QQ_MUSIC_SOURCE = "qqmusic"
+
+        /**
+         * Preferred source when scores are tied. LRCLIB returns the cleanest
+         * LRC (pure lyrics, no "作曲/作词" info lines) and is the only source
+         * whose lyrics are allowed into the offline cache.
+         */
+        private const val DEFAULT_SOURCE = "lrclib"
 
         @Volatile
         private var instance: LyricsRepository? = null
@@ -45,8 +53,12 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         LrclibLyricsSource()
     )
 
-    /** Providers whose lyrics may be displayed during the current process but never written to Room. */
-    private val memoryOnlySources = setOf(NETEASE_SOURCE)
+    /**
+     * Providers whose lyrics may be displayed during the current process but
+     * never written to Room — offline cache therefore only ever contains
+     * LRCLIB (and manually imported) lyrics.
+     */
+    private val memoryOnlySources = setOf(NETEASE_SOURCE, QQ_MUSIC_SOURCE)
 
     /** Query every source IN PARALLEL, collect all candidates, return all for scoring. */
     private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> = coroutineScope {
@@ -73,11 +85,20 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     private val historyDao = database.trackPlayHistoryDao()
     private val rejectedDao = database.rejectedLyricMatchDao()
 
+    /** Sort candidates by score desc; on ties, prefer the default source. */
+    private fun sortCandidates(list: List<LyricCandidate>): List<LyricCandidate> =
+        list.sortedWith(
+            compareByDescending<LyricCandidate> { it.score }
+                .thenByDescending { it.source == DEFAULT_SOURCE }
+        )
+
     init {
         // Enforce the session-only NetEase policy on existing installations too.
-        // This runs once for the shared repository instance.
+        // This runs once for the shared repository instance. QQ Music is also
+        // memory-only: the offline cache should only ever hold LRCLIB lyrics.
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
             cacheDao.deleteBySource(NETEASE_SOURCE)
+            cacheDao.deleteBySource(QQ_MUSIC_SOURCE)
         }
     }
 
@@ -234,19 +255,23 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             scored.forEach { c ->
                 Log.i(TAG, "Candidate: source=${c.source} title='${c.trackName}' artist='${c.artistName}' score=${c.score} synced=${!c.syncedLyrics.isNullOrEmpty()}")
             }
+            // Sort so the best match is deterministic: score desc, ties to
+            // the default source. filterRejected keeps order, so maxByOrNull
+            // below picks the sorted head.
+            scored = sortCandidates(scored)
             val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
 
             if (filtered.isEmpty()) {
                 Log.w(TAG, "All candidates rejected for: $title - $artist")
                 // Keep the scored list so the user can still manually choose if needed
-                _candidates.value = scored.sortedByDescending { it.score }
+                _candidates.value = sortCandidates(scored)
                 _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.LowConfidence(0)
                 return
             }
 
             val best = filtered.maxByOrNull { it.score }!!
-            _candidates.value = scored.sortedByDescending { it.score }
+            _candidates.value = sortCandidates(scored)
             Log.i(TAG, "Best match: ${best.trackName} (score: ${best.score})")
 
             // Cache the result
@@ -381,7 +406,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                     c.copy(score = c.score - 30)
                 } else c
             }
-            scored = scored.sortedByDescending { it.score }
+            scored = sortCandidates(scored)
             val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
 
             _candidates.value = scored

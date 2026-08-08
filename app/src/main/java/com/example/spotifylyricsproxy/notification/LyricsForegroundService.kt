@@ -203,8 +203,25 @@ class LyricsForegroundService : Service() {
         lastFetchedTrackId = track.trackId
         val todayChoice = LyricDisplayPreferences.getTodayMobileDataChoice()
         val isMetered = getMeteredState() == MeteredState.METERED
+        val isOffline = getMeteredState() == MeteredState.NONE
 
         when {
+            isOffline -> {
+                // No network at all (e.g. airplane mode). The offline fallback
+                // supplies the track from Spotify's system MediaSession; only
+                // the cache (LRCLIB) can answer — never hit online sources.
+                serviceScope.launch {
+                    Log.i(TAG, "Offline, trying cache for ${track.title}")
+                    lyricsRepository.fetchLyrics(
+                        trackId = track.trackId,
+                        title = track.title,
+                        artist = track.artist,
+                        album = track.album,
+                        durationMs = track.durationMs,
+                        forceOnline = false
+                    )
+                }
+            }
             !isMetered || todayChoice == "allow" -> {
                 serviceScope.launch {
                     Log.i(TAG, "Calling fetchLyrics forceOnline=${!isMetered} todayChoice=$todayChoice")

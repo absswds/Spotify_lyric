@@ -162,6 +162,15 @@ class MainActivity : ComponentActivity() {
         if (NotificationPermissionPolicy.shouldRequestPostNotifications(Build.VERSION.SDK_INT, granted)) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+
+        // Notification-access (通知使用权) is required to read Spotify's
+        // system MediaSession on Android 11+, which powers offline lyrics.
+        // Prompt once; it's a settings toggle, not a runtime permission.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            !NotificationPermissionPolicy.hasNotificationListenerAccess(this)
+        ) {
+            NotificationPermissionPolicy.promptNotificationListenerAccess(this)
+        }
     }
 
     companion object {
