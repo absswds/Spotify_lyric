@@ -18,6 +18,7 @@
 - **2026-07** — Added immersive playback UI, a right-side lyric settings drawer, portrait/landscape layouts, and display controls for font size, weight, alignment, and inactive-line blur.
 - **2026-07** — Added online lyrics sources: NetEase Cloud Music, QQ Music, and LRCLIB; results are searched concurrently, scored against Spotify metadata, and can be manually switched in Lyrics Correction.
 - **2026-07** — Added Simplified Chinese, Traditional Chinese, English, and Japanese interface localization, plus Simplified/Traditional conversion while lyric translation is enabled.
+- **2026-08** — Added offline mode: when Spotify App Remote cannot connect (no network), the app reads the current track, album art, and transport controls from Spotify's own system MediaSession via a notification listener, and serves cached lyrics. Default lyrics source is now LRCLIB (cleanest LRC); NetEase and QQ Music are session-only, so the offline cache only ever holds LRCLIB lyrics.
 
 ---
 
@@ -55,9 +56,9 @@ The app reads the currently playing track via Spotify App Remote, queries local 
 
 | Feature | |
 |---------|-|
-| Auto-cache | First playback searches compatible third-party sources and persists accepted lyrics to Room |
+| Auto-cache | First playback searches compatible third-party sources and persists accepted lyrics to Room (LRCLIB only — NetEase/QQ Music are session-only) |
 | Playlist precache | Background WorkManager task precaches lyrics for selected playlists (Wi-Fi / charging) |
-| Offline | Cached lyrics available without network |
+| Offline | Cached lyrics available without network; reads the current track from Spotify's system MediaSession when App Remote cannot connect |
 
 ### Lyrics Management
 
@@ -170,6 +171,8 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 > On **Android 13+**, you need to grant the **notification permission** when prompted, otherwise lyrics won't appear in the notification bar.
 
+> **Offline mode**: the first time you open the app, it may ask you to grant **notification access** (通知使用权) in system settings. This lets the app read the currently playing track from Spotify's own media session when there is no network (airplane mode / offline Spotify playback), so cached lyrics, album art, and playback controls keep working offline. Grant it once — the app only reads media-session data, never your notifications.
+
 ### Keep the App Alive in Background
 
 This app runs a foreground service to display lyrics in the notification. Some Android systems (especially OPPO ColorOS, Xiaomi MIUI, Huawei HarmonyOS, vivo OriginOS) aggressively kill background apps to save battery. If the notification disappears after a while, you need to manually allow the app to run in the background:
@@ -192,6 +195,7 @@ This app runs a foreground service to display lyrics in the notification. Some A
 | Auth redirect closes immediately | Wrong redirect URI in Dashboard | Verify `spotifylyricsproxy://callback` is set |
 | Notification disappears after a while | System killed the background service | Disable battery optimization, enable auto-start, lock in recent tasks (see [Keep the App Alive](#keep-the-app-alive-in-background)) |
 | Lyrics page shows blank / player loses focus / lyrics not updating after returning from background | App entered background and Spotify UI took over, or playback clock drifted | Swipe the app away from recent tasks and reopen it. The player reconnects and displays lyrics. |
+| Offline (airplane mode): no lyrics shown | Offline mode needs notification access | Grant notification access (通知使用权) in system settings; only LRCLIB lyrics cached while online are available offline |
 
 ---
 
