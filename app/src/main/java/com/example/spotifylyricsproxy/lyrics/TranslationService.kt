@@ -36,6 +36,24 @@ class TranslationService(private val context: Context) {
 
     private val translators = mutableMapOf<String, Translator>()
 
+    private val traditionalizer: android.icu.text.Transliterator by lazy {
+        android.icu.text.Transliterator.getInstance("Simplified-Traditional")
+    }
+    private val cnLock = Any()
+
+    /** Normalize a BCP-47 tag to the code ML Kit actually supports (zh variants -> zh). */
+    fun normalizeLang(code: String): String = if (code.startsWith("zh")) "zh" else code
+
+    /** Convert simplified Chinese text to traditional (used when target is zh-TW). */
+    fun toTraditional(text: String): String = synchronized(cnLock) {
+        try {
+            traditionalizer.transliterate(text)
+        } catch (e: Exception) {
+            Log.w(TAG, "Simplified->Traditional failed", e)
+            text
+        }
+    }
+
     /**
      * Detect the language code of [text] (e.g. "en", "zh", "ja", "ko").
      * Returns null when detection is inconclusive.
@@ -57,12 +75,16 @@ class TranslationService(private val context: Context) {
      * Translate [text] from [sourceLang] to [targetLang].
      * Downloads the translation model if this is the first use for
      * this language pair.
+     *
+     * ML Kit only ships a simplified-Chinese model ("zh"); a zh-TW target is
+     * handled by translating to zh first, then converting to traditional.
      */
     suspend fun translate(text: String, sourceLang: String, targetLang: String): String? {
         if (text.isBlank()) return null
 
-        val source = TranslateLanguage.fromLanguageTag(sourceLang) ?: return null
-        val target = TranslateLanguage.fromLanguageTag(targetLang) ?: return null
+        val toTraditional = targetLang == "zh-TW" || targetLang == "zh-Hant" || targetLang == "zh-HK"
+        val source = TranslateLanguage.fromLanguageTag(normalizeLang(sourceLang)) ?: return null
+        val target = TranslateLanguage.fromLanguageTag(if (toTraditional) "zh" else normalizeLang(targetLang)) ?: return null
 
         return withContext(Dispatchers.IO) {
             try {
@@ -70,7 +92,7 @@ class TranslationService(private val context: Context) {
                 val conditions = DownloadConditions.Builder().requireWifi().build()
                 TasksCompat.await(translator.downloadModelIfNeeded(conditions))
                 val result = TasksCompat.await(translator.translate(text))
-                result
+                if (toTraditional) toTraditional(result) else result
             } catch (e: Exception) {
                 Log.w(TAG, "Translation failed for $sourceLang->$targetLang", e)
                 null

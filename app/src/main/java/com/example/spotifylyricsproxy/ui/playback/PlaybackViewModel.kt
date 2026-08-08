@@ -90,6 +90,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private var translationMap: Map<Long, String> = emptyMap()
 
     private var translationJob: kotlinx.coroutines.Job? = null
+    private var fullTranslationJob: kotlinx.coroutines.Job? = null
 
     private val _isTranslationEnabled = MutableStateFlow(false)
     val isTranslationEnabled: StateFlow<Boolean> = _isTranslationEnabled.asStateFlow()
@@ -123,6 +124,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         observeTrackChanges()
         observePlayRequests()
         observeCurrentLineForTranslation()
+        observeLyricsForFullTranslation()
         autoReconnectOnFailure()
         viewModelScope.launch {
             ConnectivityObserver.observe(getApplication()).collect { state ->
@@ -452,9 +454,19 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         if (enabled) {
             // Sync chineseForm with the current translation target
             syncChineseFormFromTarget(_targetTranslationLang.value)
+            // Re-translate the current lyrics with the active target.
+            val lines = lyricsRepo.parsedLyrics.value
+            if (lines.isNotEmpty()) {
+                translationMap = emptyMap()
+                translateLyricsInFull(lines)
+            }
         } else {
+            fullTranslationJob?.cancel()
+            translationJob?.cancel()
+            translationMap = emptyMap()
             _translatedLine.value = null
             _detectedLyricsLang.value = null
+            _fullTranslation.value = null
             // Reset chinese form to original when translation is off
             LyricDisplayPreferences.setChineseForm("original")
         }
@@ -464,6 +476,15 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         _targetTranslationLang.value = lang
         TranslationPrefs.saveTargetLang(getApplication(), lang)
         syncChineseFormFromTarget(lang)
+        // Re-translate in the new target language.
+        if (_isTranslationEnabled.value) {
+            translationMap = emptyMap()
+            _translatedLine.value = null
+            val lines = lyricsRepo.parsedLyrics.value
+            if (lines.isNotEmpty()) {
+                translateLyricsInFull(lines)
+            }
+        }
     }
 
     private fun syncChineseFormFromTarget(lang: String) {
@@ -502,9 +523,85 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     _translatedLine.value = tlyricText
                     return@collect
                 }
+                // Full translation covers every line; only fall back to per-line
+                // translation when the full pass is not running or failed.
+                if (fullTranslationJob?.isActive == true) {
+                    return@collect
+                }
                 translationJob?.cancel()
                 _translatedLine.value = null
                 translateCurrentLine(line.text)
+            }
+        }
+    }
+
+    /** Translate the entire lyrics block in one call so context is preserved. */
+    private fun observeLyricsForFullTranslation() {
+        viewModelScope.launch {
+            lyricsRepo.parsedLyrics.collect { lines ->
+                if (lines.isNotEmpty() && _isTranslationEnabled.value) {
+                    translateLyricsInFull(lines)
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether a translation pass is meaningful for [detected] -> [target].
+     * zh -> zh-TW still needs work (simplified -> traditional conversion),
+     * but nothing to do when the lyrics are already traditional.
+     */
+    private fun needsTranslation(detected: String, target: String): Boolean {
+        val d = translationService.normalizeLang(detected)
+        val t = translationService.normalizeLang(target)
+        if (d != t) return true
+        val tradTarget = target == "zh-TW" || target == "zh-Hant" || target == "zh-HK"
+        val detectedAlreadyTrad =
+            detected == "zh-TW" || detected == "zh-Hant" || detected == "zh-HK"
+        return tradTarget && !detectedAlreadyTrad
+    }
+
+    /** Translate all lines together (better context than line-by-line). */
+    private fun translateLyricsInFull(lines: List<com.example.spotifylyricsproxy.core.model.LrcLine>) {
+        fullTranslationJob?.cancel()
+        fullTranslationJob = viewModelScope.launch {
+            val target = _targetTranslationLang.value
+            val fullText = lines.joinToString("\n") { it.text }
+            if (fullText.isBlank()) return@launch
+            try {
+                val detected = translationService.detectLanguage(fullText)
+                _detectedLyricsLang.value = detected
+                if (detected == null || !needsTranslation(detected, target)) {
+                    // Same language — no translation needed.
+                    _fullTranslation.value = null
+                    _translatedLine.value = null
+                    return@launch
+                }
+                val translated = translationService.translate(fullText, detected, target)
+                if (translated == null) {
+                    _fullTranslation.value = null
+                    _translatedLine.value = null
+                    return@launch
+                }
+                val translatedLines = translated.split("\n")
+                if (translatedLines.size == lines.size) {
+                    translationMap = lines.indices.associate { i -> lines[i].startMs to translatedLines[i] }
+                    _fullTranslation.value = translated
+                    val cur = lyricsRepo.currentLine.value
+                    _translatedLine.value = cur?.let { translationMap[it.startMs] }
+                    Log.i(TAG, "Full translation done: ${lines.size} lines -> $target")
+                } else {
+                    // Line count mismatch (translator merged/split lines): fall back per-line.
+                    Log.w(TAG, "Full translation line mismatch (${translatedLines.size} vs ${lines.size}), falling back per-line")
+                    _fullTranslation.value = null
+                    translationMap = emptyMap()
+                    val cur = lyricsRepo.currentLine.value
+                    if (cur != null) translateCurrentLine(cur.text)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Full translation failed", e)
+                _fullTranslation.value = null
+                _translatedLine.value = null
             }
         }
     }
@@ -516,7 +613,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             try {
                 val detected = translationService.detectLanguage(text)
                 _detectedLyricsLang.value = detected
-                if (detected == null || detected == target) {
+                if (detected == null || !needsTranslation(detected, target)) {
                     _translatedLine.value = null
                     return@launch
                 }
