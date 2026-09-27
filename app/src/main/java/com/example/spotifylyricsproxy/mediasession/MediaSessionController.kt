@@ -115,15 +115,28 @@ class MediaSessionController(
     }
 
     /**
+     * Move our session back to the top of the system's media priority stack, so the media
+     * card, lock screen and 流体云 show our lyrics instead of Spotify's own session.
+     * The stack (AOSP MediaSessionStack) promotes a session when it *transitions* into
+     * PLAYING; Spotify does exactly that on every track change, so we repeat the transition
+     * right after it. Only while actually playing; the flip lasts one state update.
+     */
+    fun reclaimPriority(positionMs: Long) {
+        if (currentTrack.trackId.isBlank() || currentTrack.isPaused) return
+        mediaSession?.setPlaybackState(
+            PlaybackStateCompat.Builder()
+                .setActions(TRANSPORT_ACTIONS)
+                .setState(PlaybackStateCompat.STATE_PAUSED, positionMs, 0f)
+                .build()
+        )
+        updatePlaybackState(isPlaying = true, positionMs = positionMs)
+    }
+
+    /**
      * Update just the playback state (position, playing/paused).
      */
     fun updatePlaybackState(isPlaying: Boolean, positionMs: Long) {
-        val actions = PlaybackStateCompat.ACTION_PLAY_PAUSE or
-                PlaybackStateCompat.ACTION_PLAY or
-                PlaybackStateCompat.ACTION_PAUSE or
-                PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-                PlaybackStateCompat.ACTION_SEEK_TO
+        val actions = TRANSPORT_ACTIONS
 
         val state = if (isPlaying) PlaybackStateCompat.STATE_PLAYING
         else if (currentTrack.trackId.isNotBlank()) PlaybackStateCompat.STATE_PAUSED
@@ -151,3 +164,10 @@ class MediaSessionController(
         private const val TAG = "LyricsMediaSession"
     }
 }
+
+private const val TRANSPORT_ACTIONS = PlaybackStateCompat.ACTION_PLAY_PAUSE or
+    PlaybackStateCompat.ACTION_PLAY or
+    PlaybackStateCompat.ACTION_PAUSE or
+    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+    PlaybackStateCompat.ACTION_SEEK_TO

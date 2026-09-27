@@ -32,6 +32,7 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,11 +54,15 @@ class LyricsForegroundService : Service() {
     private lateinit var playbackClock: PlaybackClock
     private lateinit var mediaSessionController: MediaSessionController
     private var observerJob: Job? = null
+    private var reclaimJob: Job? = null
     private var lastFetchedTrackId = ""
     private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
+        // The service can be restarted without MainActivity; both inits are idempotent.
+        LyricDisplayPreferences.init(applicationContext)
+        com.example.spotifylyricsproxy.core.AppSettings.init(applicationContext)
         createNotificationChannel()
         spotifyRepository = SpotifyRemoteRepository(
             context = applicationContext,
@@ -123,7 +128,18 @@ class LyricsForegroundService : Service() {
         observerJob = serviceScope.launch {
             launch {
                 spotifyRepository.currentTrack.collect { track ->
+                    val previous = currentTrack.value
                     currentTrack.value = track
+                    // Spotify just re-promoted its own session (new track or resume):
+                    // take the top spot back once it has settled.
+                    val resumed = previous.isPaused && !track.isPaused
+                    if (track.trackId.isNotBlank() && (track.trackId != previous.trackId || resumed)) {
+                        reclaimJob?.cancel()
+                        reclaimJob = launch {
+                            delay(RECLAIM_DELAY_MS)
+                            mediaSessionController.reclaimPriority(playbackClock.estimatedPositionMs())
+                        }
+                    }
                     playbackClock.update(
                         positionMs = track.playbackPositionMs,
                         paused = track.isPaused,
@@ -201,7 +217,7 @@ class LyricsForegroundService : Service() {
         // The ViewModel reads the same singleton for UI display.
         // IMPORTANT: do NOT call lyricsRepository.reset() here.
         lastFetchedTrackId = track.trackId
-        val todayChoice = LyricDisplayPreferences.getTodayMobileDataChoice()
+        val todayChoice = LyricDisplayPreferences.effectiveMobileDataChoice()
         val isMetered = getMeteredState() == MeteredState.METERED
         val isOffline = getMeteredState() == MeteredState.NONE
 
@@ -265,6 +281,11 @@ class LyricsForegroundService : Service() {
     private fun buildNotification(
         snapshot: LyricsNotificationSnapshot,
         albumArt: Bitmap?
+    ) = buildMediaNotification(snapshot, albumArt)
+
+    private fun buildMediaNotification(
+        snapshot: LyricsNotificationSnapshot,
+        albumArt: Bitmap?
     ) = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.mipmap.ic_launcher)
         .setContentTitle(snapshot.title)
@@ -321,6 +342,9 @@ class LyricsForegroundService : Service() {
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+
+        // A short-lived Live Update channel from a test build; remove it if present.
+        getSystemService(NotificationManager::class.java).deleteNotificationChannel("lyrics_live")
     }
 
     private fun waitingSnapshot() = LyricsNotificationSnapshot(
@@ -352,6 +376,8 @@ class LyricsForegroundService : Service() {
     companion object {
         private const val TAG = "LyricsForegroundSvc"
         private const val CHANNEL_ID = "lyrics_foreground"
+        /** Let Spotify finish its own state change before we re-promote our session. */
+        private const val RECLAIM_DELAY_MS = 1_200L
         private const val NOTIFICATION_ID = 4001
         private const val REQUEST_OPEN_APP = 4002
         private const val REDIRECT_URI = "spotifylyricsproxy://callback"

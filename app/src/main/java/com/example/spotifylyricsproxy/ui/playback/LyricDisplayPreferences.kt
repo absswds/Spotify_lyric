@@ -15,6 +15,7 @@ object LyricDisplayPreferences {
     private const val KEY_DIM = "dim_level"
     private const val KEY_ALIGN = "alignment"
     private const val KEY_BLUR = "blur_enabled"
+    private const val KEY_WORD_BY_WORD = "word_by_word"
     private const val KEY_FONT_SIZE_CURRENT = "font_size_current"
     private const val KEY_FONT_SIZE_OTHER = "font_size_other"
     private const val KEY_MOBILE_STRATEGY = "mobile_data_strategy"
@@ -26,6 +27,7 @@ object LyricDisplayPreferences {
     private val _dimLevel = mutableStateOf("medium")
     private val _alignment = mutableStateOf("center")
     private val _blurEnabled = mutableStateOf(true)
+    private val _wordByWord = mutableStateOf(true)
     // Font sizes: stored as Float (sp), with min 12sp, max 36sp
     private val _fontSizeCurrent = mutableFloatStateOf(20f)
     private val _fontSizeOther = mutableFloatStateOf(15f)
@@ -36,44 +38,14 @@ object LyricDisplayPreferences {
     val dimLevel: State<String> = _dimLevel
     val alignment: State<String> = _alignment
     val blurEnabled: State<Boolean> = _blurEnabled
+
+    /** Word-by-word highlight for lyrics that carry real word timing. */
+    val wordByWord: State<Boolean> = _wordByWord
     val fontSizeCurrent: State<Float> = _fontSizeCurrent
     val fontSizeOther: State<Float> = _fontSizeOther
     val mobileDataStrategy: State<String> = _mobileDataStrategy
     val chineseForm: State<String> = _chineseForm
 
-
-    /** @deprecated Use [fontSizeCurrent] slider instead. Kept for dialog compat. */
-    @Deprecated("Use fontSizeCurrent / fontSizeOther")
-    val fontSize: State<String> = object : State<String> {
-        override val value: String get() {
-            val cur = _fontSizeCurrent.value
-            return when {
-                cur <= 14f -> "small"
-                cur <= 18f -> "default"
-                cur <= 24f -> "large"
-                else -> "xlarge"
-            }
-        }
-    }
-
-    /** @deprecated Use [setFontSizeCurrent] / [setFontSizeOther] instead. */
-    @Deprecated("Use setFontSizeCurrent / setFontSizeOther")
-    fun setFontSize(value: String) {
-        val cur = when (value) {
-            "small" -> 16f
-            "large" -> 24f
-            "xlarge" -> 28f
-            else -> 20f
-        }
-        val oth = when (value) {
-            "small" -> 12f
-            "large" -> 17f
-            "xlarge" -> 20f
-            else -> 15f
-        }
-        setFontSizeCurrent(cur)
-        setFontSizeOther(oth)
-    }
 
     fun init(context: Context) {
         if (prefs != null) return
@@ -82,6 +54,7 @@ object LyricDisplayPreferences {
         _dimLevel.value = prefs?.getString(KEY_DIM, "medium") ?: "medium"
         _alignment.value = prefs?.getString(KEY_ALIGN, "center") ?: "center"
         _blurEnabled.value = prefs?.getBoolean(KEY_BLUR, true) ?: true
+        _wordByWord.value = prefs?.getBoolean(KEY_WORD_BY_WORD, true) ?: true
         _fontSizeCurrent.value = prefs?.getFloat(KEY_FONT_SIZE_CURRENT, 20f) ?: 20f
         _fontSizeOther.value = prefs?.getFloat(KEY_FONT_SIZE_OTHER, 15f) ?: 15f
         _mobileDataStrategy.value = prefs?.getString(KEY_MOBILE_STRATEGY, "ask") ?: "ask"
@@ -103,6 +76,11 @@ object LyricDisplayPreferences {
         if (value !in listOf("center", "start")) return
         prefs?.edit()?.putString(KEY_ALIGN, value)?.apply()
         _alignment.value = value
+    }
+
+    fun setWordByWord(value: Boolean) {
+        prefs?.edit()?.putBoolean(KEY_WORD_BY_WORD, value)?.apply()
+        _wordByWord.value = value
     }
 
     fun setBlurEnabled(value: Boolean) {
@@ -127,8 +105,6 @@ object LyricDisplayPreferences {
     /** Mobile data choice that persists for the current day: "allow" or "deny". */
     private const val KEY_MOBILE_TODAY_CHOICE = "mobile_today_choice"
     private const val KEY_MOBILE_TODAY_DATE = "mobile_today_date"
-    private val _mobileTodayChoice = mutableStateOf<String?>(null)
-    val mobileTodayChoice: State<String?> = _mobileTodayChoice
 
     /** Get today's stored mobile data decision, or null if not set today. */
     fun getTodayMobileDataChoice(): String? {
@@ -148,11 +124,14 @@ object LyricDisplayPreferences {
             ?.putString(KEY_MOBILE_TODAY_CHOICE, value)
             ?.putString(KEY_MOBILE_TODAY_DATE, java.time.LocalDate.now().toString())
             ?.apply()
-        _mobileTodayChoice.value = value
     }
 
-    @Composable
-    fun todayMobileDataChoice(): String? = _mobileTodayChoice.value
+    /**
+     * Decision used when a metered network is detected: today's one-off answer wins,
+     * otherwise the standing strategy from Settings ("allow" / "deny"); null means ask.
+     */
+    fun effectiveMobileDataChoice(): String? =
+        getTodayMobileDataChoice() ?: _mobileDataStrategy.value.takeIf { it == "allow" || it == "deny" }
 
     /** Strategy for mobile data: "ask" (default) | "allow" | "deny" */
     fun setMobileDataStrategy(value: String) {
@@ -189,37 +168,8 @@ object LyricDisplayPreferences {
             chineseForm = _chineseForm.value
         )
     }
-
-    @Composable
-    fun resolvedLandscapeConfig(): LyricDisplayConfig {
-        val base = resolvedConfig()
-        val curSp = (_fontSizeCurrent.value - 2f).coerceAtLeast(12f)
-        val othSp = (_fontSizeOther.value - 1f).coerceAtLeast(12f)
-        return base.copy(
-            currentLineSp = curSp.sp,
-            otherLineSp = othSp.sp
-        )
-    }
 }
 
-
-@Deprecated("Use LyricDisplayConfig with slider-based sizes")
-data class CompactLyricPreviewConfig(
-    val currentLineSp: TextUnit,
-    val contextLineSp: TextUnit,
-    val textAlign: TextAlign
-)
-
-@Composable
-@Deprecated("Use resolvedConfig() which now uses slider sizes")
-fun resolvedCompactPreviewConfig(): CompactLyricPreviewConfig {
-    val align = LyricDisplayPreferences.alignment.value
-    return CompactLyricPreviewConfig(
-        currentLineSp = 18.sp,
-        contextLineSp = 14.sp,
-        textAlign = if (align == "start") TextAlign.Start else TextAlign.Center
-    )
-}
 
 data class LyricDisplayConfig(
     val currentLineSp: TextUnit,

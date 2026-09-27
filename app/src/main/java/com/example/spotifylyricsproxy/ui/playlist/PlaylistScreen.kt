@@ -100,7 +100,7 @@ fun PlaylistScreen(
                 }
             )
         },
-        containerColor = Color(0xFFF7F8FC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -124,8 +124,8 @@ fun PlaylistScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color(0xFFF0F0F5),
-                    focusedContainerColor = Color(0xFFF0F0F5)
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             )
             // Search results — local filter of loaded tracks
@@ -136,7 +136,7 @@ fun PlaylistScreen(
                             Text(
                                 text = stringResource(R.string.correction_status_notfound),
                                 modifier = Modifier.padding(32.dp),
-                                color = Color(0xFF747B89),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -186,7 +186,7 @@ fun PlaylistScreen(
                     Text(
                         text = stringResource(R.string.playlist_loading_tracks_progress, loaded, total),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF747B89)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else if (loadingTracks && searchQuery.isEmpty()) {
@@ -199,7 +199,7 @@ fun PlaylistScreen(
                     Text(
                         text = stringResource(R.string.playlist_loading_tracks),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF747B89)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -218,7 +218,7 @@ fun PlaylistScreen(
                             Text(
                                 text = if (error != null) error!! else stringResource(R.string.playlist_no_songs),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color(0xFF747B89),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(16.dp)
                             )
                         }
@@ -267,7 +267,7 @@ private fun PlaylistCarousel(
             Text(
                 text = if (isLoading) stringResource(R.string.playlist_refresh_loading) else stringResource(R.string.playlist_cd_refresh),
                 style = MaterialTheme.typography.labelLarge,
-                color = if (isLoading) Color(0xFF747B89) else Color(0xFF4F5EDC),
+                color = if (isLoading) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clickable(enabled = !isLoading) { onRefresh() }
                     .padding(8.dp)
@@ -278,7 +278,7 @@ private fun PlaylistCarousel(
             Text(
                 text = error,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFFF3B30),
+                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
@@ -293,7 +293,7 @@ private fun PlaylistCarousel(
                     Text(
                         text = stringResource(R.string.playlist_loading),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF747B89)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -308,8 +308,8 @@ private fun PlaylistCarousel(
                     val selected = selectedPlaylist?.id == playlist.id
                     Surface(
                         shape = RoundedCornerShape(18.dp),
-                        color = if (selected) Color(0xFF4F5EDC) else Color(0xFFEFF1F6),
-                        contentColor = if (selected) Color.White else Color(0xFF27314A),
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.clickable { onSelectPlaylist(playlist) }
                     ) {
                         Text(
@@ -338,7 +338,7 @@ private fun TrackRow(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Row(
             modifier = Modifier
@@ -350,7 +350,7 @@ private fun TrackRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFEFF1F6)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 if (track.imageUrl != null) {
@@ -368,7 +368,7 @@ private fun TrackRow(
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = stringResource(R.string.playback_cd_play),
-                        tint = Color(0xFF4F5EDC),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -385,7 +385,7 @@ private fun TrackRow(
                 Text(
                     text = track.artist,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF747B89),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -394,7 +394,7 @@ private fun TrackRow(
             Text(
                 text = formatMs(track.durationMs),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF747B89)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

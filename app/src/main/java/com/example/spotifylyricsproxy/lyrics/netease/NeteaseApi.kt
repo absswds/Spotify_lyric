@@ -52,7 +52,8 @@ data class NeteaseAlbum(
 data class NeteaseLyricResponse(
     val code: Long = -1,
     val lrc: NeteaseLrc? = null,
-    val tlyric: NeteaseLrc? = null  // translation
+    val tlyric: NeteaseLrc? = null,  // translation
+    val yrc: NeteaseLrc? = null  // word-by-word timing ("逐字歌词")
 )
 
 data class NeteaseLrc(

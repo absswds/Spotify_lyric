@@ -60,6 +60,7 @@ class SpotifyRemoteRepository(
 ) {
     companion object {
         private const val TAG = "SpotifyRemoteRepo"
+        private const val SPOTIFY_PACKAGE = "com.spotify.music"
         const val AUTH_REQUEST_CODE = 0x10
         private const val CONNECTION_TIMEOUT_MS = 15_000L
     }
@@ -131,6 +132,49 @@ class SpotifyRemoteRepository(
                 _connectionState.value = SpotifyConnectionState.Disconnected
                 return true
             }
+        }
+    }
+
+    private var wakeBrowser: android.media.browse.MediaBrowser? = null
+
+    /**
+     * Start Spotify's process without showing its UI, by binding its MediaBrowserService
+     * (the same path Android Auto and headunits use). App Remote cannot bind a Spotify that
+     * is not running, but once this wakes it the next [tryConnect] succeeds.
+     */
+    fun wakeSpotifyInBackground() {
+        if (wakeBrowser != null) return
+        val browser = android.media.browse.MediaBrowser(
+            context,
+            android.content.ComponentName(
+                SPOTIFY_PACKAGE,
+                "com.spotify.mediabrowserservice.mediabrowserservice.SpotifyMediaBrowserService"
+            ),
+            object : android.media.browse.MediaBrowser.ConnectionCallback() {
+                override fun onConnected() {
+                    Log.i(TAG, "Spotify woken via MediaBrowserService")
+                    release()
+                    tryConnect()
+                }
+
+                override fun onConnectionFailed() {
+                    Log.w(TAG, "MediaBrowserService wake refused")
+                    release()
+                }
+
+                private fun release() {
+                    wakeBrowser?.disconnect()
+                    wakeBrowser = null
+                }
+            },
+            null
+        )
+        wakeBrowser = browser
+        try {
+            browser.connect()
+        } catch (e: Exception) {
+            Log.w(TAG, "MediaBrowserService wake failed: ${e.message}")
+            wakeBrowser = null
         }
     }
 

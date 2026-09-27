@@ -1,5 +1,7 @@
 package com.example.spotifylyricsproxy.ui.cache
 
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -48,14 +50,23 @@ import com.example.spotifylyricsproxy.database.entity.LyricCacheEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CacheScreen(viewModel: CacheViewModel) {
+fun CacheScreen(viewModel: CacheViewModel, onBack: () -> Unit = {}) {
     val entries by viewModel.entries.collectAsState()
     val summary by viewModel.summary.collectAsState()
 
     val filterStatus by viewModel.filterStatus.collectAsState()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.cache_title)) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.cache_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.correction_back))
+                    }
+                }
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(

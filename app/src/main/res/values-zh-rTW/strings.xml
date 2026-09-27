@@ -139,20 +139,8 @@
     <string name="settings_language_en">English</string>
     <string name="settings_language_ja">日本語</string>
     <string name="settings_group_cache">緩存與下載</string>
-    <string name="settings_auto_cache">自動緩存新播放的歌曲</string>
-    <string name="settings_auto_cache_desc">播放時自動補齊同步歌詞</string>
-    <string name="settings_wifi_only">僅在 Wi-Fi 下緩存</string>
-    <string name="settings_wifi_only_desc">避免使用行動數據下載歌詞</string>
-    <string name="settings_cache_album_art">緩存封面圖片</string>
-    <string name="settings_cache_album_art_desc">離線時仍可顯示專輯封面</string>
     <string name="settings_group_playback">播放與代理</string>
-    <string name="settings_mediasession_proxy">啟用 MediaSession 代理</string>
-    <string name="settings_mediasession_proxy_desc">在系統媒體卡片顯示目前歌詞</string>
-    <string name="settings_notification_lyrics">允許通知中顯示歌詞</string>
-    <string name="settings_notification_lyrics_desc">前台服務通知標題使用目前歌詞</string>
     <string name="settings_global_offset">全域歌詞偏移</string>
-    <string name="settings_offset_early">-2s</string>
-    <string name="settings_offset_late">+2s</string>
     <string name="settings_group_permission">權限</string>
     <string name="settings_notification_permission">通知權限</string>
     <string name="settings_notification_granted">已授權</string>
@@ -170,10 +158,7 @@
     <string name="settings_github_desc">github.com/absswds/Spotify_lyric</string>
     <string name="settings_author">作者</string>
     <string name="settings_author_detail">absswds · Binbin Li</string>
-    <string name="settings_group_translation">歌詞翻譯</string>
     <string name="settings_translate_lyrics">啟用歌詞翻譯</string>
-    <string name="settings_translate_lyrics_desc">自動偵測歌詞語言並翻譯</string>
-    <string name="settings_translate_target">目標語言</string>
     <string name="settings_translate_target_zh">中文</string>
     <string name="settings_translate_target_tw">中文（繁體）</string>
     <string name="settings_translate_target_en">English</string>
@@ -308,8 +293,6 @@
     <string name="import_lyrics_empty">檔案內容為空或格式無效</string>
 
     <!-- Scan local lyrics folder -->
-    <string name="scan_lyrics_folder">掃描本地歌詞資料夾</string>
-    <string name="scan_lyrics_folder_desc">批次匯入 .lrc 檔案，檔名需包含歌名或藝人名</string>
     <string name="scan_lyrics_scanning">正在掃描…</string>
     <string name="scan_lyrics_complete">掃描完成：%1$d 首歌詞已匯入</string>
     <string name="scan_lyrics_no_match">未找到匹配的歌詞檔案</string>
@@ -328,7 +311,6 @@
     <string name="mobile_data_restricted_short">行動數據已限制</string>
 
     <!-- Lyric source labels -->
-    <string name="lyric_source_label">目前來源：%1$s</string>
     <string name="lyric_source_cache">💾 緩存</string>
     <string name="lyric_source_lrclib">🌐 LRCLIB</string>
     <string name="lyric_source_netease">🎵 網易雲</string>
@@ -337,8 +319,6 @@
 
     <!-- Mobile data settings -->
     <string name="mobile_data_search_section">行動數據搜尋</string>
-    <string name="mobile_data_settings_today_allow">✓ 今天已允許使用行動數據</string>
-    <string name="mobile_data_settings_today_deny">✓ 今天已選擇僅用緩存</string>
 
     <!-- Other -->
     <string name="album_art_description">專輯封面</string>
@@ -348,4 +328,51 @@
     <string name="lyric_chinese_form">歌詞繁簡</string>
     <string name="chinese_simplified">簡體</string>
     <string name="chinese_traditional">繁體</string>
+    <string name="settings_group_network">網路</string>
+    <string name="settings_mobile_strategy">使用行動數據時</string>
+    <string name="settings_mobile_strategy_desc">非 Wi-Fi 網路下是否連網搜尋歌詞</string>
+    <string name="settings_mobile_ask">每次詢問</string>
+    <string name="settings_mobile_allow">總是允許</string>
+    <string name="settings_mobile_deny">只用快取</string>
+    <string name="settings_global_offset_desc">對所有歌曲生效，正數表示歌詞延後</string>
+    <string name="settings_clear_cache_confirm_title">清除歌詞快取？</string>
+    <string name="settings_clear_cache_confirm_message">所有已快取的歌詞、封面和時間偏移都會被刪除，之後播放時會重新搜尋。</string>
+    <string name="settings_clear_cache_confirm">清除</string>
+    <string name="settings_clear_cache_done">快取已清除</string>
+    <string name="menu_quick_blur">模糊</string>
+    <string name="menu_group_lyrics">歌詞</string>
+    <string name="menu_group_library">曲庫</string>
+    <string name="menu_research_desc">換來源 · 選候選歌詞</string>
+    <string name="menu_offset_title">這首歌的時間</string>
+    <string name="menu_offset_desc">歌詞太早按 +，太晚按 −</string>
+    <string name="menu_display_desc">字級 · 粗細 · 簡繁 · 翻譯語言</string>
+    <string name="menu_playlists_desc">從你的 Spotify 播放清單播放</string>
+    <string name="menu_precache_desc">提前下載整個播放清單的歌詞</string>
+    <string name="menu_cache_desc">查看已儲存的歌詞</string>
+    <string name="menu_settings_desc">主題 · 語言 · 網路 · 通知</string>
+    <string name="translation_off">關閉翻譯</string>
+    <string name="translation_same_language">歌詞已經是這個語言，無需翻譯</string>
+    <string name="translation_preparing">正在準備翻譯…首次使用需下載語言包</string>
+    <string name="onboarding_skip">略過</string>
+    <string name="onboarding_next">下一步</string>
+    <string name="onboarding_start">開始使用</string>
+    <string name="onboarding_tagline">為 Spotify 配上 Apple Music 風格的同步歌詞</string>
+    <string name="onboarding_feature_sync">自動跟隨 Spotify 播放，歌詞即時捲動</string>
+    <string name="onboarding_feature_words">支援逐字歌詞（AMLL 歌詞庫、網易雲）</string>
+    <string name="onboarding_feature_duet">對唱歌曲左右分開顯示</string>
+    <string name="onboarding_feature_translate">一鍵翻譯歌詞，可選目標語言</string>
+    <string name="onboarding_feature_offline">歌詞離線快取，沒網也能看</string>
+    <string name="onboarding_source">開源專案</string>
+    <string name="onboarding_permissions_title">讓體驗更好</string>
+    <string name="onboarding_permissions_desc">以下權限都是可選的，不開也能正常使用，之後也可以在系統設定裡再開。</string>
+    <string name="onboarding_perm_notify">通知</string>
+    <string name="onboarding_perm_notify_desc">在通知欄顯示目前歌詞和播放控制</string>
+    <string name="onboarding_perm_listener">通知使用權</string>
+    <string name="onboarding_perm_listener_desc">離線或未登入時，從系統媒體資訊辨識正在播放的歌曲</string>
+    <string name="onboarding_perm_autostart">允許 Spotify 關聯啟動</string>
+    <string name="onboarding_perm_autostart_desc">會打開 Spotify 的應用程式資訊：在「耗電管理」裡開啟「允許關聯啟動」（不同手機叫法和位置可能不同，也可能叫「自啟動」）。開啟後本應用可在背景喚醒 Spotify，不再跳出它的畫面</string>
+    <string name="onboarding_allow">開啟</string>
+    <string name="onboarding_open_settings">去設定</string>
+    <string name="onboarding_granted">已開啟</string>
+    <string name="menu_quick_word_by_word">逐字</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.example.spotifylyricsproxy.lyrics
 
+import com.example.spotifylyricsproxy.core.AppSettings
 import android.util.Log
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.core.model.LyricCandidate
@@ -10,6 +11,7 @@ import com.example.spotifylyricsproxy.database.entity.TrackPlayHistoryEntity
 import com.example.spotifylyricsproxy.lyrics.LyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LrclibLyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
+import com.example.spotifylyricsproxy.lyrics.amll.AmllTtmlLyricsSource
 import com.example.spotifylyricsproxy.lyrics.netease.NeteaseLyricsSource
 import com.example.spotifylyricsproxy.lyrics.qqmusic.QQMusicLyricsSource
 import kotlinx.coroutines.Dispatchers
@@ -20,12 +22,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 
 class LyricsRepository private constructor(private val database: AppDatabase) {
 
     companion object {
         private const val TAG = "LyricsRepo"
         private const val RETRY_DELAY_MS = 60 * 60 * 1000L // 1 hour
+        /**
+         * Below this the best candidate matched the title but not the artist (e.g. another
+         * singer's song of the same name): don't show it or cache it; offer a manual search.
+         */
+        private const val MIN_ACCEPT_SCORE = 50
+        /** Per-provider cap so the fastest good answer is not held back by a slow one. */
+        private const val SOURCE_TIMEOUT_MS = 5_000L
         private const val NETEASE_SOURCE = "netease"
         private const val QQ_MUSIC_SOURCE = "qqmusic"
 
@@ -48,6 +59,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     }
 
     private val sources: List<LyricsSource> = listOf(
+        AmllTtmlLyricsSource(),
         NeteaseLyricsSource(),
         QQMusicLyricsSource(),
         LrclibLyricsSource()
@@ -66,11 +78,14 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         val deferred = sources.map { source ->
             async {
                 try {
-                    val result = source.search(request)
+                    // One slow provider must not hold every other result hostage.
+                    val result = withTimeoutOrNull(SOURCE_TIMEOUT_MS) { source.search(request) }.orEmpty()
                     if (result.isNotEmpty()) {
                         Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
                         result
                     } else emptyList()
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     Log.w(TAG, "Source '${source.name}' failed: ${e.message}")
                     emptyList()
@@ -84,6 +99,21 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     private val cacheDao = database.lyricCacheDao()
     private val historyDao = database.trackPlayHistoryDao()
     private val rejectedDao = database.rejectedLyricMatchDao()
+
+    /**
+     * Penalize cover/remix/fan versions so original recordings rank higher, and prefer
+     * word-timed lyrics: an AMLL hit is keyed by the exact Spotify id, so it scores a full 100;
+     * other word-level results get a small nudge over line-only ones of similar score.
+     */
+    private fun adjustForQuality(c: LyricCandidate): LyricCandidate {
+        var score = c.score
+        if (LyricMatcher.looksLikeCover(c.trackName)) score -= 30
+        if (c.source == AmllTtmlLyricsSource.SOURCE) score = 100 // exact Spotify-id match
+        else if (c.syncedLyrics?.let { LrcParser.parse(it).any { line -> line.words.isNotEmpty() } } == true) {
+            score = (score + 5).coerceAtMost(99)
+        }
+        return c.copy(score = score)
+    }
 
     /** Sort candidates by score desc; on ties, prefer the default source. */
     private fun sortCandidates(list: List<LyricCandidate>): List<LyricCandidate> =
@@ -130,6 +160,9 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     private val _currentOffsetMs = MutableStateFlow(0L)
     val currentOffsetMs: StateFlow<Long> = _currentOffsetMs.asStateFlow()
 
+    /** Bumped on every fetch; a fetch whose generation is no longer current must not publish. */
+    @Volatile private var fetchGeneration = 0L
+
     fun getCurrentTrackId(): String = currentTrackId
     fun getOffsetMs(): Long = _offsetMs
 
@@ -142,6 +175,9 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         forceOnline: Boolean = false
     ) {
         if (title.isEmpty() || artist.isEmpty()) return
+        val generation = ++fetchGeneration
+        // A previous track's search may finish after this one started; drop its result.
+        fun stale() = generation != fetchGeneration
         currentTrackId = trackId
         lastSearchTitle = title
         lastSearchArtist = artist
@@ -151,12 +187,14 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         // Clear previous song's lyrics immediately; show "Searching…" while
         // we check cache and query online sources.
         _parsedLyrics.value = emptyList()
+        _currentLine.value = null
         _lyricStatus.value = LyricStatus.Searching
 
         // Load rejected lyric IDs for blacklist filtering
         val rejectedIds = withContext(Dispatchers.IO) {
             rejectedDao.getRejectedSourceLyricIds(trackId).toSet()
         }
+        if (stale()) return
 
         // On unmetered (WiFi), skip cache and go directly to online sources.
         // Cache is only a fallback when every online source returns nothing.
@@ -164,7 +202,23 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         var cached: LyricCacheEntity? = null
         if (!forceOnline) {
             cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        } else {
+            // WiFi still searches online, but show any cached lyrics right away
+            // instead of a blank "Searching…" while every source answers.
+            val preview = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+            if (stale()) return
+            if (preview?.fetchStatus == "success" && preview.confidenceScore >= MIN_ACCEPT_SCORE) {
+                val lines = preview.syncedLyrics?.let { LrcParser.parse(it) }.orEmpty()
+                if (lines.isNotEmpty()) {
+                    _offsetMs = preview.offsetMs
+                    _currentOffsetMs.value = _offsetMs
+                    _parsedLyrics.value = lines
+                    _lyricStatus.value = LyricStatus.Synced(100)
+                    _lyricSource.value = preview.source
+                }
+            }
         }
+        if (stale()) return
         if (cached != null) {
             _offsetMs = cached.offsetMs
             _currentOffsetMs.value = _offsetMs
@@ -185,7 +239,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             }
 
             when (cached.fetchStatus) {
-                "success" -> {
+                "success" -> if (cached.confidenceScore >= MIN_ACCEPT_SCORE) {
                     cached.syncedLyrics?.let { synced ->
                         val lines = LrcParser.parse(synced)
                         if (lines.isNotEmpty()) {
@@ -195,6 +249,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                             return
                         }
                     }
+                } else {
+                    Log.i(TAG, "Ignoring low-confidence cache (${cached.confidenceScore}) for $title")
                 }
                 "not_found", "failed" -> {
                     // Always re-search when playing a song, don't wait for retry timer
@@ -224,15 +280,18 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 trackName = title,
                 artistName = artist,
                 albumName = album,
-                durationMs = durationMs
+                durationMs = durationMs,
+                trackId = trackId
             )
 
             val candidates = withContext(Dispatchers.IO) { aggregateSearch(request) }
+            if (stale()) return
 
             if (candidates.isEmpty()) {
                 Log.w(TAG, "No lyrics found for: $title - $artist")
                 // Fall back to cache on forceOnline, so WiFi users still see cached lyrics when online fails
                 if (tryFallbackToCache(trackId)) return
+                if (_parsedLyrics.value.isNotEmpty()) return // cached preview already showing
                 cacheNotfound(trackId, title, artist, album, durationMs)
                 _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.NotFound
@@ -247,9 +306,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             // The NetEase cloudsearch/pc endpoint frequently returns covers as top results,
             // and artist matching via contains() can let wrong matches through (e.g., "周杰伦-" vs "周杰伦").
             scored = scored.map { c ->
-                if (LyricMatcher.looksLikeCover(c.trackName)) {
-                    c.copy(score = c.score - 30)
-                } else c
+                adjustForQuality(c)
             }
             // DEBUG: dump every candidate's score breakdown
             scored.forEach { c ->
@@ -273,9 +330,18 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             val best = filtered.maxByOrNull { it.score }!!
             _candidates.value = sortCandidates(scored)
             Log.i(TAG, "Best match: ${best.trackName} (score: ${best.score})")
+            if (best.score < MIN_ACCEPT_SCORE) {
+                // Probably a different song with the same title: wrong lyrics are worse
+                // than none. Keep the candidates for the manual picker; cache nothing.
+                Log.w(TAG, "Best match too weak (${best.score}) for $title - $artist")
+                _parsedLyrics.value = emptyList()
+                _lyricStatus.value = LyricStatus.LowConfidence(best.score)
+                return
+            }
 
             // Cache the result
             cacheResult(trackId, title, artist, album, durationMs, best)
+            if (stale()) return
 
             // Show lyrics regardless of score. Score is only for candidate ranking,
             // never for hiding content.
@@ -286,7 +352,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 return
             }
 
-            val lines = LrcParser.parse(syncedLyrics)
+            val lines = LrcParser.parse(syncedLyrics, best.translation)
             if (lines.isEmpty()) {
                 _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.ParseError
@@ -297,7 +363,10 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             _lyricStatus.value = LyricStatus.Synced(best.score)
             _lyricSource.value = best.source
 
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
+            if (stale()) return
             Log.e(TAG, "Failed to fetch lyrics", e)
             _lyricStatus.value = LyricStatus.Error(e.message ?: "未知错误")
         }
@@ -323,7 +392,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             artist = candidate.artistName,
             album = candidate.albumName,
             durationMs = candidate.durationMs,
-            best = candidate
+            // The user picked it: trust it regardless of the automatic score.
+            best = candidate.copy(score = 100)
         )
 
         val synced = candidate.syncedLyrics
@@ -333,7 +403,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             return
         }
 
-        val lines = LrcParser.parse(synced)
+        val lines = LrcParser.parse(synced, candidate.translation)
         Log.i(TAG, "Manual select: source=${candidate.source} syncedLen=${synced.length} parsedLines=${lines.size}")
         if (lines.isEmpty()) {
             Log.w(TAG, "Manual select LRC parsed 0 lines: source=${candidate.source}")
@@ -376,7 +446,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                     trackName = searchTitle,
                     artistName = searchArtist,
                     albumName = searchAlbum,
-                    durationMs = searchDuration
+                    durationMs = searchDuration,
+                    trackId = t
                 ))
             }
             if (results.isEmpty()) {
@@ -402,9 +473,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             }
             // Penalize cover/remix/fan versions so original recordings rank higher.
             scored = scored.map { c ->
-                if (LyricMatcher.looksLikeCover(c.trackName)) {
-                    c.copy(score = c.score - 30)
-                } else c
+                adjustForQuality(c)
             }
             scored = sortCandidates(scored)
             val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
@@ -416,23 +485,23 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 cacheResult(t, searchTitle, searchArtist, searchAlbum, searchDuration, best)
                 val synced = best.syncedLyrics
                 if (!synced.isNullOrEmpty()) {
-                    _parsedLyrics.value = LrcParser.parse(synced)
+                    _parsedLyrics.value = LrcParser.parse(synced, best.translation)
                     _lyricStatus.value = LyricStatus.Synced(best.score)
                     Log.i(TAG, "reSearch auto-accepted: ${best.trackName} score=${best.score} lines=${_parsedLyrics.value.size}")
                 } else {
                     _lyricStatus.value = LyricStatus.PlainOnly
                 }
-            } else if (best != null) {
-                // Show lyrics regardless of score. Score is for candidate ranking only.
+            } else if (best != null && best.score >= MIN_ACCEPT_SCORE) {
                 val synced = best.syncedLyrics
                 if (!synced.isNullOrEmpty()) {
-                    _parsedLyrics.value = LrcParser.parse(synced)
+                    _parsedLyrics.value = LrcParser.parse(synced, best.translation)
                     _lyricStatus.value = LyricStatus.Synced(best.score)
                     Log.i(TAG, "reSearch accepted ${best.trackName} score=${best.score} lines=${_parsedLyrics.value.size}")
                 } else {
                     _lyricStatus.value = LyricStatus.PlainOnly
                 }
             } else if (scored.isNotEmpty()) {
+                _parsedLyrics.value = emptyList()
                 _lyricStatus.value = LyricStatus.LowConfidence(scored.first().score)
             }
         } catch (e: Exception) {
@@ -489,8 +558,9 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         val lines = _parsedLyrics.value
         if (lines.isEmpty()) return
         // Apply offset: adjust the playback position by the offset
-        // Positive offset = lyrics appear later, so we look at an earlier position
-        val adjustedPosition = (positionMs - _offsetMs).coerceAtLeast(0)
+        // Positive offset = lyrics appear later, so we look at an earlier position.
+        // The per-song offset stacks on top of the global one from Settings.
+        val adjustedPosition = (positionMs - _offsetMs - AppSettings.globalOffsetMs.value).coerceAtLeast(0)
         val line = LyricSyncEngine.findCurrentLine(lines, adjustedPosition)
         if (line != _currentLine.value) {
             _currentLine.value = line

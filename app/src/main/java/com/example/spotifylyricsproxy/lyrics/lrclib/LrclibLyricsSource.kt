@@ -133,5 +133,7 @@ data class LyricsSearchRequest(
     val trackName: String,
     val artistName: String,
     val albumName: String = "",
-    val durationMs: Long = 0
+    val durationMs: Long = 0,
+    /** Spotify track id, for sources indexed by it (AMLL TTML DB). */
+    val trackId: String = ""
 )

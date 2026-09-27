@@ -139,20 +139,8 @@
     <string name="settings_language_en">English</string>
     <string name="settings_language_ja">日本語</string>
     <string name="settings_group_cache">缓存与下载</string>
-    <string name="settings_auto_cache">自动缓存新播放的歌曲</string>
-    <string name="settings_auto_cache_desc">播放时自动补齐同步歌词</string>
-    <string name="settings_wifi_only">仅在 Wi-Fi 下缓存</string>
-    <string name="settings_wifi_only_desc">避免使用移动数据下载歌词</string>
-    <string name="settings_cache_album_art">缓存封面图片</string>
-    <string name="settings_cache_album_art_desc">离线时仍可显示专辑封面</string>
     <string name="settings_group_playback">播放与代理</string>
-    <string name="settings_mediasession_proxy">启用 MediaSession 代理</string>
-    <string name="settings_mediasession_proxy_desc">在系统媒体卡片显示当前歌词</string>
-    <string name="settings_notification_lyrics">允许通知中显示歌词</string>
-    <string name="settings_notification_lyrics_desc">前台服务通知标题使用当前歌词</string>
     <string name="settings_global_offset">全局歌词偏移</string>
-    <string name="settings_offset_early">-2s</string>
-    <string name="settings_offset_late">+2s</string>
     <string name="settings_group_permission">权限</string>
     <string name="settings_notification_permission">通知权限</string>
     <string name="settings_notification_granted">已授权</string>
@@ -170,10 +158,7 @@
     <string name="settings_github_desc">github.com/absswds/Spotify_lyric</string>
     <string name="settings_author">作者</string>
     <string name="settings_author_detail">absswds · Binbin Li</string>
-    <string name="settings_group_translation">歌词翻译</string>
     <string name="settings_translate_lyrics">启用歌词翻译</string>
-    <string name="settings_translate_lyrics_desc">自动检测歌词语言并翻译</string>
-    <string name="settings_translate_target">目标语言</string>
     <string name="settings_translate_target_zh">中文（简体）</string>
     <string name="settings_translate_target_tw">中文（繁体）</string>
     <string name="settings_translate_target_en">English</string>
@@ -308,8 +293,6 @@
     <string name="import_lyrics_empty">文件内容为空或格式无效</string>
 
     <!-- Scan local lyrics folder -->
-    <string name="scan_lyrics_folder">扫描本地歌词文件夹</string>
-    <string name="scan_lyrics_folder_desc">批量导入 .lrc 文件，文件名需包含歌名或艺人名</string>
     <string name="scan_lyrics_scanning">正在扫描…</string>
     <string name="scan_lyrics_complete">扫描完成：%1$d 首歌词已导入</string>
     <string name="scan_lyrics_no_match">未找到匹配的歌词文件</string>
@@ -328,7 +311,6 @@
     <string name="mobile_data_restricted_short">移动数据已限制在线搜索</string>
 
     <!-- Lyric source labels (shown in settings dialog) -->
-    <string name="lyric_source_label">当前来源：%1$s</string>
     <string name="lyric_source_cache">💾 缓存</string>
     <string name="lyric_source_lrclib">🌐 LRCLIB</string>
     <string name="lyric_source_netease">🎵 网易云</string>
@@ -337,8 +319,6 @@
 
     <!-- Mobile data settings -->
     <string name="mobile_data_search_section">移动数据搜索</string>
-    <string name="mobile_data_settings_today_allow">✓ 今天已允许使用移动数据</string>
-    <string name="mobile_data_settings_today_deny">✓ 今天已选择仅用缓存</string>
 
     <!-- Album art content description -->
     <string name="album_art_description">专辑封面</string>
@@ -350,4 +330,51 @@
     <string name="lyric_chinese_form">歌词简繁</string>
     <string name="chinese_simplified">简体</string>
     <string name="chinese_traditional">繁体</string>
+    <string name="settings_group_network">网络</string>
+    <string name="settings_mobile_strategy">使用移动数据时</string>
+    <string name="settings_mobile_strategy_desc">非 Wi-Fi 网络下是否联网搜索歌词</string>
+    <string name="settings_mobile_ask">每次询问</string>
+    <string name="settings_mobile_allow">总是允许</string>
+    <string name="settings_mobile_deny">只用缓存</string>
+    <string name="settings_global_offset_desc">对所有歌曲生效，正数表示歌词延后</string>
+    <string name="settings_clear_cache_confirm_title">清理歌词缓存？</string>
+    <string name="settings_clear_cache_confirm_message">所有已缓存的歌词、封面和时间偏移都会被删除，之后播放时会重新搜索。</string>
+    <string name="settings_clear_cache_confirm">清理</string>
+    <string name="settings_clear_cache_done">缓存已清理</string>
+    <string name="menu_quick_blur">模糊</string>
+    <string name="menu_group_lyrics">歌词</string>
+    <string name="menu_group_library">曲库</string>
+    <string name="menu_research_desc">换来源 · 选候选歌词</string>
+    <string name="menu_offset_title">这首歌的时间</string>
+    <string name="menu_offset_desc">歌词太早按 +，太晚按 −</string>
+    <string name="menu_display_desc">字号 · 粗细 · 简繁 · 翻译语言</string>
+    <string name="menu_playlists_desc">从你的 Spotify 歌单播放</string>
+    <string name="menu_precache_desc">提前下载整个歌单的歌词</string>
+    <string name="menu_cache_desc">查看已保存的歌词</string>
+    <string name="menu_settings_desc">主题 · 语言 · 网络 · 通知</string>
+    <string name="translation_off">关闭翻译</string>
+    <string name="translation_same_language">歌词已经是这个语言，无需翻译</string>
+    <string name="translation_preparing">正在准备翻译…首次使用需下载语言包</string>
+    <string name="onboarding_skip">跳过</string>
+    <string name="onboarding_next">下一步</string>
+    <string name="onboarding_start">开始使用</string>
+    <string name="onboarding_tagline">为 Spotify 配上 Apple Music 风格的同步歌词</string>
+    <string name="onboarding_feature_sync">自动跟随 Spotify 播放，歌词实时滚动</string>
+    <string name="onboarding_feature_words">支持逐字歌词（AMLL 歌词库、网易云）</string>
+    <string name="onboarding_feature_duet">对唱歌曲左右分开显示</string>
+    <string name="onboarding_feature_translate">一键翻译歌词，可选目标语言</string>
+    <string name="onboarding_feature_offline">歌词离线缓存，没网也能看</string>
+    <string name="onboarding_source">开源项目</string>
+    <string name="onboarding_permissions_title">让体验更好</string>
+    <string name="onboarding_permissions_desc">以下权限都是可选的，不开也能正常使用，之后也可以在系统设置里再开。</string>
+    <string name="onboarding_perm_notify">通知</string>
+    <string name="onboarding_perm_notify_desc">在通知栏显示当前歌词和播放控制</string>
+    <string name="onboarding_perm_listener">通知使用权</string>
+    <string name="onboarding_perm_listener_desc">离线或未登录时，从系统媒体信息识别正在播放的歌曲</string>
+    <string name="onboarding_perm_autostart">允许 Spotify 关联启动</string>
+    <string name="onboarding_perm_autostart_desc">会打开 Spotify 的应用详情：在「耗电管理」里打开“允许关联启动”（不同手机叫法和位置可能不同，也可能叫“自启动”）。开启后本应用可在后台唤醒 Spotify，不再弹出它的界面</string>
+    <string name="onboarding_allow">开启</string>
+    <string name="onboarding_open_settings">去设置</string>
+    <string name="onboarding_granted">已开启</string>
+    <string name="menu_quick_word_by_word">逐字</string>
 </resources>

@@ -2,20 +2,16 @@ package com.example.spotifylyricsproxy
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.Manifest
 import android.os.Bundle
-import android.os.Build
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.example.spotifylyricsproxy.notification.NotificationPermissionPolicy
 import com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore
 import com.example.spotifylyricsproxy.ui.navigation.AppNavigation
+import com.example.spotifylyricsproxy.ui.onboarding.OnboardingScreen
+import androidx.compose.runtime.getValue
 import com.example.spotifylyricsproxy.ui.cache.CacheViewModel
 import com.example.spotifylyricsproxy.ui.playback.LyricDisplayPreferences
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
@@ -37,18 +33,15 @@ class MainActivity : ComponentActivity() {
     private val playbackViewModel: PlaybackViewModel by viewModels()
     private val cacheViewModel: CacheViewModel by viewModels()
     private val precacheViewModel: PrecacheViewModel by viewModels()
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        android.util.Log.i("MainActivity", "POST_NOTIFICATIONS granted=$granted")
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         ThemePreferences.init(this)
         LyricDisplayPreferences.init(this)
-        requestNotificationPermissionIfNeeded()
+        com.example.spotifylyricsproxy.core.AppSettings.init(this)
+        // Permissions are offered (all optional) by the first-launch guide instead of
+        // being forced on every start.
 
         // Restore persisted Web API access token so process-kill / re-launch
         // doesn't force the user to re-authorize
@@ -82,11 +75,16 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SpotifyLyricProxyTheme {
-                AppNavigation(
-                    playbackViewModel = playbackViewModel,
-                    cacheViewModel = cacheViewModel,
-                    precacheViewModel = precacheViewModel
-                )
+                val onboardingDone by com.example.spotifylyricsproxy.core.AppSettings.onboardingDone
+                if (onboardingDone) {
+                    AppNavigation(
+                        playbackViewModel = playbackViewModel,
+                        cacheViewModel = cacheViewModel,
+                        precacheViewModel = precacheViewModel
+                    )
+                } else {
+                    OnboardingScreen(onFinish = com.example.spotifylyricsproxy.core.AppSettings::finishOnboarding)
+                }
             }
         }
     }
@@ -146,30 +144,6 @@ class MainActivity : ComponentActivity() {
                 android.util.Log.w("MainActivity", "Auth error: ${authResponse.error}")
             }
             else -> {}
-        }
-    }
-
-    private fun requestNotificationPermissionIfNeeded() {
-        val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
-
-        if (NotificationPermissionPolicy.shouldRequestPostNotifications(Build.VERSION.SDK_INT, granted)) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-
-        // Notification-access (通知使用权) is required to read Spotify's
-        // system MediaSession on Android 11+, which powers offline lyrics.
-        // Prompt once; it's a settings toggle, not a runtime permission.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-            !NotificationPermissionPolicy.hasNotificationListenerAccess(this)
-        ) {
-            NotificationPermissionPolicy.promptNotificationListenerAccess(this)
         }
     }
 

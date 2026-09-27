@@ -33,7 +33,8 @@ class NeteaseLyricsSource : LyricsSource {
     companion object {
         private const val TAG = "Netease"
         private const val SEARCH_URL = "https://music.163.com/api/cloudsearch/pc"
-        private const val LYRIC_URL = "https://music.163.com/api/song/lyric"
+        // v1 also returns `yrc` (word timing) when the song has it.
+        private const val LYRIC_URL = "https://music.163.com/api/song/lyric/v1"
         private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
 
@@ -127,7 +128,7 @@ class NeteaseLyricsSource : LyricsSource {
      * Returns the LRC text plus optional translation, or null.
      */
     private fun fetchLrc(songId: Long): LrcResult? {
-        val url = "$LYRIC_URL?id=$songId&lv=-1&kv=-1&tv=-1&rv=-1"
+        val url = "$LYRIC_URL?id=$songId&lv=-1&kv=-1&tv=-1&rv=-1&yv=-1"
 
         val request = Request.Builder()
             .url(url)
@@ -151,7 +152,9 @@ class NeteaseLyricsSource : LyricsSource {
 
         if (parsed.code != 200L) return null
 
-        val lrc = parsed.lrc?.lyric
+        // Prefer word-timed YRC; LrcParser detects the format from the text.
+        val yrc = parsed.yrc?.lyric?.takeIf { it.isNotBlank() }
+        val lrc = yrc ?: parsed.lrc?.lyric
         val translation = parsed.tlyric?.lyric
         if (lrc.isNullOrBlank()) return null
 

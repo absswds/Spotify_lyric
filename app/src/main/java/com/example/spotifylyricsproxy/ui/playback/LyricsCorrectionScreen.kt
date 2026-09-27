@@ -93,8 +93,8 @@ fun LyricsCorrectionScreen(
                                 },
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Color(0xFF4F5EDC).copy(alpha = 0.12f)
-                                else Color.White
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceContainerHigh
                             )
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -107,12 +107,12 @@ fun LyricsCorrectionScreen(
                                 Text(
                                     text = stringResource(R.string.correction_candidate_subtitle, c.artistName, c.score),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFF747B89)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "📡 " + sourceDisplayName(c.source),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF9AA0A6),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(top = 2.dp)
                                 )
                             }
@@ -151,7 +151,7 @@ fun LyricsCorrectionScreen(
                 }
             )
         },
-        containerColor = Color(0xFFF7F8FC)
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -164,7 +164,7 @@ fun LyricsCorrectionScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -175,7 +175,7 @@ fun LyricsCorrectionScreen(
                     Text(
                         text = currentTrack.artist.ifEmpty { "" },
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF747B89)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -185,13 +185,13 @@ fun LyricsCorrectionScreen(
                     Text(
                         text = stringResource(R.string.correction_current_line_label, lineText),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (currentLine != null) Color(0xFF27314A) else Color(0xFF747B89)
+                        color = if (currentLine != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (currentLine != null) {
                         Text(
                             text = stringResource(R.string.correction_line_count_format, parsedLyrics.size),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF747B89)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -201,7 +201,7 @@ fun LyricsCorrectionScreen(
                         Text(
                             text = statusLabel(status),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF747B89)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -213,7 +213,7 @@ fun LyricsCorrectionScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -232,7 +232,7 @@ fun LyricsCorrectionScreen(
                         Text(
                             text = stringResource(R.string.correction_no_offset),
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF747B89)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -242,7 +242,7 @@ fun LyricsCorrectionScreen(
                     Text(
                         text = stringResource(R.string.correction_advance_label),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF747B89)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -255,7 +255,7 @@ fun LyricsCorrectionScreen(
                     Text(
                         text = stringResource(R.string.correction_delay_label),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF747B89)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -269,7 +269,7 @@ fun LyricsCorrectionScreen(
                         Text(
                             text = stringResource(R.string.correction_reset_offset),
                             style = MaterialTheme.typography.labelLarge,
-                            color = Color(0xFF4F5EDC),
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.clickable { viewModel.resetOffset() }
                         )
                     }
@@ -282,7 +282,7 @@ fun LyricsCorrectionScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -295,7 +295,7 @@ fun LyricsCorrectionScreen(
                     OutlinedButton(
                         onClick = viewModel::reSearchLyrics,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF27314A))
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                     ) {
                         Text(stringResource(R.string.correction_research))
                     }
@@ -306,7 +306,7 @@ fun LyricsCorrectionScreen(
                         OutlinedButton(
                             onClick = viewModel::rejectCurrentMatch,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF3B30))
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                         ) {
                             Text(stringResource(R.string.correction_mark_wrong))
                         }
@@ -317,7 +317,7 @@ fun LyricsCorrectionScreen(
                         OutlinedButton(
                             onClick = viewModel::showCandidateSelection,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF27314A))
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
                         ) {
                             Text(stringResource(R.string.correction_view_candidates, candidates.size))
                         }
@@ -333,8 +333,8 @@ fun LyricsCorrectionScreen(
 private fun OffsetChip(text: String, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = Color(0xFFEFF1F6),
-        contentColor = Color(0xFF27314A),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
@@ -362,10 +362,10 @@ private fun statusLabel(status: com.example.spotifylyricsproxy.lyrics.LyricStatu
 /** Map internal source name to user-facing display label. */
 @Composable
 private fun sourceDisplayName(source: String): String = when (source) {
-    "netease" -> "🎵 ${stringResource(R.string.lyric_source_netease)}"
-    "qqmusic" -> "🎵 ${stringResource(R.string.lyric_source_qqmusic)}"
-    "lrclib" -> "🌐 LRCLIB"
-    "cache" -> "💾 ${stringResource(R.string.lyric_source_cache)}"
-    "manual" -> "📝 ${stringResource(R.string.lyric_source_manual)}"
+    "netease" -> "${stringResource(R.string.lyric_source_netease)}"
+    "qqmusic" -> "${stringResource(R.string.lyric_source_qqmusic)}"
+    "lrclib" -> "LRCLIB"
+    "cache" -> "${stringResource(R.string.lyric_source_cache)}"
+    "manual" -> "${stringResource(R.string.lyric_source_manual)}"
     else -> source
 }

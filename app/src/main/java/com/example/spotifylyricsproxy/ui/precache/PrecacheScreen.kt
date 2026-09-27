@@ -1,5 +1,7 @@
 package com.example.spotifylyricsproxy.ui.precache
 
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import android.app.Activity
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.background
@@ -55,7 +57,7 @@ import com.example.spotifylyricsproxy.spotify.webapi.SpotifyPlaylistItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrecacheScreen(viewModel: PrecacheViewModel) {
+fun PrecacheScreen(viewModel: PrecacheViewModel, onBack: () -> Unit = {}) {
     val isAuthorized by viewModel.isAuthorized.collectAsState()
     val playlists by viewModel.playlists.collectAsState()
     val cachedJobs by viewModel.cachedJobs.collectAsState()
@@ -64,7 +66,7 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
     val toastMessage by viewModel.toastMessage.collectAsState()
     val currentUserId by viewModel.currentUserId.collectAsState()
     val activity = LocalContext.current as Activity
-    val snackbarHostState = androidx.compose.material3.SnackbarHostState()
+    val snackbarHostState = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
 
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
@@ -75,7 +77,14 @@ fun PrecacheScreen(viewModel: PrecacheViewModel) {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(stringResource(R.string.precache_screen_title)) })
+            TopAppBar(
+                title = { Text(stringResource(R.string.precache_screen_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.correction_back))
+                    }
+                }
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background

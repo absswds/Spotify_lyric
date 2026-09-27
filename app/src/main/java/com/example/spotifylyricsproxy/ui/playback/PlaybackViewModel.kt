@@ -36,6 +36,8 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     companion object {
         private const val TAG = "PlaybackVM"
+        /** Quiet reconnect interval while Spotify is not running. */
+        private const val BACKGROUND_RETRY_MS = 5_000L
     }
 
     private val clientId = com.example.spotifylyricsproxy.BuildConfig.SPOTIFY_CLIENT_ID
@@ -45,6 +47,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val db = AppDatabase.getInstance(application)
     private val lyricsRepo = LyricsRepository.getInstance(db)
     private val clock = PlaybackClock()
+
+    /** Continuous playback position, read every frame by the lyric sweep (not the 300 ms tick). */
+    fun livePositionMs(): Long = clock.estimatedPositionMs()
 
     private val _estimatedPositionMs = MutableStateFlow(0L)
     val estimatedPositionMs: StateFlow<Long> = _estimatedPositionMs.asStateFlow()
@@ -88,6 +93,23 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     private val _fullTranslation = MutableStateFlow<String?>(null)
     private var translationMap: Map<Long, String> = emptyMap()
+
+    /** True while a machine translation is pending (first use also downloads a language pack). */
+    private val _isPreparingTranslation = MutableStateFlow(false)
+    val isPreparingTranslation: StateFlow<Boolean> = _isPreparingTranslation.asStateFlow()
+
+    /**
+     * Translation shipped with the lyrics (NetEase / TTML), converted for the target.
+     * These are Chinese, so they only serve Chinese targets. Instant, no ML model needed.
+     */
+    private fun shippedTranslation(line: com.example.spotifylyricsproxy.core.model.LrcLine): String? {
+        val text = line.translation ?: return null
+        return when (_targetTranslationLang.value) {
+            "zh" -> convertChineseForm(text, "simplified")
+            "zh-TW" -> convertChineseForm(text, "traditional")
+            else -> null
+        }
+    }
 
     private var translationJob: kotlinx.coroutines.Job? = null
     private var fullTranslationJob: kotlinx.coroutines.Job? = null
@@ -149,22 +171,30 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Watches connection state. If initial connection fails (e.g. Spotify not
-     * running), auto-launches Spotify after a short delay. This covers both
-     * app startup and background-to-foreground transitions.
+     * Watches connection state. If the connection fails (usually Spotify is not running),
+     * retries quietly in the background instead of pulling Spotify to the foreground;
+     * as soon as the user starts Spotify, lyrics connect on their own. Spotify is only
+     * opened when the user taps "Open Spotify" on the connect panel.
      */
     private fun autoReconnectOnFailure() {
         viewModelScope.launch {
             // Wait a moment for the initial connection attempt to resolve
             kotlinx.coroutines.delay(4000)
-            val state = repository.connectionState.value
-            if (state is SpotifyConnectionState.Error ||
-                state is SpotifyConnectionState.Disconnected ||
-                state is SpotifyConnectionState.SpotifyNotInstalled ||
-                state is SpotifyConnectionState.SpotifyNotLoggedIn
-            ) {
-                android.util.Log.i("PlaybackVM", "autoReconnect: state=$state, launching Spotify")
-                openSpotifyAndConnect()
+            while (true) {
+                val state = repository.connectionState.value
+                if (state is SpotifyConnectionState.Error ||
+                    state is SpotifyConnectionState.Disconnected ||
+                    state is SpotifyConnectionState.SpotifyNotInstalled ||
+                    state is SpotifyConnectionState.SpotifyNotLoggedIn
+                ) {
+                    android.util.Log.i("PlaybackVM", "autoReconnect: state=$state, retrying in background")
+                    // Not running: start Spotify invisibly first; the wake callback reconnects.
+                    if (state is SpotifyConnectionState.SpotifyNotInstalled && isSpotifyInstalled()) {
+                        repository.wakeSpotifyInBackground()
+                    }
+                    repository.tryConnect()
+                }
+                kotlinx.coroutines.delay(BACKGROUND_RETRY_MS)
             }
         }
     }
@@ -286,6 +316,9 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             }
         }
     }
+
+    private fun isSpotifyInstalled(): Boolean =
+        getApplication<Application>().packageManager.getLaunchIntentForPackage("com.spotify.music") != null
 
     fun openSpotifyAndConnect() {
         val app = getApplication<Application>()
@@ -464,6 +497,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             fullTranslationJob?.cancel()
             translationJob?.cancel()
             translationMap = emptyMap()
+            _isPreparingTranslation.value = false
             _translatedLine.value = null
             _detectedLyricsLang.value = null
             _fullTranslation.value = null
@@ -518,6 +552,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     _translatedLine.value = null
                     return@collect
                 }
+                shippedTranslation(line)?.let {
+                    _translatedLine.value = it
+                    return@collect
+                }
                 val tlyricText = translationMap[line.startMs]
                 if (tlyricText != null) {
                     _translatedLine.value = tlyricText
@@ -564,10 +602,30 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     /** Translate all lines together (better context than line-by-line). */
     private fun translateLyricsInFull(lines: List<com.example.spotifylyricsproxy.core.model.LrcLine>) {
         fullTranslationJob?.cancel()
+        // Lyrics that ship their own translation need no model at all.
+        val textLines = lines.filter { it.text.isNotBlank() }
+        if (textLines.isNotEmpty() && textLines.all { shippedTranslation(it) != null }) {
+            _isPreparingTranslation.value = false
+            _translatedLine.value = lyricsRepo.currentLine.value?.let { shippedTranslation(it) }
+            return
+        }
         fullTranslationJob = viewModelScope.launch {
+            _isPreparingTranslation.value = true
+            val self = coroutineContext[kotlinx.coroutines.Job]
+            try {
+                translateLyricsInFullInner(lines)
+            } finally {
+                // A replacement job may already be running; only the current one clears the flag.
+                if (fullTranslationJob === self) _isPreparingTranslation.value = false
+            }
+        }
+    }
+
+    private suspend fun translateLyricsInFullInner(lines: List<com.example.spotifylyricsproxy.core.model.LrcLine>) {
+        run {
             val target = _targetTranslationLang.value
             val fullText = lines.joinToString("\n") { it.text }
-            if (fullText.isBlank()) return@launch
+            if (fullText.isBlank()) return@run
             try {
                 val detected = translationService.detectLanguage(fullText)
                 _detectedLyricsLang.value = detected
@@ -575,13 +633,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                     // Same language — no translation needed.
                     _fullTranslation.value = null
                     _translatedLine.value = null
-                    return@launch
+                    return@run
                 }
                 val translated = translationService.translate(fullText, detected, target)
                 if (translated == null) {
                     _fullTranslation.value = null
                     _translatedLine.value = null
-                    return@launch
+                    return@run
                 }
                 val translatedLines = translated.split("\n")
                 if (translatedLines.size == lines.size) {

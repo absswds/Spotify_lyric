@@ -2,56 +2,46 @@ package com.example.spotifylyricsproxy.ui.playback
 
 import android.content.res.Configuration
 import android.graphics.Bitmap
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -59,80 +49,114 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.Immutable
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import com.example.spotifylyricsproxy.ui.playback.ImmersiveAlbumBackground
-import com.example.spotifylyricsproxy.ui.playback.ImmersiveLyricsBlock
-import com.example.spotifylyricsproxy.ui.playback.ImmersiveSeekControl
-import com.example.spotifylyricsproxy.ui.playback.ImmersiveTrackHeader
-import com.example.spotifylyricsproxy.ui.playback.AlbumPalette
-import com.example.spotifylyricsproxy.ui.theme.GlassSurface
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.example.spotifylyricsproxy.R
+import com.example.spotifylyricsproxy.core.AppSettings
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.lyrics.LyricStatus
 import com.example.spotifylyricsproxy.spotify.remote.PlaybackOptions
 import com.example.spotifylyricsproxy.spotify.remote.RepeatMode
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyConnectionState
 import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
-import kotlinx.coroutines.launch
+
+/**
+ * Everything the three player layouts need, gathered once from the ViewModel.
+ * Positions are lambdas: only the progress bar and the lyric sweep read them, so the
+ * 300 ms clock tick no longer recomposes the whole screen.
+ */
+@Immutable
+private data class PlayerUiState(
+    val connectionState: SpotifyConnectionState,
+    val trackInfo: SpotifyTrackInfo,
+    val albumArt: Bitmap?,
+    val palette: AlbumPalette,
+    /** Playback position (300 ms ticks) for the progress bar. */
+    val positionMs: () -> Long,
+    /** Live position with per-song + global offsets removed, for the per-frame lyric sweep. */
+    val lyricPositionMs: () -> Long,
+    val currentLine: LrcLine?,
+    val lines: List<LrcLine>,
+    val lyricStatus: LyricStatus,
+    val translatedLine: String?,
+    val isTranslationEnabled: Boolean,
+    val targetTranslationLang: String,
+    /** Language detected in the current lyrics (null until known). */
+    val detectedLyricsLang: String?,
+    val playbackOptions: PlaybackOptions,
+    val isSpotifyInstalled: Boolean
+) {
+    val isPlaying get() = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty()
+    val hasTrack get() = connectionState is SpotifyConnectionState.Connected || trackInfo.trackId.isNotEmpty()
+}
+
+private class PlayerActions(
+    val onSeek: (Long) -> Unit,
+    val onPlayPause: () -> Unit,
+    val onSkipNext: () -> Unit,
+    val onSkipPrevious: () -> Unit,
+    val onToggleShuffle: () -> Unit,
+    val onCycleRepeat: () -> Unit,
+    /** null turns translation off; a language tag turns it on with that target. */
+    val onSelectTranslation: (String?) -> Unit,
+    val onOpenMenu: () -> Unit,
+    val onSearchManually: () -> Unit,
+    val onConnect: () -> Unit,
+    val onOpenSpotify: () -> Unit,
+    val onAllowMobileData: () -> Unit,
+    val onDenyMobileData: () -> Unit
+)
 
 @Composable
 fun PlaybackScreen(
     viewModel: PlaybackViewModel,
     onOpenDrawer: () -> Unit = {},
-    onOpenPlaylist: () -> Unit = {},
     onOpenLyricsCorrection: () -> Unit = {},
-    onOpenCache: () -> Unit = {},
-    onOpenPrecache: () -> Unit = {},
-    onOpenSettings: () -> Unit = {},
     showLyricSettingsFromDrawer: Boolean = false,
     onLyricSettingsShown: () -> Unit = {}
 ) {
@@ -140,20 +164,22 @@ fun PlaybackScreen(
     val playbackOptions by viewModel.playbackOptions.collectAsState()
     val trackInfo by viewModel.currentTrack.collectAsState()
     val albumArt by viewModel.albumArt.collectAsState()
-    val estimatedPositionMs by viewModel.estimatedPositionMs.collectAsState()
+    val positionState = viewModel.estimatedPositionMs.collectAsState()
     val currentLyricLine by viewModel.currentLyricLine.collectAsState()
     val parsedLyrics by viewModel.parsedLyrics.collectAsState()
     val lyricStatus by viewModel.lyricStatus.collectAsState()
     val translatedLine by viewModel.translatedLine.collectAsState()
     val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
     val targetTranslationLang by viewModel.targetTranslationLang.collectAsState()
-    val lyricSource by viewModel.lyricSource.collectAsState()
-    val palette = remember(albumArt) { albumPalette(albumArt) }
-    val showCandidatePicker by viewModel.showCandidatePicker.collectAsState()
+    val detectedLyricsLang by viewModel.detectedLyricsLang.collectAsState()
+    val isPreparingTranslation by viewModel.isPreparingTranslation.collectAsState()
+    val preparingText = stringResource(R.string.translation_preparing)
+    val songOffsetMs by viewModel.currentOffsetMs.collectAsState()
     val showMobileDataDialog by viewModel.showMobileDataDialog.collectAsState()
-    var lyricsExpanded by remember { mutableStateOf(false) }
+    val palette = remember(albumArt) { albumPalette(albumArt) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isTablet = configuration.smallestScreenWidthDp >= 600
     var showLyricDisplaySettings by remember { mutableStateOf(false) }
     LaunchedEffect(showLyricSettingsFromDrawer) {
         if (showLyricSettingsFromDrawer) {
@@ -164,230 +190,97 @@ fun PlaybackScreen(
     val isSpotifyInstalled = rememberIsSpotifyInstalled()
     val activity = LocalContext.current as? android.app.Activity
 
-    DisposableEffect(activity, isLandscape, lyricsExpanded) {
+    // Phones in landscape go full-bleed; tablets keep their system bars.
+    val hideSystemBars = isLandscape && !isTablet
+    DisposableEffect(activity, hideSystemBars) {
         val window = activity?.window
-        val decorView = window?.decorView
-        val controller = if (window != null && decorView != null) {
-            WindowInsetsControllerCompat(window, decorView)
+        val controller = window?.let { WindowInsetsControllerCompat(it, it.decorView) }
+        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (hideSystemBars) {
+            controller?.hide(WindowInsetsCompat.Type.systemBars())
         } else {
-            null
-        }
-
-        if (controller != null) {
-            controller.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            if (isLandscape || lyricsExpanded) {
-                controller.hide(WindowInsetsCompat.Type.systemBars())
-            } else {
-                controller.show(WindowInsetsCompat.Type.systemBars())
-            }
-        }
-
-        onDispose {
             controller?.show(WindowInsetsCompat.Type.systemBars())
         }
+        onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
     }
+
+    val allowMobileData = {
+        LyricDisplayPreferences.setTodayMobileDataChoice("allow")
+        viewModel.confirmMobileDataFetch()
+    }
+    val denyMobileData = {
+        LyricDisplayPreferences.setTodayMobileDataChoice("deny")
+        viewModel.dismissMobileDataDialog()
+    }
+
+    // Stable lambdas (remembered once) that read the latest values when invoked.
+    val currentSongOffset = rememberUpdatedState(songOffsetMs)
+    val positionLambda = remember(positionState) { { positionState.value } }
+    val lyricPositionLambda = remember(viewModel) {
+        { viewModel.livePositionMs() - currentSongOffset.value - AppSettings.globalOffsetMs.longValue }
+    }
+
+    val state = PlayerUiState(
+        connectionState = connectionState,
+        trackInfo = trackInfo,
+        albumArt = albumArt,
+        palette = palette,
+        positionMs = positionLambda,
+        lyricPositionMs = lyricPositionLambda,
+        currentLine = currentLyricLine,
+        lines = parsedLyrics,
+        lyricStatus = lyricStatus,
+        // Say something while a language pack downloads instead of staying silent.
+        translatedLine = translatedLine
+            ?: preparingText.takeIf { isTranslationEnabled && isPreparingTranslation },
+        isTranslationEnabled = isTranslationEnabled,
+        targetTranslationLang = targetTranslationLang,
+        detectedLyricsLang = detectedLyricsLang,
+        playbackOptions = playbackOptions,
+        isSpotifyInstalled = isSpotifyInstalled
+    )
+    val actions = PlayerActions(
+        onSeek = viewModel::seekTo,
+        onPlayPause = viewModel::togglePlayPause,
+        onSkipNext = viewModel::skipNext,
+        onSkipPrevious = viewModel::skipPrevious,
+        onToggleShuffle = viewModel::toggleShuffle,
+        onCycleRepeat = viewModel::cycleRepeat,
+        onSelectTranslation = { lang ->
+            if (lang == null) {
+                viewModel.setTranslationEnabled(false)
+            } else {
+                if (lang != targetTranslationLang) viewModel.setTranslationTargetLang(lang)
+                if (!isTranslationEnabled) viewModel.setTranslationEnabled(true)
+            }
+        },
+        onOpenMenu = onOpenDrawer,
+        onSearchManually = onOpenLyricsCorrection,
+        onConnect = viewModel::connect,
+        onOpenSpotify = viewModel::openSpotifyAndConnect,
+        onAllowMobileData = allowMobileData,
+        onDenyMobileData = denyMobileData
+    )
 
     Scaffold(
         containerColor = Color.Transparent,
         contentWindowInsets = WindowInsets(0)
     ) { padding ->
-        // Root box draws behind the status bar. The gradient is computed from the
-        // album palette and fills the entire screen so the top never shows black.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            palette.deep,
-                            palette.mid,
-                            Color(0xFF0A0D14)
-                        )
-                    )
-                )
-        ) {
-        // Content is allowed to draw under the status bar; only bottom nav inset
-        // (when present on non-playback routes) is respected via padding.
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .background(palette.deep)
         ) {
-            if (lyricsExpanded && parsedLyrics.isNotEmpty()) {
-                ExpandedLyricsView(
-                    lines = parsedLyrics,
-                    currentLine = currentLyricLine,
-                    estimatedPositionMs = estimatedPositionMs,
-                    durationMs = trackInfo.durationMs,
-                    isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
-                    accent = palette.accent,
-                    playbackOptions = playbackOptions,
-                    translatedLine = translatedLine,
-                    isTranslationEnabled = isTranslationEnabled,
-                    onSeek = viewModel::seekTo,
-                    onPlayPause = viewModel::togglePlayPause,
-                    onToggleShuffle = viewModel::toggleShuffle,
-                    onCycleRepeat = viewModel::cycleRepeat,
-                    onCollapse = { lyricsExpanded = false }
-                )
-            } else if (isLandscape) {
-                LandscapePlaybackLayout(
-                    albumArt = albumArt,
-                    trackInfo = trackInfo,
-                    connectionState = connectionState,
-                    palette = palette,
-                    estimatedPositionMs = estimatedPositionMs,
-                    durationMs = trackInfo.durationMs,
-                    isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
-                    isConnected = connectionState is SpotifyConnectionState.Connected
-                            || trackInfo.trackId.isNotEmpty(),
-                    parsedLyrics = parsedLyrics,
-                    currentLyricLine = currentLyricLine,
-                    lyricStatus = lyricStatus,
-                    translatedLine = translatedLine,
-                    isTranslationEnabled = isTranslationEnabled,
-                    playbackOptions = playbackOptions,
-                    isSpotifyInstalled = isSpotifyInstalled,
-                    onSeek = viewModel::seekTo,
-                    onPlayPause = viewModel::togglePlayPause,
-                    onSkipNext = viewModel::skipNext,
-                    onSkipPrevious = viewModel::skipPrevious,
-                    onConnect = viewModel::connect,
-                    onOpenSpotify = viewModel::openSpotifyAndConnect,
-                    onOpenPlaylist = onOpenPlaylist,
-                    onOpenLyricsCorrection = onOpenLyricsCorrection,
-                    onDisconnect = viewModel::disconnect,
-                    onToggleShuffle = viewModel::toggleShuffle,
-                    onCycleRepeat = viewModel::cycleRepeat,
-                    onLyricDisplaySettings = { showLyricDisplaySettings = true },
-                    onAllowMobileData = {
-                        LyricDisplayPreferences.setTodayMobileDataChoice("allow")
-                        viewModel.confirmMobileDataFetch()
-                    },
-                    onDenyMobileData = {
-                        LyricDisplayPreferences.setTodayMobileDataChoice("deny")
-                        viewModel.dismissMobileDataDialog()
-                    }
-                )
-            } else {
-                // Immersive portrait layout
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // Full-screen blurred cover + palette wash; this prevents the lower page
-                    // from falling into a detached black field.
-                    AmbientAlbumBackdrop(
-                        albumArt = albumArt,
-                        palette = palette
-                    )
-
-                    // Clear cover art stage at the top.
-                    ImmersiveAlbumBackground(
-                        albumArt = albumArt,
-                        palette = palette
-                    )
-
-                    // Interactive control respects the status inset; the album art does not.
-                    CompactTopBar(
-                        state = connectionState,
-                        onOpenDrawer = onOpenDrawer,
-                        showStatus = false,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .statusBarsPadding()
-                            .padding(top = 8.dp, end = 16.dp)
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .navigationBarsPadding()
-                    ) {
-                        // The art stage owns the status-bar area; metadata starts only after it.
-                        Spacer(
-                            modifier = Modifier.height(
-                                with(LocalConfiguration.current) {
-                                    screenHeightDp.dp * 0.36f
-                                }
-                            )
-                        )
-
-                        // Track header with compact controls
-                        ImmersiveTrackHeader(
-                            trackInfo = trackInfo,
-                            connectionState = connectionState,
-                            isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
-                            isConnected = connectionState is SpotifyConnectionState.Connected
-                                    || trackInfo.trackId.isNotEmpty(),
-                            onPlayPause = viewModel::togglePlayPause,
-                            onSkipNext = viewModel::skipNext,
-                            onSkipPrevious = viewModel::skipPrevious,
-                            modifier = Modifier.padding(top = 28.dp)
-                        )
-
-                        // Progress lives directly below the title, before lyrics: never hidden by
-                        // the gesture/navigation area or squeezed below a weighted list.
-                        ImmersiveSeekControl(
-                            estimatedPositionMs = estimatedPositionMs,
-                            durationMs = trackInfo.durationMs,
-                            onSeek = viewModel::seekTo,
-                            modifier = Modifier
-                                .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 14.dp)
-                        )
-
-                        // Lyrics (fixed anchor, uniform blur). Show them whenever
-                        // a track is known — including the offline fallback where
-                        // App Remote is disconnected but the system MediaSession
-                        // supplies the track.
-                        val showLyrics = connectionState is SpotifyConnectionState.Connected ||
-                                trackInfo.trackId.isNotEmpty()
-                        if (showLyrics) {
-                            ImmersiveLyricsBlock(
-                                currentLine = currentLyricLine,
-                                allLines = parsedLyrics,
-                                status = lyricStatus,
-                                translatedLine = translatedLine,
-                                isTranslationEnabled = isTranslationEnabled,
-                                isPlaying = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty(),
-                                positionMs = estimatedPositionMs,
-                                config = LyricDisplayPreferences.resolvedConfig(),
-                                onSeek = viewModel::seekTo,
-                                onAllowMobileData = {
-                                    LyricDisplayPreferences.setTodayMobileDataChoice("allow")
-                                    viewModel.confirmMobileDataFetch()
-                                },
-                                onDenyMobileData = {
-                                    LyricDisplayPreferences.setTodayMobileDataChoice("deny")
-                                    viewModel.dismissMobileDataDialog()
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 24.dp)
-                            )
-                        } else {
-                            ConnectActionPanel(
-                                state = connectionState,
-                                accent = palette.accent,
-                                isSpotifyInstalled = isSpotifyInstalled,
-                                onConnect = viewModel::connect,
-                                onOpenSpotify = viewModel::openSpotifyAndConnect,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-                }
+            when {
+                isLandscape -> SplitPlayerLayout(state, actions, scale = if (isTablet) 1.25f else 1f)
+                isTablet -> TabletPortraitLayout(state, actions)
+                else -> PhonePortraitLayout(state, actions)
             }
         }
-        } // close background box (full-screen gradient)
 
         if (showLyricDisplaySettings) {
             LyricDisplaySettingsDialog(
-                isTranslationEnabled = isTranslationEnabled,
-                onSetTranslationEnabled = viewModel::setTranslationEnabled,
-                targetTranslationLang = targetTranslationLang,
-                onSetTargetTranslationLang = viewModel::setTranslationTargetLang,
-                currentSource = lyricSource,
                 onDismiss = { showLyricDisplaySettings = false }
             )
         }
@@ -398,75 +291,371 @@ fun PlaybackScreen(
                 title = { Text(stringResource(R.string.mobile_data_dialog_title)) },
                 text = { Text(stringResource(R.string.mobile_data_dialog_message)) },
                 confirmButton = {
-                    TextButton(onClick = {
-                        LyricDisplayPreferences.setTodayMobileDataChoice("allow")
-                        viewModel.confirmMobileDataFetch()
-                    }) {
-                        Text(stringResource(R.string.mobile_data_allow))
-                    }
+                    TextButton(onClick = allowMobileData) { Text(stringResource(R.string.mobile_data_allow)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = {
-                        LyricDisplayPreferences.setTodayMobileDataChoice("deny")
-                        viewModel.dismissMobileDataDialog()
-                    }) {
-                        Text(stringResource(R.string.mobile_data_deny))
-                    }
+                    TextButton(onClick = denyMobileData) { Text(stringResource(R.string.mobile_data_deny)) }
                 }
             )
         }
     }
 }
 
-@Composable
-private fun CompactTopBar(
-    state: SpotifyConnectionState,
-    onOpenDrawer: () -> Unit,
-    showStatus: Boolean = true,
-    modifier: Modifier = Modifier
-) {
+// ---------------------------------------------------------------------------
+// Layouts
+// ---------------------------------------------------------------------------
 
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        if (showStatus) {
-            // Connection indicator — compact
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val connected = state is SpotifyConnectionState.Connected
+/** Phone portrait: clear cover stage on top, header + scrubber, lyrics fill the rest. */
+@Composable
+private fun PhonePortraitLayout(state: PlayerUiState, actions: PlayerActions) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        AmbientAlbumBackdrop(albumArt = state.albumArt, palette = state.palette, animate = state.isPlaying)
+        ImmersiveAlbumBackground(albumArt = state.albumArt, palette = state.palette)
+
+        PlayerChrome(
+            state = state,
+            actions = actions,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(top = 6.dp, end = 12.dp)
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+        ) {
+            Spacer(modifier = Modifier.height(LocalConfiguration.current.screenHeightDp.dp * 0.36f))
+            ImmersiveTrackHeader(
+                trackInfo = state.trackInfo,
+                connectionState = state.connectionState,
+                isPlaying = state.isPlaying,
+                isConnected = state.hasTrack,
+                onPlayPause = actions.onPlayPause,
+                onSkipNext = actions.onSkipNext,
+                onSkipPrevious = actions.onSkipPrevious,
+                modifier = Modifier.padding(top = 28.dp)
+            )
+            ReadPosition(state.positionMs) { position ->
+                ImmersiveSeekControl(
+                    estimatedPositionMs = position,
+                    durationMs = state.trackInfo.durationMs,
+                    onSeek = actions.onSeek,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 14.dp)
+                )
+            }
+            if (state.hasTrack) {
+                PlayerLyrics(
+                    state = state,
+                    actions = actions,
+                    config = LyricDisplayPreferences.resolvedConfig(),
+                    textScale = 1f,
+                    anchorFraction = 0.12f,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 14.dp)
+                        .fadingEdges(top = 0.06f, bottom = 0.18f)
+                )
+            } else {
+                ConnectActionPanel(
+                    state = state.connectionState,
+                    accent = state.palette.accent,
+                    isSpotifyInstalled = state.isSpotifyInstalled,
+                    onConnect = actions.onConnect,
+                    onOpenSpotify = actions.onOpenSpotify,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 24.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Landscape (phone and tablet): Apple-Music-style split. Left, one centred block whose
+ * every row shares the cover's width; right, left-aligned lyrics with faded edges.
+ */
+@Composable
+private fun SplitPlayerLayout(state: PlayerUiState, actions: PlayerActions, scale: Float) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        PlayerBackground(state)
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            // Phones are short in landscape: a smaller cover leaves room for the rest,
+            // and the whole block is centred on the cover's axis.
+            val compact = scale <= 1f
+            val coverSize = if (compact) min(maxHeight * 0.46f, maxWidth * 0.26f) else min(maxHeight * 0.58f, maxWidth * 0.34f)
+            Row(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(if (connected) Color(0xFF34C759) else Color(0xFFFF3B30).copy(alpha = 0.6f))
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stateLabel(state),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.72f)
-                )
+                        .weight(0.45f)
+                        .fillMaxHeight()
+                        .padding(start = 24.dp * scale, top = 20.dp * scale, bottom = 12.dp * scale),
+                    contentAlignment = if (compact) Alignment.Center else Alignment.TopCenter
+                ) {
+                    NowPlayingBlock(
+                        state = state,
+                        actions = actions,
+                        coverSize = coverSize,
+                        scale = scale,
+                        compact = compact
+                    )
+                }
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .weight(0.55f)
+                        .fillMaxHeight()
+                ) {
+                    if (state.hasTrack) {
+                        PlayerLyrics(
+                            state = state,
+                            actions = actions,
+                            config = LyricDisplayPreferences.resolvedConfig(),
+                            textScale = scale * 1.08f,
+                            anchorFraction = 0.34f,
+                            contentPadding = PaddingValues(top = maxHeight * 0.34f, bottom = maxHeight * 0.55f),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 32.dp * scale)
+                                .fadingEdges(top = 0.22f, bottom = 0.30f)
+                        )
+                    } else {
+                        ConnectActionPanel(
+                            state = state.connectionState,
+                            accent = state.palette.accent,
+                            isSpotifyInstalled = state.isSpotifyInstalled,
+                            onConnect = actions.onConnect,
+                            onOpenSpotify = actions.onOpenSpotify,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp)
+                                .wrapContentSize(Alignment.Center)
+                        )
+                    }
+                }
             }
-        } else {
-            // Minimal spacer in landscape to keep menu right-aligned
-            Spacer(modifier = Modifier.width(1.dp))
-        }
 
-        GlassSurface(
-            modifier = Modifier.size(42.dp),
-            shape = CircleShape,
-            glassAlpha = 0.12f,
-            borderAlpha = 0.20f
+            PlayerChrome(
+                state = state,
+                actions = actions,
+                scale = scale,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 14.dp)
+            )
+        }
+    }
+}
+
+/** Tablet portrait: cover and controls side by side on top, full-width lyrics below. */
+@Composable
+private fun TabletPortraitLayout(state: PlayerUiState, actions: PlayerActions) {
+    val scale = 1.3f
+    Box(modifier = Modifier.fillMaxSize()) {
+        PlayerBackground(state)
+
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
         ) {
-            IconButton(
-                onClick = onOpenDrawer,
-                modifier = Modifier.fillMaxSize()
-            ) {
+            val coverSize = maxWidth * 0.30f
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 40.dp, end = 40.dp, top = 64.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(32.dp)
+                ) {
+                    AlbumCover(state.albumArt, state.isPlaying, coverSize)
+                    Column(modifier = Modifier.weight(1f)) {
+                        TrackMeta(state.trackInfo, scale)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LiveProgressBar(state, actions, scale)
+                        TransportRow(state, actions, scale)
+                    }
+                }
+                if (state.hasTrack) {
+                    PlayerLyrics(
+                        state = state,
+                        actions = actions,
+                        config = LyricDisplayPreferences.resolvedConfig(),
+                        textScale = scale,
+                        anchorFraction = 0.2f,
+                        contentPadding = PaddingValues(top = 48.dp, bottom = 320.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 36.dp)
+                            .fadingEdges(top = 0.10f, bottom = 0.25f)
+                    )
+                } else {
+                    ConnectActionPanel(
+                        state = state.connectionState,
+                        accent = state.palette.accent,
+                        isSpotifyInstalled = state.isSpotifyInstalled,
+                        onConnect = actions.onConnect,
+                        onOpenSpotify = actions.onOpenSpotify,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(40.dp)
+                            .wrapContentSize(Alignment.Center)
+                    )
+                }
+            }
+
+            PlayerChrome(
+                state = state,
+                actions = actions,
+                scale = scale,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 18.dp)
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Building blocks
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun PlayerBackground(state: PlayerUiState) {
+    MeshGradientBackground(albumArt = state.albumArt, palette = state.palette, animate = state.isPlaying)
+    // A light left→right veil keeps the lyric column calm without flattening the colours.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.08f), Color.Black.copy(alpha = 0.24f))))
+    )
+}
+
+@Composable
+private fun PlayerLyrics(
+    state: PlayerUiState,
+    actions: PlayerActions,
+    config: LyricDisplayConfig,
+    textScale: Float,
+    anchorFraction: Float,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(bottom = 120.dp)
+) {
+    ImmersiveLyricsBlock(
+        currentLine = state.currentLine,
+        allLines = state.lines,
+        status = state.lyricStatus,
+        translatedLine = state.translatedLine,
+        isTranslationEnabled = state.isTranslationEnabled,
+        isPlaying = state.isPlaying,
+        positionMs = state.lyricPositionMs,
+        config = config,
+        onSeek = actions.onSeek,
+        onAllowMobileData = actions.onAllowMobileData,
+        onDenyMobileData = actions.onDenyMobileData,
+        onSearchManually = actions.onSearchManually,
+        textScale = textScale,
+        anchorFraction = anchorFraction,
+        contentPadding = contentPadding,
+        modifier = modifier
+    )
+}
+
+/**
+ * Cover pinned near the top at full height budget; title, progress and transport share
+ * the space below it evenly so the lower half of the screen is used, not left empty.
+ */
+@Composable
+private fun NowPlayingBlock(state: PlayerUiState, actions: PlayerActions, coverSize: Dp, scale: Float, compact: Boolean = false) {
+    if (compact) {
+        // Phone landscape: fixed rhythm, everything centred under the cover.
+        Column(
+            modifier = Modifier.width(coverSize * 1.35f),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            AlbumCover(state.albumArt, state.isPlaying, coverSize)
+            Spacer(modifier = Modifier.height(16.dp))
+            TrackMeta(state.trackInfo, scale, centered = true)
+            Spacer(modifier = Modifier.height(10.dp))
+            LiveProgressBar(state, actions, scale)
+            TransportRow(state, actions, scale)
+        }
+        return
+    }
+    Column(modifier = Modifier.width(coverSize).fillMaxHeight()) {
+        AlbumCover(state.albumArt, state.isPlaying, coverSize)
+        Spacer(modifier = Modifier.weight(1f))
+        TrackMeta(state.trackInfo, scale)
+        Spacer(modifier = Modifier.weight(0.8f))
+        LiveProgressBar(state, actions, scale)
+        Spacer(modifier = Modifier.weight(0.8f))
+        TransportRow(state, actions, scale)
+        Spacer(modifier = Modifier.weight(0.6f))
+    }
+}
+
+/** Own recomposition scope: reading the position here keeps the tick from reaching the parent. */
+@Composable
+private fun ReadPosition(position: () -> Long, content: @Composable (Long) -> Unit) {
+    content(position())
+}
+
+@Composable
+private fun LiveProgressBar(state: PlayerUiState, actions: PlayerActions, scale: Float) {
+    ReadPosition(state.positionMs) { position ->
+        AppleProgressBar(
+            positionMs = position,
+            durationMs = state.trackInfo.durationMs,
+            onSeek = actions.onSeek,
+            scale = scale
+        )
+    }
+}
+
+/** Cover that settles back when paused and springs forward when playback resumes. */
+@Composable
+private fun AlbumCover(albumArt: Bitmap?, isPlaying: Boolean, size: Dp) {
+    val coverScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1f else 0.86f,
+        animationSpec = spring(dampingRatio = 0.62f, stiffness = 220f),
+        label = "coverScale"
+    )
+    val shape = RoundedCornerShape(size * 0.035f)
+    Box(
+        modifier = Modifier
+            .size(size)
+            .graphicsLayer {
+                scaleX = coverScale
+                scaleY = coverScale
+            }
+            .shadow(elevation = 24.dp * coverScale, shape = shape, ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(shape)
+            .background(Color.White.copy(alpha = 0.08f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Crossfade(targetState = albumArt, animationSpec = tween(400), label = "coverCrossfade") { art ->
+            if (art != null) {
+                Image(
+                    bitmap = art.asImageBitmap(),
+                    contentDescription = stringResource(R.string.album_art_description),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    filterQuality = FilterQuality.High
+                )
+            } else {
                 Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = stringResource(R.string.playback_cd_more),
-                    tint = Color.White.copy(alpha = 0.9f)
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = stringResource(R.string.playback_cd_album_art_placeholder),
+                    modifier = Modifier.fillMaxSize(0.3f),
+                    tint = Color.White.copy(alpha = 0.6f)
                 )
             }
         }
@@ -474,51 +663,214 @@ private fun CompactTopBar(
 }
 
 @Composable
-private fun PlaylistEntryButton(
-    accent: Color,
-    onOpen: () -> Unit
-) {
-    Card(
+private fun TrackMeta(trackInfo: SpotifyTrackInfo, scale: Float, centered: Boolean = false) {
+    val align = if (centered) TextAlign.Center else TextAlign.Start
+    val rowModifier = if (centered) Modifier.fillMaxWidth() else Modifier
+    Text(
+        text = trackInfo.title.ifEmpty { stringResource(R.string.playback_title_waiting) },
+        fontSize = 16.sp * scale,
+        fontWeight = FontWeight.SemiBold,
+        color = Color.White,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = align,
+        modifier = rowModifier
+    )
+    val subtitle = listOf(trackInfo.artist, trackInfo.album).filter { it.isNotBlank() }.joinToString(" — ")
+    if (subtitle.isNotEmpty()) {
+        Text(
+            text = subtitle,
+            fontSize = 14.sp * scale,
+            color = Color.White.copy(alpha = 0.62f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = align,
+            modifier = rowModifier
+        )
+    }
+}
+
+/** Shuffle · previous · play/pause · next · repeat, bare icons spread across the row. */
+@Composable
+private fun TransportRow(state: PlayerUiState, actions: PlayerActions, scale: Float) {
+    val enabled = state.hasTrack
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onOpen),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.10f))
+            .padding(top = 4.dp * scale),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.List,
-                contentDescription = stringResource(R.string.nav_playlist),
-                tint = accent,
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.playback_playlist_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = stringResource(R.string.playback_playlist_subtitle),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.56f)
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = stringResource(R.string.playback_cd_playlist),
-                tint = Color.White.copy(alpha = 0.48f)
+        ModeToggle(
+            icon = Icons.Filled.Shuffle,
+            active = state.playbackOptions.isShuffling,
+            contentDescription = stringResource(R.string.playback_cd_shuffle),
+            scale = scale,
+            onClick = actions.onToggleShuffle
+        )
+        BareIconButton(onClick = actions.onSkipPrevious, size = 48.dp * scale, enabled = enabled) {
+            Icon(Icons.Filled.SkipPrevious, stringResource(R.string.playback_cd_previous), Modifier.size(36.dp * scale), tint = Color.White)
+        }
+        BareIconButton(onClick = actions.onPlayPause, size = 56.dp * scale, enabled = enabled) {
+            PlayPauseGlyph(isPlaying = state.isPlaying, size = 34.dp * scale)
+        }
+        BareIconButton(onClick = actions.onSkipNext, size = 48.dp * scale, enabled = enabled) {
+            Icon(Icons.Filled.SkipNext, stringResource(R.string.playback_cd_next), Modifier.size(36.dp * scale), tint = Color.White)
+        }
+        ModeToggle(
+            icon = if (state.playbackOptions.repeatMode == RepeatMode.TRACK) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+            active = state.playbackOptions.repeatMode != RepeatMode.OFF,
+            contentDescription = stringResource(R.string.playback_cd_repeat),
+            scale = scale,
+            onClick = actions.onCycleRepeat
+        )
+    }
+}
+
+/** A bare icon whose "on" state is full white plus a small dot underneath — no filled circle. */
+@Composable
+private fun ModeToggle(
+    icon: ImageVector,
+    active: Boolean,
+    contentDescription: String,
+    scale: Float,
+    onClick: () -> Unit
+) {
+    BareIconButton(onClick = onClick, size = 36.dp * scale) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(20.dp * scale),
+            tint = Color.White.copy(alpha = if (active) 1f else 0.45f)
+        )
+        if (active) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 2.dp)
+                    .size(4.dp * scale)
+                    .clip(CircleShape)
+                    .background(Color.White)
             )
         }
     }
 }
+
+/** Top-right controls: translation language picker and the menu. */
+@Composable
+private fun PlayerChrome(
+    state: PlayerUiState,
+    actions: PlayerActions,
+    modifier: Modifier = Modifier,
+    scale: Float = 1f
+) {
+    var pickerOpen by remember { mutableStateOf(false) }
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box {
+            ModeToggle(
+                icon = Icons.Filled.Translate,
+                active = state.isTranslationEnabled,
+                contentDescription = stringResource(R.string.settings_translate_lyrics),
+                scale = scale * 1.15f,
+                onClick = { pickerOpen = true }
+            )
+            TranslationPicker(
+                expanded = pickerOpen,
+                state = state,
+                onSelect = {
+                    pickerOpen = false
+                    actions.onSelectTranslation(it)
+                },
+                onDismiss = { pickerOpen = false }
+            )
+        }
+        BareIconButton(onClick = actions.onOpenMenu, size = 42.dp * scale) {
+            Icon(
+                imageVector = Icons.Filled.MoreHoriz,
+                contentDescription = stringResource(R.string.playback_cd_more),
+                modifier = Modifier.size(26.dp * scale),
+                tint = Color.White.copy(alpha = 0.85f)
+            )
+        }
+    }
+}
+
+private val TRANSLATION_TARGETS = listOf(
+    "zh" to R.string.settings_translate_target_zh,
+    "zh-TW" to R.string.settings_translate_target_tw,
+    "en" to R.string.settings_translate_target_en,
+    "ja" to R.string.settings_translate_target_ja
+)
+
+/** Off + one row per target language; notes when the lyrics are already in the chosen language. */
+@Composable
+private fun TranslationPicker(
+    expanded: Boolean,
+    state: PlayerUiState,
+    onSelect: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(16.dp),
+        containerColor = Color(0xF0202228)
+    ) {
+        val check: @Composable (Boolean) -> Unit = { on ->
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = if (on) Color.White else Color.Transparent,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        DropdownMenuItem(
+            text = { Text(stringResource(R.string.translation_off), color = Color.White) },
+            leadingIcon = { check(!state.isTranslationEnabled) },
+            onClick = { onSelect(null) }
+        )
+        TRANSLATION_TARGETS.forEach { (lang, label) ->
+            DropdownMenuItem(
+                text = { Text(stringResource(label), color = Color.White) },
+                leadingIcon = { check(state.isTranslationEnabled && state.targetTranslationLang == lang) },
+                onClick = { onSelect(lang) }
+            )
+        }
+        val detected = state.detectedLyricsLang
+        if (state.isTranslationEnabled && detected != null && state.translatedLine == null &&
+            detected.substringBefore('-') == state.targetTranslationLang.substringBefore('-')
+        ) {
+            Text(
+                text = stringResource(R.string.translation_same_language),
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.55f),
+                modifier = Modifier
+                    .widthIn(max = 220.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+    }
+}
+
+/** Fades content out toward the top and bottom edges (fractions of the height). */
+private fun Modifier.fadingEdges(top: Float, bottom: Float): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        drawRect(
+            brush = Brush.verticalGradient(
+                0f to Color.Transparent,
+                top to Color.Black,
+                (1f - bottom) to Color.Black,
+                1f to Color.Transparent
+            ),
+            blendMode = BlendMode.DstIn
+        )
+    }
+
+// ---------------------------------------------------------------------------
+// Connection, palette and dialog (unchanged)
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun ConnectActionPanel(
@@ -615,493 +967,6 @@ private fun ActionPill(
     }
 }
 
-@Composable
-private fun AlbumArtHero(albumArt: Bitmap?, accent: Color, widthFraction: Float = 0.66f) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth(widthFraction)
-            .aspectRatio(1f),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(34.dp))
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            accent.copy(alpha = 0.32f),
-                            Color.White.copy(alpha = 0.05f),
-                            Color.Black.copy(alpha = 0.18f)
-                        )
-                    )
-                )
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize(0.86f)
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color.White.copy(alpha = 0.10f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Crossfade(
-                targetState = albumArt,
-                animationSpec = tween(durationMillis = 300)
-            ) { art ->
-                if (art != null) {
-                    Image(
-                        bitmap = art.asImageBitmap(),
-                        contentDescription = stringResource(R.string.album_art_description),
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        filterQuality = FilterQuality.High
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Filled.PlayArrow,
-                        contentDescription = stringResource(R.string.playback_cd_album_art_placeholder),
-                        modifier = Modifier.size(86.dp),
-                        tint = Color.White.copy(alpha = 0.84f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TrackTitleBlock(
-    trackInfo: SpotifyTrackInfo,
-    connectionState: SpotifyConnectionState,
-    textScale: Float = 1f
-) {
-    Crossfade(
-        targetState = trackInfo.title,
-        animationSpec = tween(durationMillis = 300)
-    ) { title ->
-        Text(
-            text = title.ifEmpty { stringResource(R.string.playback_title_waiting) },
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = MaterialTheme.typography.headlineSmall.fontSize * textScale
-            ),
-            color = Color.White,
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-    Spacer(modifier = Modifier.height((6 * textScale).dp))
-    Crossfade(
-        targetState = trackInfo.artist,
-        animationSpec = tween(durationMillis = 300)
-    ) { artist ->
-        Text(
-            text = if (artist.isNotEmpty()) {
-                listOf(artist, trackInfo.album)
-                    .filter { it.isNotBlank() }
-                    .joinToString(" · ")
-            } else {
-                if (connectionState is SpotifyConnectionState.Connected) stringResource(R.string.playback_subtitle_waiting) else stringResource(R.string.playback_subtitle_connect_prompt)
-            },
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = MaterialTheme.typography.bodyMedium.fontSize * textScale
-            ),
-            color = Color.White.copy(alpha = 0.66f),
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun CompactLyricsBlock(
-    currentLine: LrcLine?,
-    allLines: List<LrcLine>,
-    status: LyricStatus,
-    translatedLine: String?,
-    isTranslationEnabled: Boolean,
-    onExpand: () -> Unit,
-    onImportLyrics: (String) -> Unit = {},
-    onAllowMobileData: () -> Unit = {},
-    onDenyMobileData: () -> Unit = {}
-) {
-    val currentIndex = if (currentLine != null) allLines.indexOf(currentLine) else -1
-    val previous = allLines.getOrNull(currentIndex - 1)?.text
-    val next = allLines.getOrNull(currentIndex + 1)?.text
-    val config = LyricDisplayPreferences.resolvedConfig()
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                if (status is LyricStatus.Synced && allLines.isNotEmpty()) {
-                    onExpand()
-                }
-            },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.08f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            when (status) {
-                is LyricStatus.Idle -> LyricMessage(stringResource(R.string.playback_lyrics_idle))
-                is LyricStatus.Searching -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    LyricMessage(stringResource(R.string.playback_lyrics_searching))
-                }
-                is LyricStatus.Synced -> {
-                    Text(
-                        text = currentLine?.text ?: stringResource(R.string.playback_lyrics_synced_placeholder),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontSize = config.currentLineSp,
-                        color = Color.White,
-                        textAlign = config.textAlign,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (isTranslationEnabled && !translatedLine.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = translatedLine,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.85f),
-                            textAlign = config.textAlign,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    next?.let {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        ContextLyric(it, config)
-                    }
-                }
-                is LyricStatus.PlainOnly -> LyricMessage(stringResource(R.string.playback_lyrics_plain_only))
-                is LyricStatus.NotFound -> {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        LyricMessage(stringResource(R.string.playback_lyrics_not_found))
-                        Spacer(modifier = Modifier.height(12.dp))
-                        val context = LocalContext.current
-                        val launcher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.OpenDocument()
-                        ) { uri ->
-                            uri?.let {
-                                val text = context.contentResolver.openInputStream(it)?.bufferedReader()?.readText()
-                                if (!text.isNullOrBlank()) {
-                                    onImportLyrics(text)
-                                }
-                            }
-                        }
-                        OutlinedButton(onClick = { launcher.launch(arrayOf("application/octet-stream", "text/plain")) }) {
-                            Text(stringResource(R.string.import_lyrics_button))
-                        }
-                    }
-                }
-                is LyricStatus.LowConfidence -> LyricMessage(stringResource(R.string.playback_lyrics_low_confidence))
-                is LyricStatus.ParseError -> LyricMessage(stringResource(R.string.playback_lyrics_parse_error))
-                is LyricStatus.Error -> LyricMessage(stringResource(R.string.playback_lyrics_load_error))
-                is LyricStatus.MobileDataRestricted -> {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = stringResource(R.string.mobile_data_restricted_short),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White.copy(alpha = 0.78f),
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            TextButton(onClick = onAllowMobileData) { Text(stringResource(R.string.mobile_data_allow)) }
-                            TextButton(onClick = onDenyMobileData) { Text(stringResource(R.string.mobile_data_deny)) }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LyricMessage(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        color = Color.White.copy(alpha = 0.78f),
-        textAlign = TextAlign.Center
-    )
-}
-
-@Composable
-private fun ContextLyric(
-    text: String,
-    config: LyricDisplayConfig = LyricDisplayPreferences.resolvedConfig()
-) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        fontSize = config.otherLineSp,
-        color = Color.White.copy(alpha = 0.48f),
-        textAlign = config.textAlign,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis
-    )
-    Spacer(modifier = Modifier.height(12.dp))
-}
-
-@Composable
-private fun BottomPlaybackPane(
-    estimatedPositionMs: Long,
-    durationMs: Long,
-    accent: Color,
-    isPlaying: Boolean,
-    isConnected: Boolean,
-    playbackOptions: PlaybackOptions,
-    onSeek: (Long) -> Unit,
-    onPlayPause: () -> Unit,
-    onSkipNext: () -> Unit,
-    onSkipPrevious: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onCycleRepeat: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        ProgressBlock(
-            estimatedPositionMs = estimatedPositionMs,
-            durationMs = durationMs,
-            accent = accent,
-            onSeek = onSeek
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        PlaybackControls(
-            isPlaying = isPlaying,
-            isConnected = isConnected,
-            accent = accent,
-            playbackOptions = playbackOptions,
-            onPlayPause = onPlayPause,
-            onSkipNext = onSkipNext,
-            onSkipPrevious = onSkipPrevious,
-            onToggleShuffle = onToggleShuffle,
-            onCycleRepeat = onCycleRepeat
-        )
-    }
-}
-
-@Composable
-private fun ProgressBlock(
-    estimatedPositionMs: Long,
-    durationMs: Long,
-    accent: Color,
-    onSeek: (Long) -> Unit
-) {
-    if (durationMs <= 0) return
-
-    val progress = (estimatedPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-    var draggingProgress by remember { mutableStateOf<Float?>(null) }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Slider(
-            value = draggingProgress ?: progress,
-            onValueChange = { fraction ->
-                draggingProgress = fraction
-            },
-            onValueChangeFinished = {
-                draggingProgress?.let {
-                    onSeek((it * durationMs).toLong().coerceIn(0, durationMs))
-                }
-                draggingProgress = null
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = SliderDefaults.colors(
-                thumbColor = accent,
-                activeTrackColor = accent,
-                inactiveTrackColor = Color.White.copy(alpha = 0.18f)
-            )
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            val displayMs = draggingProgress?.let { (it * durationMs).toLong() } ?: estimatedPositionMs
-            Text(
-                text = formatMs(displayMs),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.56f)
-            )
-            Text(
-                text = formatMs(durationMs),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.56f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun PlaybackControls(
-    isPlaying: Boolean,
-    isConnected: Boolean,
-    accent: Color,
-    playbackOptions: PlaybackOptions,
-    onPlayPause: () -> Unit,
-    onSkipNext: () -> Unit,
-    onSkipPrevious: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onCycleRepeat: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Shuffle
-        ModeToggleButton(
-            isActive = playbackOptions.isShuffling,
-            accent = accent,
-            icon = Icons.Filled.Shuffle,
-            contentDescription = stringResource(R.string.playback_cd_shuffle),
-            iconSize = 26.dp,
-            onClick = onToggleShuffle
-        )
-
-        Spacer(modifier = Modifier.width(4.dp))
-
-        // Previous
-        IconButton(onClick = onSkipPrevious, enabled = isConnected) {
-            Icon(
-                imageVector = Icons.Filled.SkipPrevious,
-                contentDescription = stringResource(R.string.playback_cd_previous),
-                modifier = Modifier.size(34.dp),
-                tint = Color.White.copy(alpha = if (isConnected) 0.86f else 0.28f)
-            )
-        }
-        Spacer(modifier = Modifier.width(24.dp))
-
-        // Play/Pause
-        val buttonBg = if (isConnected) accent else Color.White.copy(alpha = 0.14f)
-        val buttonContent = if (buttonBg.let { c ->
-                0.299f * c.red + 0.587f * c.green + 0.114f * c.blue
-            } > 0.55f
-        ) Color.Black else Color.White
-        Surface(
-            modifier = Modifier.size(72.dp),
-            shape = CircleShape,
-            color = buttonBg,
-            contentColor = buttonContent,
-            shadowElevation = 8.dp
-        ) {
-            IconButton(onClick = onPlayPause, enabled = isConnected) {
-                Crossfade(
-                        targetState = isPlaying,
-                        animationSpec = tween(durationMillis = 250)
-                    ) { playing ->
-                        if (playing) PauseGlyph(color = buttonContent)
-                        else Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = stringResource(R.string.playback_cd_play),
-                        modifier = Modifier.size(42.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.width(24.dp))
-
-        // Next
-        IconButton(onClick = onSkipNext, enabled = isConnected) {
-            Icon(
-                imageVector = Icons.Filled.SkipNext,
-                contentDescription = stringResource(R.string.playback_cd_next),
-                modifier = Modifier.size(34.dp),
-                tint = Color.White.copy(alpha = if (isConnected) 0.86f else 0.28f)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(4.dp))
-
-        // Repeat
-        ModeToggleButton(
-            isActive = playbackOptions.repeatMode != RepeatMode.OFF,
-            accent = accent,
-            icon = if (playbackOptions.repeatMode == RepeatMode.TRACK)
-                Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-            contentDescription = stringResource(R.string.playback_cd_repeat),
-            iconSize = 26.dp,
-            onClick = onCycleRepeat
-        )
-    }
-}
-
-@Composable
-private fun PauseGlyph(color: Color = Color.White) {
-    Row(
-        modifier = Modifier.size(42.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        PauseBar(color = color)
-        Spacer(modifier = Modifier.width(7.dp))
-        PauseBar(color = color)
-    }
-}
-
-@Composable
-private fun PauseBar(color: Color) {
-    Box(
-        modifier = Modifier
-            .width(7.dp)
-            .height(28.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(color)
-    )
-}
-
-/** A compact mode-toggle icon with a visible background circle when active. */
-@Composable
-private fun ModeToggleButton(
-    isActive: Boolean,
-    accent: Color,
-    icon: ImageVector,
-    contentDescription: String,
-    iconSize: Dp = 26.dp,
-    onClick: () -> Unit
-) {
-    Box(contentAlignment = Alignment.Center) {
-        if (isActive) {
-            Box(
-                modifier = Modifier
-                    .size(iconSize + 14.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = 0.18f))
-            )
-        }
-        IconButton(onClick = onClick) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                modifier = Modifier.size(iconSize),
-                tint = if (isActive) accent else Color.White.copy(alpha = 0.25f)
-            )
-        }
-    }
-}
-
 internal data class AlbumPalette(
     val deep: Color,
     val mid: Color,
@@ -1159,250 +1024,11 @@ internal fun albumPalette(bitmap: Bitmap?): AlbumPalette {
 }
 
 @Composable
-private fun ExpandedLyricsView(
-    lines: List<LrcLine>,
-    currentLine: LrcLine?,
-    estimatedPositionMs: Long,
-    durationMs: Long,
-    isPlaying: Boolean,
-    accent: Color,
-    playbackOptions: PlaybackOptions,
-    translatedLine: String?,
-    isTranslationEnabled: Boolean,
-    onSeek: (Long) -> Unit,
-    onPlayPause: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onCycleRepeat: () -> Unit,
-    onCollapse: () -> Unit
-) {
-    val currentIndex = currentLine?.let { lines.indexOf(it) } ?: -1
-    val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
-    val config = LyricDisplayPreferences.resolvedLandscapeConfig()
-
-    // Detect if the current line has scrolled out of the viewport
-    val isScrolledAway by remember(currentIndex) {
-        derivedStateOf {
-            if (currentIndex < 0) false
-            else listState.layoutInfo.visibleItemsInfo.none { it.index == currentIndex }
-        }
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Lyrics list — leave bottom room for the control bar
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .navigationBarsPadding()
-                .padding(top = 56.dp, bottom = 72.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            itemsIndexed(lines) { index, line ->
-                val isCurrent = index == currentIndex
-                val isPast = index < currentIndex
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSeek(line.startMs) }
-                        .padding(horizontal = 28.dp, vertical = 10.dp)
-                ) {
-                    Text(
-                        text = line.text,
-                        color = when {
-                            isCurrent -> Color.White
-                            isPast -> Color.White.copy(alpha = config.pastLineAlpha)
-                            else -> Color.White.copy(alpha = config.futureLineAlpha)
-                        },
-                        fontSize = if (isCurrent) config.currentLineSp else config.otherLineSp,
-                        fontWeight = if (isCurrent) config.currentLineWeight else FontWeight.Normal,
-                        textAlign = config.textAlign
-                    )
-                    if (isCurrent && isTranslationEnabled && !translatedLine.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = translatedLine,
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontSize = config.otherLineSp,
-                            textAlign = config.textAlign
-                        )
-                    }
-                }
-            }
-        }
-
-        // Top bar: collapse button
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 4.dp, top = 8.dp, end = 4.dp)
-                .align(Alignment.TopCenter),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onCollapse) {
-                Icon(
-                    imageVector = Icons.Filled.KeyboardArrowDown,
-                    contentDescription = stringResource(R.string.playback_cd_collapse),
-                    tint = Color.White.copy(alpha = 0.72f),
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = stringResource(R.string.playback_fullscreen_lyrics),
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.48f)
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.size(48.dp))
-        }
-
-        // Jump-to-current-line button — shows only when user scrolls away
-        if (isScrolledAway && currentIndex >= 0) {
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 90.dp)
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .clickable {
-                        coroutineScope.launch {
-                            listState.animateScrollToItem((currentIndex - 3).coerceAtLeast(0))
-                        }
-                    },
-                shape = CircleShape,
-                color = Color.White.copy(alpha = 0.16f),
-                tonalElevation = 0.dp,
-                shadowElevation = 4.dp
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.playback_cd_jump_to_current),
-                        tint = Color.White.copy(alpha = 0.82f),
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        }
-
-        // Bottom control bar: progress + play/pause
-        if (durationMs > 0) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(start = 20.dp, end = 20.dp)
-                    .padding(bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Compact progress slider
-                val progress = (estimatedPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-                var draggingProgress by remember { mutableStateOf<Float?>(null) }
-                val displayMs = draggingProgress?.let { (it * durationMs).toLong() } ?: estimatedPositionMs
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = formatMs(displayMs),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.50f),
-                        modifier = Modifier.width(40.dp)
-                    )
-
-                    Slider(
-                        value = draggingProgress ?: progress,
-                        onValueChange = { draggingProgress = it },
-                        onValueChangeFinished = {
-                            draggingProgress?.let {
-                                onSeek((it * durationMs).toLong().coerceIn(0, durationMs))
-                            }
-                            draggingProgress = null
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = SliderDefaults.colors(
-                            thumbColor = accent,
-                            activeTrackColor = accent,
-                            inactiveTrackColor = Color.White.copy(alpha = 0.18f)
-                        )
-                    )
-
-                    Text(
-                        text = formatMs(durationMs),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.50f),
-                        modifier = Modifier.width(40.dp),
-                        textAlign = TextAlign.End
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Play / pause — same style as the compact controls
-                    IconButton(onClick = onPlayPause) {
-                        if (isPlaying) {
-                            PauseGlyph(color = Color.White.copy(alpha = 0.78f))
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = stringResource(R.string.playback_cd_play),
-                                tint = Color.White.copy(alpha = 0.78f),
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
-                // Shuffle + Repeat — smaller buttons in expanded view
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ModeToggleButton(
-                        isActive = playbackOptions.isShuffling,
-                        accent = accent,
-                        icon = Icons.Filled.Shuffle,
-                        contentDescription = stringResource(R.string.playback_cd_shuffle),
-                        iconSize = 22.dp,
-                        onClick = onToggleShuffle
-                    )
-                    Spacer(modifier = Modifier.width(24.dp))
-                    ModeToggleButton(
-                        isActive = playbackOptions.repeatMode != RepeatMode.OFF,
-                        accent = accent,
-                        icon = if (playbackOptions.repeatMode == RepeatMode.TRACK)
-                            Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-                        contentDescription = stringResource(R.string.playback_cd_repeat),
-                        iconSize = 22.dp,
-                        onClick = onCycleRepeat
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun rememberIsSpotifyInstalled(): Boolean {
     val context = androidx.compose.ui.platform.LocalContext.current
     return remember {
         context.packageManager.getLaunchIntentForPackage("com.spotify.music") != null
     }
-}
-
-@Composable
-private fun stateLabel(state: SpotifyConnectionState): String = when (state) {
-    is SpotifyConnectionState.Disconnected -> stringResource(R.string.playback_disconnected)
-    is SpotifyConnectionState.Connecting -> stringResource(R.string.playback_connecting)
-    is SpotifyConnectionState.Connected -> stringResource(R.string.playback_connected)
-    is SpotifyConnectionState.Error -> stringResource(R.string.playback_error)
-    SpotifyConnectionState.SpotifyNotInstalled -> stringResource(R.string.playback_not_installed)
-    SpotifyConnectionState.SpotifyNotLoggedIn -> stringResource(R.string.playback_not_logged_in)
 }
 
 @Composable
@@ -1420,243 +1046,11 @@ private fun readableOn(color: Color): Color {
     return if (luminance > 0.55f) Color.Black else Color.White
 }
 
-private fun formatMs(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
-}
-
-@Composable
-private fun LandscapePlaybackLayout(
-    albumArt: Bitmap?,
-    trackInfo: SpotifyTrackInfo,
-    connectionState: SpotifyConnectionState,
-    palette: AlbumPalette,
-    estimatedPositionMs: Long,
-    durationMs: Long,
-    isPlaying: Boolean,
-    isConnected: Boolean,
-    parsedLyrics: List<LrcLine>,
-    currentLyricLine: LrcLine?,
-    lyricStatus: LyricStatus,
-    translatedLine: String?,
-    isTranslationEnabled: Boolean,
-    playbackOptions: PlaybackOptions,
-    isSpotifyInstalled: Boolean,
-    onSeek: (Long) -> Unit,
-    onPlayPause: () -> Unit,
-    onSkipNext: () -> Unit,
-    onSkipPrevious: () -> Unit,
-    onConnect: () -> Unit,
-    onOpenSpotify: () -> Unit,
-    onOpenPlaylist: () -> Unit,
-    onOpenLyricsCorrection: () -> Unit,
-    onDisconnect: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onCycleRepeat: () -> Unit,
-    onLyricDisplaySettings: () -> Unit,
-    onAllowMobileData: () -> Unit = {},
-    onDenyMobileData: () -> Unit = {}
-) {
-    val dominant = palette.deep
-    val secondary = palette.mid
-    val accent = palette.accent
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.horizontalGradient(colors = listOf(dominant, secondary))
-            )
-    ) {
-        // Top-right: settings gear
-        GlassSurface(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-                .padding(top = 8.dp, end = 16.dp)
-                .size(42.dp),
-            shape = CircleShape,
-            glassAlpha = 0.12f,
-            borderAlpha = 0.20f
-        ) {
-            IconButton(onClick = onLyricDisplaySettings, modifier = Modifier.fillMaxSize()) {
-                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.lyric_settings_title), tint = Color.White.copy(alpha = 0.9f))
-            }
-        }
-
-        // Center: scrollable full lyrics list (uses portrait's ImmersiveLyricsBlock)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(bottom = 100.dp)   // leave room for the bottom bar
-        ) {
-            if (!isConnected) {
-                ConnectActionPanel(
-                    state = connectionState,
-                    accent = accent,
-                    isSpotifyInstalled = isSpotifyInstalled,
-                    onConnect = onConnect,
-                    onOpenSpotify = onOpenSpotify,
-                    modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(start = 48.dp, end = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    ImmersiveLyricsBlock(
-                        currentLine = currentLyricLine,
-                        allLines = parsedLyrics,
-                        status = lyricStatus,
-                        translatedLine = translatedLine,
-                        isTranslationEnabled = isTranslationEnabled,
-                        isPlaying = isPlaying,
-                        positionMs = estimatedPositionMs,
-                        config = LyricDisplayPreferences.resolvedConfig(),
-                        onSeek = onSeek,
-                        onAllowMobileData = onAllowMobileData,
-                        onDenyMobileData = onDenyMobileData,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-        }
-
-        // Bottom bar: left=cover+info, center=progress bar (compact), right=transport
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(start = 22.dp, end = 22.dp, bottom = 20.dp)
-                .height(64.dp)
-        ) {
-            // Progress bar — geometrically centered on screen
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .width(260.dp)
-                    .height(48.dp)
-            ) {
-                ImmersiveSeekControl(
-                    estimatedPositionMs = estimatedPositionMs,
-                    durationMs = durationMs,
-                    onSeek = onSeek,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            // Left: small cover + title/artist
-            Row(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .clickable { onOpenPlaylist() },
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.10f))
-                ) {
-                    albumArt?.let {
-                        Image(
-                            bitmap = it.asImageBitmap(),
-                            contentDescription = stringResource(R.string.album_art_description),
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.widthIn(max = 300.dp)) {
-                    Text(
-                        text = trackInfo.title.ifEmpty { stringResource(R.string.playback_title_waiting) },
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    val sub = listOf(trackInfo.artist, trackInfo.album).filter { it.isNotBlank() }.joinToString(" · ")
-                    if (sub.isNotEmpty()) {
-                        Text(
-                            text = sub,
-                            color = Color.White.copy(alpha = 0.62f),
-                            fontSize = 13.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-
-            // Right: transport controls
-            Row(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                GlassSurface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CircleShape,
-                    glassAlpha = 0.16f,
-                    borderAlpha = 0.22f
-                ) {
-                    IconButton(onClick = onSkipPrevious, modifier = Modifier.fillMaxSize()) {
-                        Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.playback_cd_previous), tint = Color.White, modifier = Modifier.size(22.dp))
-                    }
-                }
-                GlassSurface(
-                    modifier = Modifier.size(50.dp),
-                    shape = CircleShape,
-                    glassAlpha = 0.20f,
-                    borderAlpha = 0.26f
-                ) {
-                    IconButton(onClick = onPlayPause, modifier = Modifier.fillMaxSize()) {
-                            Crossfade(
-                                targetState = isPlaying,
-                                animationSpec = tween(durationMillis = 250)
-                            ) { playing ->
-                                if (playing) PauseGlyph(color = Color.White)
-                                else Icon(Icons.Filled.PlayArrow, contentDescription = stringResource(R.string.playback_cd_play), tint = Color.White, modifier = Modifier.size(30.dp))
-                            }
-                    }
-                }
-                GlassSurface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CircleShape,
-                    glassAlpha = 0.16f,
-                    borderAlpha = 0.22f
-                ) {
-                    IconButton(onClick = onSkipNext, modifier = Modifier.fillMaxSize()) {
-                        Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.playback_cd_next), tint = Color.White, modifier = Modifier.size(22.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LyricDisplaySettingsDialog(
-    isTranslationEnabled: Boolean = false,
-    onSetTranslationEnabled: (Boolean) -> Unit = {},
-    targetTranslationLang: String = "zh",
-    onSetTargetTranslationLang: (String) -> Unit = {},
-    currentSource: String = "",
     onDismiss: () -> Unit
 ) {
-    val currentFontSize by LyricDisplayPreferences.fontSize
     val currentBold by LyricDisplayPreferences.boldCurrentLine
     val currentDim by LyricDisplayPreferences.dimLevel
     val currentAlign by LyricDisplayPreferences.alignment
@@ -1676,23 +1070,6 @@ private fun LyricDisplaySettingsDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Current lyrics source
-                if (currentSource.isNotEmpty()) {
-                    val sourceLabel = when (currentSource) {
-                                            "cache" -> stringResource(R.string.lyric_source_cache)
-                                            "lrclib" -> stringResource(R.string.lyric_source_lrclib)
-                                            "netease" -> stringResource(R.string.lyric_source_netease)
-                                            "qqmusic" -> stringResource(R.string.lyric_source_qqmusic)
-                                            "manual" -> stringResource(R.string.lyric_source_manual)
-                                            else -> currentSource
-                                        }
-                    Text(
-                        text = stringResource(R.string.lyric_source_label, sourceLabel),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
 
                 // Font size sliders
                 val currentSp = LyricDisplayPreferences.fontSizeCurrent.value
@@ -1808,119 +1185,6 @@ private fun LyricDisplaySettingsDialog(
                             }
                         }
                     }
-
-                // Translation toggle
-                Column {
-                    Text(
-                        text = stringResource(R.string.settings_group_translation),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.settings_translate_lyrics),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                stringResource(R.string.settings_translate_lyrics_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = isTranslationEnabled,
-                            onCheckedChange = onSetTranslationEnabled
-                        )
-                    }
-                    if (isTranslationEnabled) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                stringResource(R.string.settings_translate_target),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            var expanded by remember { mutableStateOf(false) }
-                            Box {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                                    modifier = Modifier
-                                        .heightIn(min = 40.dp)
-                                        .clickable { expanded = true }
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
-                                    ) {
-                                        Text(
-                                            when (targetTranslationLang) {
-                                                "zh" -> stringResource(R.string.settings_translate_target_zh)
-                                                "zh-TW" -> stringResource(R.string.settings_translate_target_tw)
-                                                "en" -> stringResource(R.string.settings_translate_target_en)
-                                                "ja" -> stringResource(R.string.settings_translate_target_ja)
-                                                else -> targetTranslationLang
-                                            },
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            maxLines = 1
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Icon(
-                                            imageVector = Icons.Filled.KeyboardArrowDown,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                                DropdownMenu(
-                                    expanded = expanded,
-                                    onDismissRequest = { expanded = false }
-                                ) {
-                                    listOf(
-                                        "zh" to stringResource(R.string.settings_translate_target_zh),
-                                        "zh-TW" to stringResource(R.string.settings_translate_target_tw),
-                                        "en" to stringResource(R.string.settings_translate_target_en),
-                                        "ja" to stringResource(R.string.settings_translate_target_ja)
-                                    ).forEach { (code, label) ->
-                                        DropdownMenuItem(
-                                            text = { Text(label) },
-                                            onClick = {
-                                                onSetTargetTranslationLang(code)
-                                                expanded = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Mobile data — show today's choice info
-                val todayChoice = LyricDisplayPreferences.getTodayMobileDataChoice()
-                if (todayChoice != null) {
-                    Column(modifier = Modifier.padding(top = 8.dp)) {
-                        Text(
-                            text = stringResource(
-                                if (todayChoice == "allow") R.string.mobile_data_settings_today_allow
-                                else R.string.mobile_data_settings_today_deny
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
             }
         },
         confirmButton = {
