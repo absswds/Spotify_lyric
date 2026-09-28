@@ -12,25 +12,28 @@ It does **not** grant a license to redistribute, republish, sublicense, train on
 - music metadata returned by third-party services;
 - album artwork;
 - Spotify content, trademarks, or user data; or
-- content returned by LRCLIB, NetEase Cloud Music, QQ Music, or another provider.
+- content returned by AMLL TTML DB, LRCLIB, NetEase Cloud Music, QQ Music, Kugou, or another provider.
 
-The application may store data locally on the user's device for its cache feature. This repository must not contain cached lyrics, sample lyric collections, album-art archives, user listening history, credentials, tokens, or a hosted lyrics database.
+The application may store data locally on the user's device for its cache feature. Lyrics from unofficial sources (NetEase Cloud Music, QQ Music, Kugou) are kept in memory only, unless the user agrees in a one-time prompt to cache them on the device (changeable in Settings). This repository must not contain cached lyrics, sample lyric collections, album-art archives, user listening history, credentials, tokens, or a hosted lyrics database.
 
 ## 2. External services and risk boundaries
 
 | Service / component | Purpose in the app | Publication boundary |
 |---|---|---|
-| Spotify Android SDK and Web API | Reads playback state, sends player commands, and reads playlist metadata after the user authorizes their own account | Follow the current [Spotify Developer Terms](https://developer.spotify.com/terms) and [Spotify Design & Branding Guidelines](https://developer.spotify.com/documentation/design). Do not represent the project as endorsed by, affiliated with, or replacing Spotify. |
+| Spotify Android SDK and Web API | Reads playback state (App Remote, and `GET /v1/me/player` with scope `user-read-playback-state` while another Spotify Connect device plays), sends player commands, and reads playlist metadata after the user authorizes their own account | Follow the current [Spotify Developer Terms](https://developer.spotify.com/terms) and [Spotify Design & Branding Guidelines](https://developer.spotify.com/documentation/design). Do not represent the project as endorsed by, affiliated with, or replacing Spotify. |
+| AMLL TTML DB | On-device lookup of word-timed TTML by Spotify track id | Public community repository on GitHub. Contributors' own work (timing, markup) is CC0-1.0; the lyric text itself still belongs to its rights holders. Cached like LRCLIB. |
 | LRCLIB | Optional on-device lookup for synchronized lyrics | Check LRCLIB's current API policy and terms before distributing an APK or commercializing the project. Do not mirror or bulk-export returned lyric data. |
 | NetEase Cloud Music adapter | Optional on-device lyric lookup | The implementation may rely on endpoints that are undocumented and may change. Use only where permitted by the provider's terms and applicable law. Disable/remove it for public releases if that cannot be established. |
-| QQ Music adapter | Optional on-device lyric lookup | The same boundary applies: availability is not authorization. Do not run a proxy, mirror, downloader, public API, or central cache for QQ Music content. |
+| QQ Music adapter | Optional on-device lyric lookup (LRC and word-timed QRC) | The same boundary applies: availability is not authorization. Do not run a proxy, mirror, downloader, public API, or central cache for QQ Music content. |
+| Kugou adapter | Optional on-device lyric lookup (word-timed KRC) | Same boundary as NetEase and QQ Music. |
+| Musixmatch, Spotify's own lyrics | Not used | Musixmatch's full/synced lyrics need a paid commercial license (the free API tier returns only part of each lyric); Spotify's lyric API is private. |
 | Google ML Kit | On-device language identification and translation | A translation does not remove the copyright or contractual restrictions applicable to the source lyric. |
 
 ## 3. Spotify account and playback-control requirements
 
 - Creating a Spotify Developer Dashboard account/app follows Spotify's current account requirements. As of Spotify's February 2026 Developer Access update, the owner of a Development Mode app must have a **Spotify Premium** account; re-check the [current quota-mode rules](https://developer.spotify.com/documentation/web-api/concepts/quota-modes) before release.
 - This app forwards play, pause, previous, next, seek, shuffle, and repeat commands to the installed Spotify app through Spotify App Remote. It does not bypass Spotify account entitlements. **Previous/next and other playback controls have the same Premium restriction as Spotify's native remote/player controls.** A free account may still be able to use Spotify normally according to Spotify's own product rules, but this project must not promise remote playback control for it.
-- The app subscribes to the Spotify client installed on the Android device running this app. Spotify Connect playback transferred to another device (for example, a tablet) can have delayed or missing App Remote state callbacks on the phone. Cross-device synchronisation is therefore a known compatibility boundary, not a guarantee.
+- The app subscribes to the Spotify client installed on the Android device running this app. When playback runs on another Spotify Connect device, that client often keeps reporting a stale paused state, so the app follows the Web API playback state instead (polling every 5 s while another device plays, backing off when nothing plays). The implicit-grant token lasts about an hour and is renewed only when the app is opened, so cross-device sync is best effort, not a guarantee.
 
 ## 4. Explicitly out of scope
 
@@ -42,21 +45,25 @@ The project must not add features that:
 4. bundle a copied lyric catalogue, a user playback-history dump, or cached artwork in an APK/release; or
 5. claim that third-party service data is licensed under Apache-2.0 merely because this repository's code is Apache-2.0.
 
-## 5. Third-party code, protocol references, and dependencies
+## 5. Personal use
+
+Many jurisdictions allow some private use of published works; for example, China's Copyright Law Art. 24(1) permits using a published work for personal study, research or appreciation. That lowers the risk of an individual showing and caching lyrics on their own device. It does not cover redistributing lyrics, publishing a lyric cache, or any commercial use, and it does not override a provider's terms of service, which are a separate (contractual) matter. This is why unofficial sources stay session-only unless the user opts in, and why nothing in section 4 changes for personal-use builds.
+
+## 6. Third-party code, protocol references, and dependencies
 
 ### Reference implementation
 
-- **[Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)** — consulted as a protocol/reference implementation while creating the NetEase adapter. Its repository is Apache-2.0. This project does not vendor its source code or lyric data; the source-level reference is documented in `NeteaseLyricsSource.kt`.
+- **[Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)** — consulted as a protocol/reference implementation for the NetEase, QQ Music (QRC) and Kugou (KRC) adapters. Its repository is Apache-2.0. The QRC/KRC decryption and parsing are ported from it (Apache-2.0 permits this with attribution); each ported file names its source in a header comment. No lyric data is taken from it.
 
 ### Runtime/build dependencies
 
 The dependency catalog is in [`gradle/libs.versions.toml`](../gradle/libs.versions.toml). Notable dependencies include the Spotify Android SDK/Auth SDK, AndroidX, Jetpack Compose, Room, WorkManager, Coil, Gson, OkHttp, Retrofit, and Google ML Kit. Each dependency retains its own license and notice requirements.
 
-## 6. Release checklist
+## 7. Release checklist
 
 Before creating a public release, APK, app-store listing, paid offering, or backend service:
 
-- [ ] Re-check the current terms/policies for Spotify, LRCLIB, NetEase Cloud Music, QQ Music, Google ML Kit, and the target distribution platform.
+- [ ] Re-check the current terms/policies for Spotify, AMLL TTML DB, LRCLIB, NetEase Cloud Music, QQ Music, Kugou, Google ML Kit, and the target distribution platform.
 - [ ] Obtain legal review if distributing beyond personal/private use, especially in jurisdictions where lyrics licensing is regulated.
 - [ ] Confirm no `local.properties`, signing keys, OAuth tokens, user database, lyric cache, album-art cache, screenshots containing personal data, or developer workspaces are tracked.
 - [ ] Confirm the app and listing do not claim Spotify endorsement or imply that Spotify content/lyrics are licensed by this repository.
@@ -67,6 +74,6 @@ Before creating a public release, APK, app-store listing, paid offering, or back
 
 Do not commit local configuration, signing material, OAuth tokens, user databases, lyric caches, artwork caches, screenshots containing personal data, generated APKs, or local development workspaces. The repository's `.gitignore` covers the common local paths; contributors are still responsible for checking staged files before a commit.
 
-## 7. Reporting concerns
+## 8. Reporting concerns
 
 If you believe a file or feature creates an intellectual-property, terms-of-service, privacy, or attribution issue, open an issue without pasting copyrighted lyric text, private tokens, or personal listening data.

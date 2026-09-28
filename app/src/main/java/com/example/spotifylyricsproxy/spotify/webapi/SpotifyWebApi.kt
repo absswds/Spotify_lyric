@@ -29,6 +29,39 @@ interface SpotifyWebApi {
         @Query("market") market: String = "from_token"
     ): SpotifyPlaylistTracksResponse
 
+    // Playback control on the active Connect device (scope user-modify-playback-state).
+    @retrofit2.http.PUT("v1/me/player/play")
+    suspend fun resume(@Header("Authorization") auth: String): retrofit2.Response<Unit>
+
+    @retrofit2.http.PUT("v1/me/player/pause")
+    suspend fun pause(@Header("Authorization") auth: String): retrofit2.Response<Unit>
+
+    @retrofit2.http.POST("v1/me/player/next")
+    suspend fun next(@Header("Authorization") auth: String): retrofit2.Response<Unit>
+
+    @retrofit2.http.POST("v1/me/player/previous")
+    suspend fun previous(@Header("Authorization") auth: String): retrofit2.Response<Unit>
+
+    @retrofit2.http.PUT("v1/me/player/seek")
+    suspend fun seek(@Header("Authorization") auth: String, @Query("position_ms") positionMs: Long): retrofit2.Response<Unit>
+
+    @retrofit2.http.PUT("v1/me/player/shuffle")
+    suspend fun shuffle(@Header("Authorization") auth: String, @Query("state") state: Boolean): retrofit2.Response<Unit>
+
+    /** [state]: "track", "context" or "off". */
+    @retrofit2.http.PUT("v1/me/player/repeat")
+    suspend fun repeat(@Header("Authorization") auth: String, @Query("state") state: String): retrofit2.Response<Unit>
+
+    /** Upcoming tracks (scope user-read-playback-state). */
+    @GET("v1/me/player/queue")
+    suspend fun getQueue(@Header("Authorization") auth: String): retrofit2.Response<SpotifyQueue>
+
+    /** 204 (no body) when nothing is playing on any device. */
+    @GET("v1/me/player")
+    suspend fun getPlayer(
+        @Header("Authorization") auth: String
+    ): retrofit2.Response<SpotifyPlayerState>
+
     @GET("v1/tracks/{id}")
     suspend fun getTrack(
         @Header("Authorization") auth: String,
@@ -85,6 +118,30 @@ data class SpotifyTrack(
     val album: SpotifyAlbum? = null,
     @SerializedName("duration_ms")
     val durationMs: Long = 0
+)
+
+data class SpotifyPlayerState(
+    @SerializedName("is_playing")
+    val isPlaying: Boolean = false,
+    @SerializedName("progress_ms")
+    val progressMs: Long? = null,
+    val item: SpotifyTrack? = null,
+    val device: SpotifyDevice? = null,
+    @SerializedName("shuffle_state")
+    val shuffleState: Boolean = false,
+    /** "off", "track" or "context". */
+    @SerializedName("repeat_state")
+    val repeatState: String = "off"
+)
+
+data class SpotifyQueue(
+    val queue: List<SpotifyTrack> = emptyList()
+)
+
+data class SpotifyDevice(
+    val name: String = "",
+    /** "Smartphone", "Tablet", "Computer", "Speaker", ... */
+    val type: String = ""
 )
 
 data class SpotifyArtist(

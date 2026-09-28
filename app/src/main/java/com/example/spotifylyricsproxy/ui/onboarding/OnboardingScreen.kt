@@ -76,6 +76,30 @@ import com.example.spotifylyricsproxy.ui.playback.LyricDisplayPreferences
 import com.example.spotifylyricsproxy.ui.settings.ChineseModePreview
 import com.example.spotifylyricsproxy.notification.NotificationPermissionPolicy
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringArrayResource
+import com.example.spotifylyricsproxy.core.AppSettings
 
 const val PROJECT_URL = "https://github.com/absswds/Spotify_lyric"
 private const val SPOTIFY_PACKAGE = "com.spotify.music"
@@ -92,13 +116,24 @@ private val Accent = Color(0xFF1ED760)
 fun OnboardingScreen(onFinish: () -> Unit) {
     // Chinese UIs get an extra page for how Chinese lyrics meet a Chinese target.
     val chinese = LocalConfiguration.current.locales[0].language == "zh"
-    val pageCount = if (chinese) 3 else 2
+    val pages = buildList {
+        add("welcome")
+        if (chinese) add("chinese")
+        add("cache")
+        add("permissions")
+    }
+    val pageCount = pages.size
     val pager = rememberPagerState { pageCount }
     val scope = rememberCoroutineScope()
+    val aurora = rememberInfiniteTransition(label = "aurora")
+    val auroraPhase = aurora.animateFloat(
+        0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(14_000, easing = LinearEasing)), label = "auroraPhase"
+    )
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(Color(0xFF1B2735), Color(0xFF0B0F18))))
+            .drawBehind { drawAuroraBlobs(auroraPhase.value) }
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -116,7 +151,19 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 )
             }
             HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            // Neighbouring pages recede and fade while swiping.
+                            val offset = kotlin.math.abs(pager.currentPage - page + pager.currentPageOffsetFraction).coerceIn(0f, 1f)
+                            alpha = 1f - offset * 0.6f
+                            val scale = 1f - offset * 0.08f
+                            scaleX = scale
+                            scaleY = scale
+                        },
+                    contentAlignment = Alignment.TopCenter
+                ) {
                     Column(
                         modifier = Modifier
                             .widthIn(max = 560.dp)
@@ -124,10 +171,12 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 28.dp)
                     ) {
-                        when {
-                            page == 0 -> WelcomePage()
-                            chinese && page == 1 -> ChineseModePage()
-                            else -> PermissionsPage()
+                        val visible = pager.settledPage == page
+                        when (pages[page]) {
+                            "welcome" -> WelcomePage(visible)
+                            "chinese" -> ChineseModePage()
+                            "cache" -> CacheConsentPage()
+                            else -> PermissionsPage(visible)
                         }
                     }
                 }
@@ -188,32 +237,115 @@ private fun ChineseModePage() {
     }
 }
 
+/** Slowly drifting colour glows behind the guide, like the player's cover-sampled background. */
+private fun DrawScope.drawAuroraBlobs(t: Float) {
+    val glows = listOf(
+        Triple(Color(0xFF1ED760), 0.25f, 0f),
+        Triple(Color(0xFF5B6CFF), 0.75f, 2.1f),
+        Triple(Color(0xFFE0569B), 0.5f, 4.2f)
+    )
+    glows.forEach { (color, x, phase) ->
+        val center = Offset(
+            size.width * (x + 0.18f * kotlin.math.sin(t + phase)),
+            size.height * (0.35f + 0.22f * kotlin.math.cos(t * 0.8f + phase))
+        )
+        val radius = size.minDimension * 0.75f
+        drawCircle(
+            brush = Brush.radialGradient(listOf(color.copy(alpha = 0.22f), Color.Transparent), center, radius),
+            radius = radius,
+            center = center
+        )
+    }
+}
+
+/** Fades and lifts a block in, [index] steps after the page shows. */
 @Composable
-private fun WelcomePage() {
+private fun Modifier.staggerIn(visible: Boolean, index: Int): Modifier {
+    // Starts at 0 even when the page is visible from the first frame (the welcome page).
+    val progress = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(visible) {
+        if (visible) {
+            progress.animateTo(1f, tween(560, delayMillis = 90 * index, easing = FastOutSlowInEasing))
+        } else {
+            progress.snapTo(0f)
+        }
+    }
+    return graphicsLayer {
+        alpha = progress.value
+        translationY = (1f - progress.value) * 28.dp.toPx()
+    }
+}
+
+/**
+ * A mock media-card capsule cycling through demo lines, showing the app's core idea
+ * before any explanation: lyrics follow the song outside the app.
+ */
+@Composable
+private fun LiveCapsuleDemo() {
+    val lines = stringArrayResource(R.array.onboarding_demo_lines)
+    var index by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(2200)
+            index = (index + 1) % lines.size
+        }
+    }
+    val pulse = rememberInfiniteTransition(label = "capsule")
+    val glow by pulse.animateFloat(0.35f, 0.8f, infiniteRepeatable(tween(1600), RepeatMode.Reverse), label = "glow")
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.Black)
+            .border(1.dp, Accent.copy(alpha = glow * 0.5f), RoundedCornerShape(50))
+            .padding(start = 8.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(Brush.linearGradient(listOf(Accent, Color(0xFF0E8F43)))),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Filled.Lyrics, contentDescription = null, tint = Color.Black, modifier = Modifier.size(17.dp))
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        AnimatedContent(
+            targetState = index,
+            transitionSpec = {
+                (slideInVertically(tween(420)) { it } + fadeIn(tween(420))) togetherWith
+                    (slideOutVertically(tween(420)) { -it } + fadeOut(tween(300)))
+            },
+            label = "capsuleLine"
+        ) { i ->
+            Text(lines[i], color = Ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun WelcomePage(visible: Boolean) {
     val context = LocalContext.current
     Spacer(modifier = Modifier.height(24.dp))
-    Box(
-        modifier = Modifier
-            .size(72.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Brush.linearGradient(listOf(Accent, Color(0xFF0E8F43)))),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.Filled.Lyrics, contentDescription = null, tint = Color.Black, modifier = Modifier.size(38.dp))
-    }
-    Spacer(modifier = Modifier.height(20.dp))
-    Text(stringResource(R.string.app_name), color = Ink, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+    Box(modifier = Modifier.staggerIn(visible, 0)) { LiveCapsuleDemo() }
+    Spacer(modifier = Modifier.height(24.dp))
+    Text(stringResource(R.string.app_name), color = Ink, fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.staggerIn(visible, 1))
     Spacer(modifier = Modifier.height(6.dp))
-    Text(stringResource(R.string.onboarding_tagline), color = InkDim, fontSize = 16.sp, lineHeight = 22.sp)
+    Text(stringResource(R.string.onboarding_tagline), color = InkDim, fontSize = 16.sp, lineHeight = 22.sp, modifier = Modifier.staggerIn(visible, 2))
     Spacer(modifier = Modifier.height(28.dp))
-    Feature(Icons.Filled.Sync, R.string.onboarding_feature_sync)
-    Feature(Icons.Filled.MusicNote, R.string.onboarding_feature_words)
-    Feature(Icons.Filled.PeopleAlt, R.string.onboarding_feature_duet)
-    Feature(Icons.Filled.Translate, R.string.onboarding_feature_translate)
-    Feature(Icons.Filled.OfflinePin, R.string.onboarding_feature_offline)
+    listOf(
+        Icons.Filled.Sync to R.string.onboarding_feature_sync,
+        Icons.Filled.MusicNote to R.string.onboarding_feature_words,
+        Icons.Filled.PeopleAlt to R.string.onboarding_feature_duet,
+        Icons.Filled.Translate to R.string.onboarding_feature_translate,
+        Icons.Filled.OfflinePin to R.string.onboarding_feature_offline
+    ).forEachIndexed { i, (icon, text) ->
+        Box(modifier = Modifier.staggerIn(visible, 3 + i)) { Feature(icon, text) }
+    }
     Spacer(modifier = Modifier.height(20.dp))
     Row(
         modifier = Modifier
+            .staggerIn(visible, 8)
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White.copy(alpha = 0.07f))
             .clickable { openUrl(context, PROJECT_URL) }
@@ -248,7 +380,37 @@ private fun Feature(icon: ImageVector, text: Int) {
 }
 
 @Composable
-private fun PermissionsPage() {
+private fun CacheConsentPage() {
+    val allowed by AppSettings.cacheUnofficial
+    Spacer(modifier = Modifier.height(24.dp))
+    Text(stringResource(R.string.cache_consent_title), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(stringResource(R.string.cache_consent_message), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
+    Spacer(modifier = Modifier.height(16.dp))
+    listOf(
+        true to R.string.cache_consent_allow,
+        false to R.string.cache_consent_deny
+    ).forEach { (value, label) ->
+        val selected = allowed == value
+        val bg by animateColorAsState(if (selected) Accent else Color.White.copy(alpha = 0.07f), label = "cacheChoice")
+        Text(
+            text = stringResource(label),
+            color = if (selected) Color.Black else Ink,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 5.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(bg)
+                .clickable { AppSettings.setCacheUnofficial(value) }
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        )
+    }
+}
+
+@Composable
+private fun PermissionsPage(visible: Boolean) {
     val context = LocalContext.current
     // Re-read grants whenever we come back from a settings screen.
     var refresh by remember { mutableIntStateOf(0) }
@@ -272,7 +434,18 @@ private fun PermissionsPage() {
     Text(stringResource(R.string.onboarding_permissions_desc), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
     Spacer(modifier = Modifier.height(20.dp))
 
+    val signedIn = remember(refresh) { com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore.hasCurrentScopes() }
     PermissionCard(
+        modifier = Modifier.staggerIn(visible, 0),
+        icon = Icons.Filled.MusicNote,
+        title = R.string.onboarding_perm_spotify,
+        desc = R.string.onboarding_perm_spotify_desc,
+        granted = signedIn
+    ) {
+        com.example.spotifylyricsproxy.SpotifyAuthHolder.requestAuth()
+    }
+    PermissionCard(
+        modifier = Modifier.staggerIn(visible, 1),
         icon = Icons.Filled.Notifications,
         title = R.string.onboarding_perm_notify,
         desc = R.string.onboarding_perm_notify_desc,
@@ -283,6 +456,7 @@ private fun PermissionsPage() {
         }
     }
     PermissionCard(
+        modifier = Modifier.staggerIn(visible, 2),
         icon = Icons.Filled.OfflinePin,
         title = R.string.onboarding_perm_listener,
         desc = R.string.onboarding_perm_listener_desc,
@@ -292,6 +466,7 @@ private fun PermissionsPage() {
     }
     // Not detectable by apps: shown as an action only.
     PermissionCard(
+        modifier = Modifier.staggerIn(visible, 3),
         icon = Icons.Filled.Wifi,
         title = R.string.onboarding_perm_autostart,
         desc = R.string.onboarding_perm_autostart_desc,
@@ -304,13 +479,13 @@ private fun PermissionsPage() {
 
 /** [granted] null means the state can't be read; the card always offers its action. */
 @Composable
-private fun PermissionCard(icon: ImageVector, title: Int, desc: Int, granted: Boolean?, onClick: () -> Unit) {
+private fun PermissionCard(modifier: Modifier = Modifier, icon: ImageVector, title: Int, desc: Int, granted: Boolean?, onClick: () -> Unit) {
     val tint by animateColorAsState(
         if (granted == true) Accent.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.07f),
         label = "permTint"
     )
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clip(RoundedCornerShape(16.dp))

@@ -217,7 +217,7 @@
     <string name="correction_current_offset_label">Current offset</string>
     <string name="correction_instruction">Tap "Re-match" to search other lyric sources, or manually adjust the time offset.</string>
     <string name="correction_classify_failed">Unable to match lyrics</string>
-    <string name="correction_candidate_subtitle">%1$s · %2$d pts</string>
+    <string name="correction_candidate_subtitle">%1$s · %2$s</string>
     <string name="correction_back">Back</string>
     <string name="correction_no_track">Not playing</string>
     <string name="correction_current_line_label">Current lyric line: %1$s</string>
@@ -229,10 +229,10 @@
     <string name="correction_research">Re-search lyrics</string>
     <string name="correction_mark_wrong">Mark as wrong song</string>
     <string name="correction_view_candidates">View candidate list (%1$d)</string>
-    <string name="correction_status_synced">Matched (%1$d pts)</string>
+    <string name="correction_status_synced">Matched · %1$s</string>
     <string name="correction_status_plain">Plain text lyrics only</string>
     <string name="correction_status_notfound">Lyrics not found</string>
-    <string name="correction_status_low">Low confidence match (%1$d pts)</string>
+    <string name="correction_status_low">Weak match · %1$s</string>
     <string name="correction_status_parse_error">Parse failed</string>
     <string name="correction_status_error">Error: %1$s</string>
 
@@ -371,4 +371,51 @@
     <string name="settings_chinese_mode_desc">When both the lyrics and the translation target are Chinese</string>
     <string name="settings_chinese_replace">Convert the lyrics</string>
     <string name="settings_chinese_below">Show below as a second line</string>
+    <string name="menu_other_device_sync">Syncing another device</string>
+    <string name="cache_consent_title">Cache lyrics from unofficial sources?</string>
+    <string name="cache_consent_message">Viewing these lyrics online is generally fine. The risk is using cached lyrics for anything beyond your own listening, such as sharing, exporting, publishing or commercial use, which may infringe copyright in the lyrics. If you agree, lyrics from NetEase, QQ Music and Kugou are saved on this device for your own offline viewing only. You can change this in Settings.</string>
+    <string name="cache_consent_allow">Allow caching</string>
+    <string name="cache_consent_deny">Show only</string>
+    <string name="settings_cache_unofficial">Cache unofficial lyric sources</string>
+    <string name="settings_cache_unofficial_desc">Save NetEase, QQ Music and Kugou lyrics on this device for offline use; personal use only</string>
+    <string-array name="onboarding_demo_lines">
+        <item>♪ Lyrics that follow the song</item>
+        <item>On the lock screen, notification and media card</item>
+        <item>Word by word, like karaoke</item>
+    </string-array>
+    <string name="tour_lyrics_title">Lyrics</string>
+    <string name="tour_lyrics_desc">Tap any line to jump there. Scroll to browse; it returns to the current line after a few seconds.</string>
+    <string name="tour_progress_title">Progress</string>
+    <string name="tour_progress_desc">Drag to jump anywhere in the song; the time digits roll as it plays.</string>
+    <string name="tour_play_title">Playback</string>
+    <string name="tour_play_desc">Previous, play/pause and next control Spotify directly.</string>
+    <string name="tour_shuffle_title">Shuffle</string>
+    <string name="tour_shuffle_desc">Lit with a small dot when on.</string>
+    <string name="tour_repeat_title">Repeat</string>
+    <string name="tour_repeat_desc">Tap to cycle through off, repeat all and repeat one.</string>
+    <string name="tour_translate_title">Translation</string>
+    <string name="tour_translate_desc">Pick a language; each line shows its translation underneath.</string>
+    <string name="tour_menu_title">Menu</string>
+    <string name="tour_menu_desc">Switch lyric source, adjust timing, lyric display settings and the other pages.</string>
+    <string name="tour_done">Get started</string>
+    <string name="settings_replay_tour">Button tour</string>
+    <string name="settings_replay_tour_desc">Show the player button tour again</string>
+    <string name="match_very_close">Very close</string>
+    <string name="match_close">Close</string>
+    <string name="match_possible">Possible match</string>
+    <string name="tour_menu_quick_title">Quick toggles</string>
+    <string name="tour_menu_quick_desc">Alignment, blur, and word-by-word highlighting (only when the lyrics have word timing).</string>
+    <string name="tour_menu_research_title">Search lyrics again</string>
+    <string name="tour_menu_research_desc">Wrong lyrics? Pick a better version from every source here.</string>
+    <string name="tour_menu_offset_title">Earlier / later</string>
+    <string name="tour_menu_offset_desc">Nudge the timing when lyrics and singing drift apart; remembered per lyric source.</string>
+    <string name="tour_menu_display_title">Lyric display</string>
+    <string name="tour_menu_display_desc">Font size and how dim the other lines are.</string>
+    <string name="tour_menu_library_title">Playlists, pre-cache, cache</string>
+    <string name="tour_menu_library_desc">Browse Spotify playlists, download lyrics ahead of time, manage the local cache.</string>
+    <string name="tour_menu_settings_title">Settings</string>
+    <string name="tour_menu_settings_desc">Theme, language, network, Chinese script, cache and permissions; you can replay this tour there too.</string>
+    <string name="onboarding_perm_spotify">Sign in to Spotify</string>
+    <string name="onboarding_perm_spotify_desc">Lets the app read your playlists and playback state, so lyrics stay in sync when you play on another device such as a computer or tablet. Read-only; nothing in your account changes.The authorization expires about every hour and is renewed when you open the app, so a Spotify loading screen may flash briefly. That is normal.</string>
+    <string name="playback_next_up">Next: %1$s</string>
 </resources>

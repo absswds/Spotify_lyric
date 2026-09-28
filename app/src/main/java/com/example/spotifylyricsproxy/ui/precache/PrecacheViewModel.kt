@@ -66,7 +66,9 @@ class PrecacheViewModel(application: Application) : AndroidViewModel(application
         "app-remote-control",
         "playlist-read-private",
         "playlist-read-collaborative",
-        "user-read-private"
+        "user-read-private",
+        "user-read-playback-state",
+        "user-modify-playback-state"
     )
 
     private val db = AppDatabase.getInstance(application)

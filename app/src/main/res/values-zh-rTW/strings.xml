@@ -217,7 +217,7 @@
     <string name="correction_current_offset_label">目前偏移</string>
     <string name="correction_instruction">點選「重新匹配」搜尋其他歌詞來源，或手動調整時間偏移</string>
     <string name="correction_classify_failed">無法匹配歌詞</string>
-    <string name="correction_candidate_subtitle">%1$s · %2$d分</string>
+    <string name="correction_candidate_subtitle">%1$s · %2$s</string>
     <string name="correction_back">返回</string>
     <string name="correction_no_track">未播放</string>
     <string name="correction_current_line_label">目前歌詞行: %1$s</string>
@@ -229,10 +229,10 @@
     <string name="correction_research">重新搜尋歌詞</string>
     <string name="correction_mark_wrong">標記為錯誤歌曲</string>
     <string name="correction_view_candidates">檢視候選列表 (%1$d 個)</string>
-    <string name="correction_status_synced">已匹配 (%1$d分)</string>
+    <string name="correction_status_synced">已匹配 · %1$s</string>
     <string name="correction_status_plain">僅文字歌詞</string>
     <string name="correction_status_notfound">未找到歌詞</string>
-    <string name="correction_status_low">低分匹配 (%1$d分)</string>
+    <string name="correction_status_low">匹配度低 · %1$s</string>
     <string name="correction_status_parse_error">解析失敗</string>
     <string name="correction_status_error">錯誤: %1$s</string>
 
@@ -374,4 +374,51 @@
     <string name="settings_chinese_mode_desc">翻譯目標是中文、歌詞本身也是中文時，如何處理</string>
     <string name="settings_chinese_replace">直接轉換原歌詞</string>
     <string name="settings_chinese_below">在下方另起一行</string>
+    <string name="menu_other_device_sync">正在同步其他裝置</string>
+    <string name="cache_consent_title">快取非官方歌詞來源？</string>
+    <string name="cache_consent_message">線上查看這些歌詞一般沒有問題。風險在於把快取下來的歌詞拿去做個人欣賞以外的事，例如分享、匯出、公開發布或商用，這可能侵犯歌詞版權。同意後，網易雲、QQ 音樂、酷狗的歌詞會儲存在本機，只供你自己離線查看。之後可在設定中修改。</string>
+    <string name="cache_consent_allow">同意快取</string>
+    <string name="cache_consent_deny">僅本次顯示</string>
+    <string name="settings_cache_unofficial">快取非官方來源歌詞</string>
+    <string name="settings_cache_unofficial_desc">網易雲、QQ 音樂、酷狗的歌詞儲存到本機以便離線顯示；僅供個人使用</string>
+    <string-array name="onboarding_demo_lines">
+        <item>♪ 歌詞跟著歌曲即時走</item>
+        <item>鎖定畫面、通知、流體雲都看得到</item>
+        <item>逐字高亮，像在唱卡拉 OK</item>
+    </string-array>
+    <string name="tour_lyrics_title">歌詞</string>
+    <string name="tour_lyrics_desc">點任一行跳到那裡；滑動可以自己翻看，幾秒後自動回到目前這行。</string>
+    <string name="tour_progress_title">進度條</string>
+    <string name="tour_progress_desc">拖動跳到歌曲任意位置，時間數字會滾動變化。</string>
+    <string name="tour_play_title">播放控制</string>
+    <string name="tour_play_desc">上一首、播放/暫停、下一首，直接控制 Spotify。</string>
+    <string name="tour_shuffle_title">隨機播放</string>
+    <string name="tour_shuffle_desc">亮起並帶小圓點表示已開啟。</string>
+    <string name="tour_repeat_title">循環</string>
+    <string name="tour_repeat_desc">點擊在不循環、清單循環、單曲循環之間切換。</string>
+    <string name="tour_translate_title">翻譯</string>
+    <string name="tour_translate_desc">選擇翻譯語言，每行歌詞下方顯示譯文。</string>
+    <string name="tour_menu_title">選單</string>
+    <string name="tour_menu_desc">換歌詞來源、調快調慢、歌詞顯示設定和其他頁面都在這裡。</string>
+    <string name="tour_done">開始使用</string>
+    <string name="settings_replay_tour">按鈕介紹</string>
+    <string name="settings_replay_tour_desc">再看一次播放頁各個按鈕的介紹</string>
+    <string name="match_very_close">非常接近</string>
+    <string name="match_close">比較接近</string>
+    <string name="match_possible">可能是這首</string>
+    <string name="tour_menu_quick_title">快捷開關</string>
+    <string name="tour_menu_quick_desc">對齊方式、模糊效果，以及逐字高亮（歌詞有逐字時間時才出現）。</string>
+    <string name="tour_menu_research_title">重新搜尋歌詞</string>
+    <string name="tour_menu_research_desc">歌詞不對就點這裡，從所有來源裡挑一個更合適的版本。</string>
+    <string name="tour_menu_offset_title">調快 / 調慢</string>
+    <string name="tour_menu_offset_desc">歌詞和歌聲對不上時微調；每個歌詞來源分別記住。</string>
+    <string name="tour_menu_display_title">歌詞顯示</string>
+    <string name="tour_menu_display_desc">字級和其他行的暗度。</string>
+    <string name="tour_menu_library_title">歌單、預先快取、快取</string>
+    <string name="tour_menu_library_desc">瀏覽 Spotify 歌單、提前下載歌詞、管理本機快取。</string>
+    <string name="tour_menu_settings_title">設定</string>
+    <string name="tour_menu_settings_desc">主題、語言、網路、繁簡、快取和權限都在這裡；也可以再看一次這個介紹。</string>
+    <string name="onboarding_perm_spotify">登入 Spotify</string>
+    <string name="onboarding_perm_spotify_desc">授權讀取你的歌單與播放狀態：在電腦、平板等其他裝置播放時也能同步歌詞。唯讀，不會變更你的帳號。授權大約每小時過期一次，之後開啟應用程式時會自動續期，可能會閃一下 Spotify 的載入頁，屬正常現象。</string>
+    <string name="playback_next_up">下一首：%1$s</string>
 </resources>

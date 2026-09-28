@@ -13,6 +13,9 @@ object SpotifyTokenStore {
     private const val PREFS_NAME = "spotify_webapi_auth"
     private const val KEY_ACCESS_TOKEN = "access_token"
     private const val KEY_SAVED_AT = "saved_at_ms"
+    private const val KEY_SCOPE_VERSION = "scope_version"
+    /** Bump when the requested scopes change, so older tokens get replaced. */
+    const val SCOPE_VERSION = 3
     private const val TAG = "SpotifyTokenStore"
 
     private var prefs: SharedPreferences? = null
@@ -28,6 +31,7 @@ object SpotifyTokenStore {
         p.edit()
             .putString(KEY_ACCESS_TOKEN, accessToken)
             .putLong(KEY_SAVED_AT, System.currentTimeMillis())
+            .putInt(KEY_SCOPE_VERSION, SCOPE_VERSION)
             .apply()
         Log.i(TAG, "Token saved (length=${accessToken.length})")
     }
@@ -46,6 +50,18 @@ object SpotifyTokenStore {
             .remove(KEY_SAVED_AT)
             .apply()
         Log.i(TAG, "Token cleared")
+    }
+
+    /** Authorized at least once with the current scopes (the token may have expired since). */
+    fun hasCurrentScopes(): Boolean =
+        (prefs?.getInt(KEY_SCOPE_VERSION, 1) ?: 1) >= SCOPE_VERSION
+
+    /** Missing, expired (tokens last an hour) or lacking the current scopes. */
+    fun needsRefresh(): Boolean {
+        val p = prefs ?: return false
+        val age = ageMs()
+        return getAccessToken() == null || age < 0 || age > 55 * 60_000L ||
+            p.getInt(KEY_SCOPE_VERSION, 1) < SCOPE_VERSION
     }
 
     /** Returns the age of the saved token in milliseconds, or -1 if none. */

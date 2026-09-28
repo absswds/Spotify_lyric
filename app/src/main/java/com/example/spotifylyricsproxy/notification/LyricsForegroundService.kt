@@ -111,6 +111,9 @@ class LyricsForegroundService : Service() {
 
     override fun onDestroy() {
         observerJob?.cancel()
+        sessionsListener?.let {
+            getSystemService(android.media.session.MediaSessionManager::class.java)?.removeOnActiveSessionsChangedListener(it)
+        }
         serviceScope.cancel()
         mediaSessionController.release()
         spotifyRepository.disconnect()
@@ -130,14 +133,69 @@ class LyricsForegroundService : Service() {
         }
     }
 
+    private fun reclaimSoon() {
+        reclaimJob?.cancel()
+        reclaimJob = serviceScope.launch {
+            delay(RECLAIM_DELAY_MS)
+            try {
+                if (mediaSessionController.beginReclaim(playbackClock.estimatedPositionMs())) {
+                    delay(MediaSessionController.RECLAIM_GAP_MS)
+                }
+            } finally {
+                mediaSessionController.endReclaim(playbackClock.estimatedPositionMs())
+            }
+        }
+    }
+
+    // Spotify re-promotes its session without us seeing a track change or resume:
+    // playback moved back from another device, or it resumed after another app's audio.
+    // Watch the system priority order itself and take the top spot back.
+    private var sessionsListener: android.media.session.MediaSessionManager.OnActiveSessionsChangedListener? = null
+
+    private fun watchSessionOrder() {
+        if (sessionsListener != null) return
+        val manager = getSystemService(android.media.session.MediaSessionManager::class.java) ?: return
+        val listener = android.media.session.MediaSessionManager.OnActiveSessionsChangedListener { list ->
+            val top = list?.firstOrNull() ?: return@OnActiveSessionsChangedListener
+            // Spotify's state is not checked: it often takes the top while still starting
+            // up (not yet PLAYING), and a later PLAYING doesn't reorder the list again.
+            // beginReclaim() itself only acts while our track is playing.
+            if (top.packageName == SPOTIFY_PACKAGE) reclaimSoon()
+        }
+        try {
+            manager.addOnActiveSessionsChangedListener(
+                listener,
+                android.content.ComponentName(this, com.example.spotifylyricsproxy.spotify.remote.MediaSessionNotificationListener::class.java),
+                android.os.Handler(mainLooper)
+            )
+            sessionsListener = listener
+        } catch (e: SecurityException) {
+            // No notification access: fall back to track-change reclaims only.
+        }
+    }
+
     private fun startNotificationLoop() {
-        if (observerJob != null) return
+        if (observerJob != null) {
+            // Already running (the app came back to the foreground): catch up on missed events.
+            spotifyRepository.refreshState()
+            return
+        }
+        watchSessionOrder()
 
         acquireWakeLock()
         startForeground(NOTIFICATION_ID, buildNotification(waitingSnapshot(), null))
         spotifyRepository.tryConnect()
 
         observerJob = serviceScope.launch {
+            launch {
+                spotifyRepository.nextTrack.collect { next ->
+                    next ?: return@collect
+                    lyricsRepository.prefetch(
+                        next.id, next.name, next.artists.firstOrNull()?.name ?: "",
+                        next.album?.name ?: "", next.durationMs
+                    )
+                }
+            }
             launch {
                 spotifyRepository.currentTrack.collect { track ->
                     val previous = currentTrack.value
@@ -146,17 +204,7 @@ class LyricsForegroundService : Service() {
                     // take the top spot back once it has settled.
                     val resumed = previous.isPaused && !track.isPaused
                     if (track.trackId.isNotBlank() && (track.trackId != previous.trackId || resumed)) {
-                        reclaimJob?.cancel()
-                        reclaimJob = launch {
-                            delay(RECLAIM_DELAY_MS)
-                            try {
-                                if (mediaSessionController.beginReclaim(playbackClock.estimatedPositionMs())) {
-                                    delay(MediaSessionController.RECLAIM_GAP_MS)
-                                }
-                            } finally {
-                                mediaSessionController.endReclaim(playbackClock.estimatedPositionMs())
-                            }
-                        }
+                        reclaimSoon()
                     }
                     playbackClock.update(
                         positionMs = track.playbackPositionMs,
@@ -398,6 +446,7 @@ class LyricsForegroundService : Service() {
     }
 
     companion object {
+        private const val SPOTIFY_PACKAGE = "com.spotify.music"
         private const val TAG = "LyricsForegroundSvc"
         private const val CHANNEL_ID = "lyrics_foreground"
         /** Let Spotify finish its own state change before we re-promote our session. */

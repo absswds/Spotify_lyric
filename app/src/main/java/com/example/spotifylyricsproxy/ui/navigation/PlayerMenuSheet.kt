@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.spotifylyricsproxy.R
+import com.example.spotifylyricsproxy.ui.playback.coachTarget
 import com.example.spotifylyricsproxy.ui.playback.LyricDisplayPreferences
 import com.example.spotifylyricsproxy.ui.playback.PlaybackViewModel
 import java.util.Locale
@@ -177,6 +178,10 @@ private fun ColumnScope.MenuContent(
             if (track.artist.isNotBlank()) {
                 Text(track.artist, color = SheetInkDim, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            val otherDevice by viewModel.otherDevicePlaying.collectAsState()
+            if (otherDevice) {
+                Text(stringResource(R.string.menu_other_device_sync), color = Color(0xFF8FE3B0), fontSize = 11.sp, maxLines = 1)
+            }
         }
         sourceLabel(source)?.let { label ->
             Text(
@@ -193,7 +198,7 @@ private fun ColumnScope.MenuContent(
     }
 
     // Quick toggles
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.coachTarget("menu_quick")) {
         // Shows the current alignment; each tap switches to the other one.
         val alignStart = alignment == "start"
         QuickTile(
@@ -216,18 +221,24 @@ private fun ColumnScope.MenuContent(
 
     GroupTitle(stringResource(R.string.menu_group_lyrics))
     MenuGroup {
-        MenuRow(Icons.Filled.Search, Color(0xFFFF9F0A), stringResource(R.string.correction_research), stringResource(R.string.menu_research_desc)) {
-            onOpenPage(NavRoute.LyricsCorrection)
+        Box(Modifier.coachTarget("menu_research")) {
+            MenuRow(Icons.Filled.Search, Color(0xFFFF9F0A), stringResource(R.string.correction_research), stringResource(R.string.menu_research_desc)) {
+                onOpenPage(NavRoute.LyricsCorrection)
+            }
         }
-        MenuRow(Icons.Filled.Timer, Color(0xFF5E5CE6), stringResource(R.string.menu_offset_title), stringResource(R.string.menu_offset_desc),
-            trailing = { OffsetStepper(offsetMs, onChange = { viewModel.adjustOffset(it) }) },
-            onClick = null
-        )
-        MenuRow(Icons.Filled.TextFields, Color(0xFF64D2FF), stringResource(R.string.nav_lyric_display), stringResource(R.string.menu_display_desc), onClick = onOpenLyricDisplay)
+        Box(Modifier.coachTarget("menu_offset")) {
+            MenuRow(Icons.Filled.Timer, Color(0xFF5E5CE6), stringResource(R.string.menu_offset_title), stringResource(R.string.menu_offset_desc),
+                trailing = { OffsetStepper(offsetMs, onChange = { viewModel.adjustOffset(it) }) },
+                onClick = null
+            )
+        }
+        Box(Modifier.coachTarget("menu_display")) {
+            MenuRow(Icons.Filled.TextFields, Color(0xFF64D2FF), stringResource(R.string.nav_lyric_display), stringResource(R.string.menu_display_desc), onClick = onOpenLyricDisplay)
+        }
     }
 
     GroupTitle(stringResource(R.string.menu_group_library))
-    MenuGroup {
+    Box(Modifier.coachTarget("menu_library")) { MenuGroup {
         MenuRow(Icons.AutoMirrored.Filled.QueueMusic, Color(0xFF30D158), stringResource(R.string.nav_playlist), stringResource(R.string.menu_playlists_desc)) {
             onOpenPage(NavRoute.Playlist)
         }
@@ -237,14 +248,14 @@ private fun ColumnScope.MenuContent(
         MenuRow(Icons.Filled.Storage, Color(0xFF8E8E93), stringResource(R.string.nav_cache), stringResource(R.string.menu_cache_desc)) {
             onOpenPage(NavRoute.Cache)
         }
-    }
+    } }
 
     Spacer(modifier = Modifier.height(2.dp))
-    MenuGroup {
+    Box(Modifier.coachTarget("menu_settings")) { MenuGroup {
         MenuRow(Icons.Filled.Settings, Color(0xFF636366), stringResource(R.string.nav_settings), stringResource(R.string.menu_settings_desc)) {
             onOpenPage(NavRoute.Settings)
         }
-    }
+    } }
 }
 
 @Composable

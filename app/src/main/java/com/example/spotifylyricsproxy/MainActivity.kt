@@ -1,5 +1,6 @@
 package com.example.spotifylyricsproxy
 
+import androidx.compose.animation.togetherWith
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -70,20 +71,35 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 playbackViewModel.onResume()
+            } else if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) {
+                playbackViewModel.onPause()
             }
         })
 
         setContent {
             SpotifyLyricProxyTheme {
                 val onboardingDone by com.example.spotifylyricsproxy.core.AppSettings.onboardingDone
-                if (onboardingDone) {
-                    AppNavigation(
-                        playbackViewModel = playbackViewModel,
-                        cacheViewModel = cacheViewModel,
-                        precacheViewModel = precacheViewModel
-                    )
-                } else {
-                    OnboardingScreen(onFinish = com.example.spotifylyricsproxy.core.AppSettings::finishOnboarding)
+                // One continuous shot from the guide into the player: the guide zooms
+                // past the camera while the player settles in behind it.
+                androidx.compose.animation.AnimatedContent(
+                    targetState = onboardingDone,
+                    transitionSpec = {
+                        (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(700, delayMillis = 150)) +
+                            androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(900), initialScale = 0.9f)) togetherWith
+                            (androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(500)) +
+                                androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(600), targetScale = 1.18f))
+                    },
+                    label = "onboardingToPlayer"
+                ) { done ->
+                    if (done) {
+                        AppNavigation(
+                            playbackViewModel = playbackViewModel,
+                            cacheViewModel = cacheViewModel,
+                            precacheViewModel = precacheViewModel
+                        )
+                    } else {
+                        OnboardingScreen(onFinish = com.example.spotifylyricsproxy.core.AppSettings::finishOnboarding)
+                    }
                 }
             }
         }
@@ -154,6 +170,18 @@ class MainActivity : ComponentActivity() {
 
 object SpotifyAuthHolder {
     var startAuth: ((com.spotify.sdk.android.auth.AuthorizationRequest) -> Unit)? = null
+
+    /** Opens Spotify's authorization with every scope the app uses. */
+    fun requestAuth() {
+        val request = com.spotify.sdk.android.auth.AuthorizationRequest.Builder(
+            BuildConfig.SPOTIFY_CLIENT_ID,
+            com.spotify.sdk.android.auth.AuthorizationResponse.Type.TOKEN,
+            "spotifylyricsproxy://callback"
+        )
+            .setScopes(arrayOf("app-remote-control", "playlist-read-private", "playlist-read-collaborative", "user-read-private", "user-read-playback-state", "user-modify-playback-state"))
+            .build()
+        startAuth?.invoke(request)
+    }
     /** Shared Web API token, set by MainActivity when auth succeeds */
     var accessToken: String? = null
 }

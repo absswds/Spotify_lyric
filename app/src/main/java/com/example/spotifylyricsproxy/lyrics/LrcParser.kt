@@ -22,7 +22,8 @@ object LrcParser {
     // Matches [mm:ss.xx] or [mm:ss.xxx]
     private val LINE_REGEX = Regex("""\[(\d{2}):(\d{2})\.(\d{2,3})](.*)""")
     private val YRC_LINE = Regex("""^\[(\d+),(\d+)](.*)$""")
-    private val YRC_WORD = Regex("""\((\d+),(\d+),\d+\)([^(]*)""")
+    // Word text runs to the next timing tag, so a literal "(" in a word survives.
+    private val YRC_WORD = Regex("""\((\d+),(\d+),\d+\)(.*?)(?=\(\d+,\d+,\d+\)|$)""")
     private val WHITESPACE = Regex("\\s+")
 
     /**

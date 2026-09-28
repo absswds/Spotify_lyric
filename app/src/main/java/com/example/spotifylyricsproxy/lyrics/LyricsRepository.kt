@@ -68,6 +68,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         AmllTtmlLyricsSource(),
         NeteaseLyricsSource(),
         QQMusicLyricsSource(),
+        com.example.spotifylyricsproxy.lyrics.kugou.KugouLyricsSource(),
         LrclibLyricsSource()
     )
 
@@ -76,10 +77,12 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
      * never written to Room — offline cache therefore only ever contains
      * LRCLIB (and manually imported) lyrics.
      */
-    private val memoryOnlySources = setOf(NETEASE_SOURCE, QQ_MUSIC_SOURCE)
+    private val memoryOnlySources = setOf(NETEASE_SOURCE, QQ_MUSIC_SOURCE, com.example.spotifylyricsproxy.lyrics.kugou.KugouLyricsSource.NAME)
+
 
     /** Query every source IN PARALLEL, collect all candidates, return all for scoring. */
-    private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> = coroutineScope {
+    /** [waitAll]: the correction screen wants every version, so no early finish. */
+    private suspend fun aggregateSearch(request: LyricsSearchRequest, waitAll: Boolean = false): List<LyricCandidate> = coroutineScope {
         val allCandidates = mutableListOf<LyricCandidate>()
         val results = kotlinx.coroutines.channels.Channel<List<LyricCandidate>>(sources.size)
         val jobs = sources.map { source ->
@@ -94,7 +97,9 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             val batch = (if (remaining > 0) withTimeoutOrNull(remaining) { results.receive() } else null)
                 ?: return@repeat
             allCandidates.addAll(batch)
-            if (allCandidates.any { it.source == AmllTtmlLyricsSource.SOURCE && !it.syncedLyrics.isNullOrEmpty() }) {
+            if (waitAll) {
+                // keep the full timeout
+            } else if (allCandidates.any { it.source == AmllTtmlLyricsSource.SOURCE && !it.syncedLyrics.isNullOrEmpty() }) {
                 deadline = 0L
             } else if (allCandidates.map { it.source }.distinct().size >= 2 &&
                 allCandidates.any { c -> c.syncedLyrics?.let { YRC_HINT.containsMatchIn(it) || it.trimStart().startsWith("<tt") } == true }
@@ -204,6 +209,26 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     /** Bumped on every fetch; a fetch whose generation is no longer current must not publish. */
     @Volatile private var fetchGeneration = 0L
 
+    /** Search results fetched ahead for the queued next track: trackId to candidates. */
+    @Volatile private var prefetched: Pair<String, List<LyricCandidate>>? = null
+
+    /** Searches the next track's lyrics in advance so they show the moment it starts. */
+    suspend fun prefetch(trackId: String, title: String, artist: String, album: String, durationMs: Long) {
+        if (title.isEmpty() || artist.isEmpty() || trackId == currentTrackId || prefetched?.first == trackId) return
+        val cached = withContext(Dispatchers.IO) { cacheDao.getByTrackId(trackId) }
+        // These never search online anyway.
+        if (cached?.source == "manual" || cached?.source == AmllTtmlLyricsSource.SOURCE) return
+        val request = LyricsSearchRequest(trackName = title, artistName = artist, albumName = album, durationMs = durationMs, trackId = trackId)
+        val list = runCatching { withContext(Dispatchers.IO) { aggregateSearch(request) } }.getOrElse {
+            if (it is CancellationException) throw it
+            emptyList()
+        }
+        if (list.isNotEmpty()) {
+            prefetched = trackId to list
+            Log.i(TAG, "Prefetched ${list.size} candidates for next track: $title")
+        }
+    }
+
     fun getCurrentTrackId(): String = currentTrackId
     fun getOffsetMs(): Long = _offsetMs
 
@@ -252,10 +277,11 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 val lines = preview.syncedLyrics?.let { LrcParser.parse(it) }.orEmpty()
                 if (lines.isNotEmpty()) {
                     _offsetMs = preview.offsetMs
+                    offsetKey = "$currentTrackId|${preview.source}"
                     _currentOffsetMs.value = _offsetMs
                     _parsedLyrics.value = lines
                     _lyricStatus.value = LyricStatus.Synced(100)
-                    _lyricSource.value = preview.source
+                    setSource(preview.source)
                 }
             }
         }
@@ -265,6 +291,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         var upgrading = false
         if (cached != null) {
             _offsetMs = cached.offsetMs
+            offsetKey = "$currentTrackId|${cached.source}"
             _currentOffsetMs.value = _offsetMs
             Log.i(TAG, "Cache hit: $title (status=${cached.fetchStatus}, source=${cached.source}, offset=${_offsetMs}ms)")
             updatePlayHistory(cached)
@@ -276,7 +303,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                     if (lines.isNotEmpty()) {
                         _parsedLyrics.value = lines
                         _lyricStatus.value = LyricStatus.Synced(100)
-                        _lyricSource.value = cached.source
+                        setSource(cached.source)
                         return
                     }
                 }
@@ -289,7 +316,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                         if (lines.isNotEmpty()) {
                             _parsedLyrics.value = lines
                             _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
-                            _lyricSource.value = cached.source
+                            setSource(cached.source)
                             if (lines.any { it.words.isNotEmpty() } || cached.source == AmllTtmlLyricsSource.SOURCE) return
                             upgrading = true
                         }
@@ -307,7 +334,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                         if (lines.isNotEmpty()) {
                             _parsedLyrics.value = lines
                             _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
-                            _lyricSource.value = cached.source
+                            setSource(cached.source)
                             return
                         }
                     }
@@ -329,7 +356,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 trackId = trackId
             )
 
-            val candidates = withContext(Dispatchers.IO) { aggregateSearch(request) }
+            val candidates = prefetched?.takeIf { it.first == trackId }?.second
+                ?: withContext(Dispatchers.IO) { aggregateSearch(request) }
             if (stale()) return
 
             if (candidates.isEmpty()) {
@@ -404,7 +432,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
 
             _parsedLyrics.value = lines
             _lyricStatus.value = LyricStatus.Synced(best.score)
-            _lyricSource.value = best.source
+            setSource(best.source)
 
         } catch (e: CancellationException) {
             throw e
@@ -427,7 +455,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         // line visible in MediaSession/notification while the playback UI was empty.
         _parsedLyrics.value = emptyList()
         _currentLine.value = null
-        _lyricSource.value = candidate.source
+        setSource(candidate.source)
 
         cacheResult(
             trackId = currentTrackId,
@@ -491,7 +519,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                     albumName = searchAlbum,
                     durationMs = searchDuration,
                     trackId = t
-                ))
+                ), waitAll = true)
             }
             if (results.isEmpty()) {
                 // Cross-device fallback: the App Remote track info may be stale
@@ -502,7 +530,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                     aggregateSearch(LyricsSearchRequest(
                         trackName = searchTitle,
                         artistName = ""
-                    ))
+                    ), waitAll = true)
                 }
                 if (titleOnlyResults.isEmpty()) {
                     _lyricStatus.value = LyricStatus.NotFound
@@ -576,10 +604,30 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         reSearch()
     }
 
-    /** Set per-track offset and save to database. */
+    /** Track and source the current [_offsetMs] belongs to. */
+    private var offsetKey = ""
+
+    /**
+     * Switch the lyric source. Offsets are kept per source (their timing differs), so
+     * load this source's saved one; the offset from the cache row applies only to the
+     * source it was saved with.
+     */
+    private fun setSource(source: String) {
+        _lyricSource.value = source
+        val key = "$currentTrackId|$source"
+        val saved = AppSettings.sourceOffsetMs(currentTrackId, source)
+        if (saved != null) _offsetMs = saved else if (key != offsetKey) _offsetMs = 0L
+        offsetKey = key
+        _currentOffsetMs.value = _offsetMs
+    }
+
+    /** Set per-track offset for the current source and save it. */
     suspend fun setOffsetMs(offsetMs: Long) {
         _offsetMs = offsetMs
         _currentOffsetMs.value = offsetMs
+        if (currentTrackId.isNotBlank() && _lyricSource.value.isNotBlank()) {
+            AppSettings.setSourceOffsetMs(currentTrackId, _lyricSource.value, offsetMs)
+        }
         if (currentTrackId.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 val entity = cacheDao.getByTrackId(currentTrackId)
@@ -612,10 +660,13 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         trackId: String, title: String, artist: String,
         album: String, durationMs: Long, best: LyricCandidate
     ) {
-        // NetEase lyrics are session-only by policy: display them in memory but never persist them.
+        // Unofficial sources are session-only unless the user agreed to cache them.
         if (best.source in memoryOnlySources) {
-            Log.i(TAG, "Skipping Room cache for memory-only source=${best.source}")
-            return
+            // Asked once in the guide (changeable in Settings); no answer means no.
+            if (AppSettings.cacheUnofficial.value != true) {
+                Log.i(TAG, "Skipping Room cache for memory-only source=${best.source}")
+                return
+            }
         }
 
         val fetchStatus = when {
@@ -718,6 +769,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         _offsetMs = 0L
         _currentOffsetMs.value = 0L
         currentTrackId = ""
+        offsetKey = ""
     }
 
     /** Set status to indicate online search was skipped because of metered connection. */
@@ -747,10 +799,11 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         val lines = LrcParser.parse(synced)
         if (lines.isEmpty()) return false
         _offsetMs = cached.offsetMs
+            offsetKey = "$currentTrackId|${cached.source}"
         _currentOffsetMs.value = _offsetMs
         _parsedLyrics.value = lines
         _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
-        _lyricSource.value = cached.source
+        setSource(cached.source)
         Log.d(TAG, "Fallback to cache for $trackId (source=${cached.source})")
         return true
     }

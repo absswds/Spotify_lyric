@@ -133,7 +133,9 @@ private data class PlayerUiState(
     /** Language detected in the current lyrics (null until known). */
     val detectedLyricsLang: String?,
     val playbackOptions: PlaybackOptions,
-    val isSpotifyInstalled: Boolean
+    val isSpotifyInstalled: Boolean,
+    /** "Title · Artist" of the queued next track, or null. */
+    val nextUp: String? = null
 ) {
     val isPlaying get() = !trackInfo.isPaused && trackInfo.trackId.isNotEmpty()
     val hasTrack get() = connectionState is SpotifyConnectionState.Connected || trackInfo.trackId.isNotEmpty()
@@ -166,6 +168,7 @@ fun PlaybackScreen(
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
     val playbackOptions by viewModel.playbackOptions.collectAsState()
+    val nextTrack by viewModel.nextTrack.collectAsState()
     val trackInfo by viewModel.currentTrack.collectAsState()
     val albumArt by viewModel.albumArt.collectAsState()
     val positionState = viewModel.estimatedPositionMs.collectAsState()
@@ -241,7 +244,8 @@ fun PlaybackScreen(
         targetTranslationLang = targetTranslationLang,
         detectedLyricsLang = detectedLyricsLang,
         playbackOptions = playbackOptions,
-        isSpotifyInstalled = isSpotifyInstalled
+        isSpotifyInstalled = isSpotifyInstalled,
+        nextUp = nextTrack?.let { t -> listOf(t.name, t.artists.firstOrNull()?.name.orEmpty()).filter { it.isNotBlank() }.joinToString(" · ") }
     )
     val actions = PlayerActions(
         onSeek = viewModel::seekTo,
@@ -576,7 +580,7 @@ private fun PlayerLyrics(
         textScale = textScale,
         anchorFraction = anchorFraction,
         contentPadding = contentPadding,
-        modifier = modifier
+        modifier = modifier.coachTarget("lyrics")
     )
 }
 
@@ -634,6 +638,7 @@ private fun ReadPosition(position: () -> Long, content: @Composable (Long) -> Un
 
 @Composable
 private fun LiveProgressBar(state: PlayerUiState, actions: PlayerActions, scale: Float) {
+    Box(Modifier.coachTarget("progress")) {
     ReadPosition(state.positionMs) { position ->
         AppleProgressBar(
             positionMs = position,
@@ -641,6 +646,7 @@ private fun LiveProgressBar(state: PlayerUiState, actions: PlayerActions, scale:
             onSeek = actions.onSeek,
             scale = scale
         )
+    }
     }
 }
 
@@ -719,6 +725,23 @@ private fun TrackMeta(trackInfo: SpotifyTrackInfo, scale: Float, centered: Boole
 /** Shuffle · previous · play/pause · next · repeat, bare icons spread across the row. */
 @Composable
 private fun TransportRow(state: PlayerUiState, actions: PlayerActions, scale: Float) {
+    TransportButtons(state, actions, scale)
+    val nextUp = state.nextUp
+    if (!nextUp.isNullOrBlank()) {
+        Text(
+            text = stringResource(R.string.playback_next_up, nextUp),
+            fontSize = 12.sp * scale,
+            color = Color.White.copy(alpha = 0.5f),
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp * scale)
+        )
+    }
+}
+
+@Composable
+private fun TransportButtons(state: PlayerUiState, actions: PlayerActions, scale: Float) {
     val enabled = state.hasTrack
     Row(
         modifier = Modifier
@@ -729,7 +752,7 @@ private fun TransportRow(state: PlayerUiState, actions: PlayerActions, scale: Fl
     ) {
         // The toggles' touch boxes are wider than their icons: shift them outward so the
         // icons themselves line up with the cover and progress bar edges.
-        Box(Modifier.offset(x = -8.dp * scale)) {
+        Box(Modifier.offset(x = -8.dp * scale).coachTarget("shuffle")) {
             ModeToggle(
                 icon = Icons.Filled.Shuffle,
                 active = state.playbackOptions.isShuffling,
@@ -741,13 +764,15 @@ private fun TransportRow(state: PlayerUiState, actions: PlayerActions, scale: Fl
         BareIconButton(onClick = actions.onSkipPrevious, size = 48.dp * scale, enabled = enabled) {
             Icon(Icons.Filled.SkipPrevious, stringResource(R.string.playback_cd_previous), Modifier.size(36.dp * scale), tint = Color.White)
         }
-        BareIconButton(onClick = actions.onPlayPause, size = 56.dp * scale, enabled = enabled) {
-            PlayPauseGlyph(isPlaying = state.isPlaying, size = 34.dp * scale)
+        Box(Modifier.coachTarget("play")) {
+            BareIconButton(onClick = actions.onPlayPause, size = 56.dp * scale, enabled = enabled) {
+                PlayPauseGlyph(isPlaying = state.isPlaying, size = 34.dp * scale)
+            }
         }
         BareIconButton(onClick = actions.onSkipNext, size = 48.dp * scale, enabled = enabled) {
             Icon(Icons.Filled.SkipNext, stringResource(R.string.playback_cd_next), Modifier.size(36.dp * scale), tint = Color.White)
         }
-        Box(Modifier.offset(x = 8.dp * scale)) {
+        Box(Modifier.offset(x = 8.dp * scale).coachTarget("repeat")) {
             ModeToggle(
                 icon = if (state.playbackOptions.repeatMode == RepeatMode.TRACK) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
                 active = state.playbackOptions.repeatMode != RepeatMode.OFF,
@@ -800,7 +825,7 @@ private fun PlayerChrome(
 ) {
     var pickerOpen by remember { mutableStateOf(false) }
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box {
+        Box(Modifier.coachTarget("translate")) {
             if (inline) {
                 CircleIconButton(
                     icon = Icons.Filled.Translate,
@@ -828,7 +853,9 @@ private fun PlayerChrome(
                 onDismiss = { pickerOpen = false }
             )
         }
-        MenuCircleButton(onClick = actions.onOpenMenu, scale = scale)
+        Box(Modifier.coachTarget("menu")) {
+            MenuCircleButton(onClick = actions.onOpenMenu, scale = scale)
+        }
     }
 }
 
@@ -1017,7 +1044,7 @@ private fun ActionPill(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier
+        modifier = modifier.coachTarget("lyrics")
             .height(44.dp)
             .clip(RoundedCornerShape(22.dp))
             .clickable(enabled = enabled, onClick = onClick),

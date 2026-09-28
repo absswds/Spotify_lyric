@@ -55,6 +55,13 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     private val _estimatedPositionMs = MutableStateFlow(0L)
     val estimatedPositionMs: StateFlow<Long> = _estimatedPositionMs.asStateFlow()
 
+    /** Following another Spotify Connect device through the Web API. */
+    val nextTrack: StateFlow<com.example.spotifylyricsproxy.spotify.webapi.SpotifyTrack?>
+        get() = repository.nextTrack
+
+    val otherDevicePlaying: StateFlow<Boolean>
+        get() = repository.otherDevicePlayingFlow
+
     val connectionState: StateFlow<SpotifyConnectionState>
         get() = repository.connectionState
 
@@ -282,16 +289,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun authorize(activity: Activity) {
-        val request = AuthorizationRequest.Builder(
-            clientId,
-            AuthorizationResponse.Type.TOKEN,
-            redirectUri
-        )
-            .setScopes(arrayOf("app-remote-control", "playlist-read-private", "playlist-read-collaborative", "user-read-private"))
-            .build()
-        SpotifyAuthHolder.startAuth?.invoke(request)
-    }
+    private var lastTokenRequestAt = -10 * 60_000L
+
+    fun authorize(activity: Activity) = authorize()
+
+    private fun authorize() = SpotifyAuthHolder.requestAuth()
 
     fun disconnect() {
         LyricsForegroundService.stop(getApplication())
@@ -341,16 +343,31 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     /** Called from MainActivity.onResume — gentle auto-reconnect when returning
      *  to foreground (e.g. after opening Spotify). */
+    fun onPause() {
+        repository.webPollEnabled = false
+    }
+
     fun onResume() {
+        repository.webPollEnabled = true
         if (pendingConnectionOnResume) {
             pendingConnectionOnResume = false
             android.util.Log.i("PlaybackVM", "onResume: retrying connection after opening Spotify")
             repository.forceReconnect()
-        } else if (repository.connectionState.value is SpotifyConnectionState.Disconnected ||
-                repository.connectionState.value is SpotifyConnectionState.Error
-        ) {
-            android.util.Log.i("PlaybackVM", "onResume: gentle reconnect attempt")
-            repository.tryConnect()
+        } else {
+            // The Web API token (other-device sync) lasts an hour and can only be
+            // renewed from the foreground. Only renew for someone who signed in with the
+            // guide's button; never pop the authorization up unasked.
+            if (com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore.hasCurrentScopes() &&
+                com.example.spotifylyricsproxy.spotify.webapi.SpotifyTokenStore.needsRefresh() &&
+                android.os.SystemClock.elapsedRealtime() - lastTokenRequestAt > 10 * 60_000L
+            ) {
+                lastTokenRequestAt = android.os.SystemClock.elapsedRealtime()
+                SpotifyAuthHolder.startAuth?.let { authorize() }
+            }
+            repository.refreshState()
+            if (repository.connectionState.value is SpotifyConnectionState.Connected) {
+                LyricsForegroundService.start(getApplication())
+            }
         }
     }
 

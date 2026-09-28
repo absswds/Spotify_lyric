@@ -217,7 +217,7 @@
     <string name="correction_current_offset_label">当前偏移</string>
     <string name="correction_instruction">点击「重新匹配」搜索其他歌词来源，或手动调整时间偏移</string>
     <string name="correction_classify_failed">无法匹配歌词</string>
-    <string name="correction_candidate_subtitle">%1$s · %2$d分</string>
+    <string name="correction_candidate_subtitle">%1$s · %2$s</string>
     <string name="correction_back">返回</string>
     <string name="correction_no_track">未播放</string>
     <string name="correction_current_line_label">当前歌词行: %1$s</string>
@@ -229,10 +229,10 @@
     <string name="correction_research">重新搜索歌词</string>
     <string name="correction_mark_wrong">标记为错误歌曲</string>
     <string name="correction_view_candidates">查看候选列表 (%1$d 个)</string>
-    <string name="correction_status_synced">已匹配 (%1$d分)</string>
+    <string name="correction_status_synced">已匹配 · %1$s</string>
     <string name="correction_status_plain">仅文本歌词</string>
     <string name="correction_status_notfound">未找到歌词</string>
-    <string name="correction_status_low">低分匹配 (%1$d分)</string>
+    <string name="correction_status_low">匹配度低 · %1$s</string>
     <string name="correction_status_parse_error">解析失败</string>
     <string name="correction_status_error">错误: %1$s</string>
 
@@ -376,4 +376,51 @@
     <string name="settings_chinese_mode_desc">翻译目标是中文、歌词本身也是中文时，怎么处理</string>
     <string name="settings_chinese_replace">直接转换原歌词</string>
     <string name="settings_chinese_below">在下方另起一行</string>
+    <string name="menu_other_device_sync">正在同步其他设备</string>
+    <string name="cache_consent_title">缓存非官方歌词源？</string>
+    <string name="cache_consent_message">在线查看这些歌词一般没有问题。风险在于把缓存下来的歌词拿去做个人欣赏以外的事，例如分享、导出、公开发布或商用，这可能侵犯歌词版权。同意后，网易云、QQ 音乐、酷狗的歌词会保存在本机，只供你自己离线查看。之后可在设置中修改。</string>
+    <string name="cache_consent_allow">同意缓存</string>
+    <string name="cache_consent_deny">仅本次显示</string>
+    <string name="settings_cache_unofficial">缓存非官方来源歌词</string>
+    <string name="settings_cache_unofficial_desc">网易云、QQ 音乐、酷狗的歌词保存到本机以便离线显示；仅供个人使用</string>
+    <string-array name="onboarding_demo_lines">
+        <item>♪ 歌词跟着歌曲实时走</item>
+        <item>锁屏、通知、流体云都能看到</item>
+        <item>逐字高亮，像在唱卡拉 OK</item>
+    </string-array>
+    <string name="tour_lyrics_title">歌词</string>
+    <string name="tour_lyrics_desc">点任意一行跳到那里；滑动可以自己翻看，几秒后自动回到当前行。</string>
+    <string name="tour_progress_title">进度条</string>
+    <string name="tour_progress_desc">拖动跳到歌曲任意位置，时间数字会滚动变化。</string>
+    <string name="tour_play_title">播放控制</string>
+    <string name="tour_play_desc">上一首、播放/暂停、下一首，直接控制 Spotify。</string>
+    <string name="tour_shuffle_title">随机播放</string>
+    <string name="tour_shuffle_desc">亮起并带小圆点表示已开启。</string>
+    <string name="tour_repeat_title">循环</string>
+    <string name="tour_repeat_desc">点击在不循环、列表循环、单曲循环之间切换。</string>
+    <string name="tour_translate_title">翻译</string>
+    <string name="tour_translate_desc">选择翻译语言，每行歌词下面显示译文。</string>
+    <string name="tour_menu_title">菜单</string>
+    <string name="tour_menu_desc">换歌词来源、调快调慢、歌词显示设置和其他页面都在这里。</string>
+    <string name="tour_done">开始使用</string>
+    <string name="settings_replay_tour">按钮介绍</string>
+    <string name="settings_replay_tour_desc">再看一次播放页各个按钮的介绍</string>
+    <string name="match_very_close">非常接近</string>
+    <string name="match_close">比较接近</string>
+    <string name="match_possible">可能是这首</string>
+    <string name="tour_menu_quick_title">快捷开关</string>
+    <string name="tour_menu_quick_desc">对齐方式、模糊效果，以及逐字高亮（歌词有逐字时间时才出现）。</string>
+    <string name="tour_menu_research_title">重新搜索歌词</string>
+    <string name="tour_menu_research_desc">歌词不对就点这里，从所有来源里挑一个更合适的版本。</string>
+    <string name="tour_menu_offset_title">调快 / 调慢</string>
+    <string name="tour_menu_offset_desc">歌词和歌声对不上时微调；每个歌词来源分别记住。</string>
+    <string name="tour_menu_display_title">歌词显示</string>
+    <string name="tour_menu_display_desc">字号和其他行的暗度。</string>
+    <string name="tour_menu_library_title">歌单、预缓存、缓存</string>
+    <string name="tour_menu_library_desc">浏览 Spotify 歌单、提前下载歌词、管理本地缓存。</string>
+    <string name="tour_menu_settings_title">设置</string>
+    <string name="tour_menu_settings_desc">主题、语言、网络、繁简、缓存和权限都在这里；也可以再看一次这个介绍。</string>
+    <string name="onboarding_perm_spotify">登录 Spotify</string>
+    <string name="onboarding_perm_spotify_desc">授权读取你的歌单和播放状态：在电脑、平板等其他设备播放时也能同步歌词。只读，不会改动你的账号。授权大约每小时过期一次，之后打开应用时会自动续期，可能会闪一下 Spotify 的加载页，属正常现象。</string>
+    <string name="playback_next_up">下一首：%1$s</string>
 </resources>

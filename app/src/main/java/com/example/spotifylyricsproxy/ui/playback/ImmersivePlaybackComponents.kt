@@ -692,6 +692,7 @@ private fun SyncedLyricsList(
                             exit = fadeOut(tween(250)) + shrinkVertically(tween(450))
                         ) {
                             IntroCountdownDots(
+                                startMs = 0L,
                                 endMs = line.startMs,
                                 positionMs = smoothPosition,
                                 textScale = textScale,
@@ -740,6 +741,35 @@ private fun SyncedLyricsList(
                                 .fillMaxWidth()
                                 .padding(horizontal = 10.dp, vertical = 2.dp)
                         )
+                    }
+                    // Interlude: the same dots between two lines far apart.
+                    val next = lines.getOrNull(index + 1)
+                    val gapStart = if (line.text.isBlank()) line.startMs
+                        else line.endMs ?: line.words.lastOrNull()?.endMs
+                    if (isCurrent && next != null && gapStart != null &&
+                        next.startMs - gapStart >= INTERLUDE_DOTS_MIN_MS
+                    ) {
+                        var inGap by remember { mutableStateOf(false) }
+                        LaunchedEffect(gapStart) {
+                            while (true) {
+                                inGap = smoothPosition() >= gapStart + 300
+                                delay(200)
+                            }
+                        }
+                        AnimatedVisibility(
+                            visible = inGap,
+                            enter = fadeIn(tween(300)) + expandVertically(),
+                            exit = fadeOut(tween(250)) + shrinkVertically(tween(450))
+                        ) {
+                            IntroCountdownDots(
+                                startMs = gapStart,
+                                endMs = next.startMs,
+                                positionMs = smoothPosition,
+                                textScale = textScale,
+                                alignEnd = lineConfig.textAlign == TextAlign.End || lineConfig.textAlign == TextAlign.Right,
+                                center = lineConfig.textAlign == TextAlign.Center
+                            )
+                        }
                     }
                 }
             }
@@ -797,6 +827,7 @@ private fun LyricsStatusMessage(text: String, textScale: Float, onSearchManually
 }
 
 private const val INTRO_DOTS_MIN_MS = 3_000L
+private const val INTERLUDE_DOTS_MIN_MS = 6_000L
 
 /**
  * Intro countdown after Lyricify / Apple Music: three dots that light up one by one
@@ -805,6 +836,7 @@ private const val INTRO_DOTS_MIN_MS = 3_000L
  */
 @Composable
 private fun IntroCountdownDots(
+    startMs: Long,
     endMs: Long,
     positionMs: () -> Long,
     textScale: Float,
@@ -819,12 +851,12 @@ private fun IntroCountdownDots(
             .padding(horizontal = 10.dp, vertical = 14.dp * textScale)
             .height(dot * 1.6f)
     ) {
-        val now = positionMs().coerceAtMost(endMs)
-        val progress = (now.toFloat() / endMs).coerceIn(0f, 1f)
+        val now = positionMs().coerceIn(startMs, endMs)
+        val progress = ((now - startMs).toFloat() / (endMs - startMs)).coerceIn(0f, 1f)
         // Last 400 ms: swell then collapse.
         val outro = ((endMs - now) / 400f).coerceIn(0f, 1f)
         val pop = if (outro < 1f) (1f + 0.25f * kotlin.math.sin(outro * Math.PI.toFloat())) * outro else 1f
-        val breathe = 1f + 0.08f * kotlin.math.sin(now / 1000f * 2f * Math.PI.toFloat() / 1.6f)
+        val breathe = 1f + 0.1f * kotlin.math.sin(now / 1000f * 2f * Math.PI.toFloat() / 3.2f)
         val r = dot.toPx() / 2f * breathe * pop
         val step = dot.toPx() + gap.toPx()
         val groupWidth = step * 2 + dot.toPx()

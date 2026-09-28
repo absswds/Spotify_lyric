@@ -1,6 +1,8 @@
 package com.example.spotifylyricsproxy.lyrics.netease
 
 import android.util.Log
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import com.example.spotifylyricsproxy.core.model.LyricCandidate
 import com.example.spotifylyricsproxy.lyrics.LyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
@@ -32,6 +34,7 @@ class NeteaseLyricsSource : LyricsSource {
 
     companion object {
         private const val TAG = "Netease"
+        private const val MAX_SONGS = 3
         private const val SEARCH_URL = "https://music.163.com/api/cloudsearch/pc"
         // v1 also returns `yrc` (word timing) when the song has it.
         private const val LYRIC_URL = "https://music.163.com/api/song/lyric/v1"
@@ -52,38 +55,32 @@ class NeteaseLyricsSource : LyricsSource {
             return emptyList()
         }
 
-        // Step 2: fetch LRC for the best match (first result)
-        val bestSong = songs.first()
-        val lrcText = try {
-            fetchLrc(bestSong.id)
-        } catch (e: Exception) {
-            Log.w(TAG, "Lyric fetch failed for ${bestSong.id}: ${e.message}")
-            null
+        // Step 2: lyrics for the top few results, in parallel, so the correction screen
+        // has more than one version to choose from.
+        return kotlinx.coroutines.coroutineScope {
+            songs.take(MAX_SONGS).map { song ->
+                async(kotlinx.coroutines.Dispatchers.IO) {
+                    val lrcText = try {
+                        fetchLrc(song.id)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Lyric fetch failed for ${song.id}: ${e.message}")
+                        null
+                    }
+                    LyricCandidate(
+                        id = song.id,
+                        trackName = song.name,
+                        artistName = song.resolvedArtists.joinToString(", ") { it.name },
+                        albumName = song.resolvedAlbum?.name ?: "",
+                        durationMs = song.resolvedDuration,
+                        syncedLyrics = lrcText?.lyric,
+                        plainLyrics = null,
+                        translation = lrcText?.translation,
+                        source = name,
+                        score = 0
+                    )
+                }
+            }.awaitAll().filter { !it.syncedLyrics.isNullOrBlank() }
         }
-
-        // Step 3: build candidate
-        val candidate = LyricCandidate(
-            id = bestSong.id,
-            trackName = bestSong.name,
-            artistName = bestSong.resolvedArtists.joinToString(", ") { it.name },
-            albumName = bestSong.resolvedAlbum?.name ?: "",
-            durationMs = bestSong.resolvedDuration,
-            syncedLyrics = lrcText?.lyric,
-            plainLyrics = null,
-            translation = lrcText?.translation,
-            source = name,
-            score = 0
-        )
-
-        // If we also have a translation, append it as a metadata hint
-        val translation = lrcText?.translation
-        val result = mutableListOf(candidate)
-        if (translation != null && translation.isNotEmpty()) {
-            // Store translation inline — the renderer appends it below the current line
-            // when isTranslationEnabled is active.
-            Log.i(TAG, "Found translation (${translation.length} chars) for track ${bestSong.id}")
-        }
-        return result
     }
 
     /**

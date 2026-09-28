@@ -78,7 +78,9 @@ class PlaylistViewModel(application: Application) : AndroidViewModel(application
                 "app-remote-control",
                 "playlist-read-private",
                 "playlist-read-collaborative",
-                "user-read-private"
+                "user-read-private",
+                "user-read-playback-state",
+                "user-modify-playback-state"
             ))
             .build()
         SpotifyAuthHolder.startAuth?.invoke(request)

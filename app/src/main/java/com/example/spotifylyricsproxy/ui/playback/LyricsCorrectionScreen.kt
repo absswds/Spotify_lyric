@@ -61,7 +61,9 @@ fun LyricsCorrectionScreen(
     val currentLine by viewModel.currentLyricLine.collectAsState()
     val parsedLyrics by viewModel.parsedLyrics.collectAsState()
     val lyricStatus by viewModel.lyricStatus.collectAsState()
-    val candidates by viewModel.candidates.collectAsState()
+    val allCandidates by viewModel.candidates.collectAsState()
+    // Too weak to be the song: not worth offering.
+    val candidates = remember(allCandidates) { allCandidates.filter { it.score >= MIN_SHOWN_SCORE } }
     val currentOffsetMs by viewModel.currentOffsetMs.collectAsState()
     val showCandidatePicker by viewModel.showCandidatePicker.collectAsState()
 
@@ -105,7 +107,7 @@ fun LyricsCorrectionScreen(
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = stringResource(R.string.correction_candidate_subtitle, c.artistName, c.score),
+                                    text = stringResource(R.string.correction_candidate_subtitle, c.artistName, matchLabel(c.score)),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -350,10 +352,10 @@ private fun OffsetChip(text: String, onClick: () -> Unit) {
 private fun statusLabel(status: com.example.spotifylyricsproxy.lyrics.LyricStatus): String = when (status) {
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.Idle -> stringResource(R.string.playback_title_waiting)
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.Searching -> stringResource(R.string.correction_status_searching)
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Synced -> stringResource(R.string.correction_status_synced, status.score)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.Synced -> stringResource(R.string.correction_status_synced, matchLabel(status.score))
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.PlainOnly -> stringResource(R.string.correction_status_plain)
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.NotFound -> stringResource(R.string.correction_status_notfound)
-    is com.example.spotifylyricsproxy.lyrics.LyricStatus.LowConfidence -> stringResource(R.string.correction_status_low, status.score)
+    is com.example.spotifylyricsproxy.lyrics.LyricStatus.LowConfidence -> stringResource(R.string.correction_status_low, matchLabel(status.score))
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.ParseError -> stringResource(R.string.correction_status_parse_error)
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.Error -> stringResource(R.string.correction_status_error, status.message)
     is com.example.spotifylyricsproxy.lyrics.LyricStatus.MobileDataRestricted -> stringResource(R.string.correction_status_mobile_restricted)
@@ -369,3 +371,15 @@ private fun sourceDisplayName(source: String): String = when (source) {
     "manual" -> "${stringResource(R.string.lyric_source_manual)}"
     else -> source
 }
+
+private const val MIN_SHOWN_SCORE = 50
+
+/** Words instead of a raw score. */
+@Composable
+private fun matchLabel(score: Int): String = stringResource(
+    when {
+        score >= 85 -> R.string.match_very_close
+        score >= 65 -> R.string.match_close
+        else -> R.string.match_possible
+    }
+)

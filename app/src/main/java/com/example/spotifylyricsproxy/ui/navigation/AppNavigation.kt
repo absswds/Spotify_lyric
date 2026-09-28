@@ -127,6 +127,28 @@ fun AppNavigation(
             requestLyricSettings = true
         }
     )
+
+    // One-time button tour, above the menu so it can walk through it too.
+    val tourDone by com.example.spotifylyricsproxy.core.AppSettings.tourDone
+    var tourReady by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(tourDone) {
+        // Let the player's controls lay out (and report their bounds) first.
+        if (!tourDone) {
+            // After the guide's zoom into the player has finished.
+            kotlinx.coroutines.delay(1200)
+            tourReady = true
+        }
+    }
+    if (tourReady && !tourDone) {
+        com.example.spotifylyricsproxy.ui.playback.CoachTour(
+            menuOpen = showMenu,
+            onOpenMenu = { showMenu = true },
+            onDone = {
+                showMenu = false
+                com.example.spotifylyricsproxy.core.AppSettings.finishTour()
+            }
+        )
+    }
 }
 
 @Composable

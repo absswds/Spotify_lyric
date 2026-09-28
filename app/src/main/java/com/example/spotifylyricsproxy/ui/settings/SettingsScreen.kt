@@ -189,6 +189,12 @@ fun SettingsScreen(
                 // Network
                 GroupTitle(stringResource(R.string.settings_group_network))
                 SettingsGroup {
+                    SettingsRow(
+                        title = stringResource(R.string.onboarding_perm_spotify),
+                        subtitle = stringResource(R.string.onboarding_perm_spotify_desc),
+                        onClick = { com.example.spotifylyricsproxy.SpotifyAuthHolder.requestAuth() }
+                    )
+                    Divider()
                     val strategy by LyricDisplayPreferences.mobileDataStrategy
                     SettingsRow(stringResource(R.string.settings_mobile_strategy), stringResource(R.string.settings_mobile_strategy_desc))
                     ChoiceRow(
@@ -233,6 +239,18 @@ fun SettingsScreen(
                 // Storage
                 GroupTitle(stringResource(R.string.settings_group_storage))
                 SettingsGroup {
+                    val cacheUnofficial by AppSettings.cacheUnofficial
+                    SettingsRow(
+                        title = stringResource(R.string.settings_cache_unofficial),
+                        subtitle = stringResource(R.string.settings_cache_unofficial_desc),
+                        trailing = {
+                            androidx.compose.material3.Switch(
+                                checked = cacheUnofficial == true,
+                                onCheckedChange = AppSettings::setCacheUnofficial
+                            )
+                        }
+                    )
+                    Divider()
                     SettingsRow(
                         title = stringResource(R.string.settings_clear_cache),
                         subtitle = stringResource(R.string.settings_clear_cache_desc),
@@ -244,6 +262,15 @@ fun SettingsScreen(
                 // About
                 GroupTitle(stringResource(R.string.settings_group_about))
                 SettingsGroup {
+                    SettingsRow(
+                        title = stringResource(R.string.settings_replay_tour),
+                        subtitle = stringResource(R.string.settings_replay_tour_desc),
+                        onClick = {
+                            AppSettings.replayTour()
+                            onBack()
+                        }
+                    )
+                    Divider()
                     SettingsRow(stringResource(R.string.settings_about_app), stringResource(R.string.settings_about_version_detail))
                     Divider()
                     SettingsRow(

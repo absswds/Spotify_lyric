@@ -4,7 +4,10 @@ import com.example.spotifylyricsproxy.core.model.LyricCandidate
 import com.example.spotifylyricsproxy.lyrics.LyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -12,6 +15,8 @@ import org.json.JSONObject
 import java.net.URLEncoder
 import java.util.Base64
 import java.util.concurrent.TimeUnit
+
+private const val MAX_SONGS = 3
 
 class QQMusicLyricsSource : LyricsSource {
 
@@ -46,8 +51,11 @@ class QQMusicLyricsSource : LyricsSource {
                 android.util.Log.i("QQMusic", "Found ${songList.length()} songs")
                 if (songList.length() == 0) return@withContext candidates
 
-                // Step 2: fetch lyrics for the first song only (best match)
-                val song = songList.getJSONObject(0)
+                // Step 2: lyrics for the top few songs, in parallel, so the correction
+                // screen has more than one version to choose from.
+                val found = kotlinx.coroutines.coroutineScope {
+                (0 until minOf(MAX_SONGS, songList.length())).map { k -> async {
+                val song = songList.getJSONObject(k)
                 val songid = song.optLong("songid", 0L)
                 val songmid = song.optString("songmid", "")
                 val songName = song.optString("songname", "")
@@ -78,19 +86,19 @@ class QQMusicLyricsSource : LyricsSource {
                                             android.util.Log.w("QQMusic", "Base64 decode failed: ${e.message}")
                                             null
                                         }
-                                        if (synced != null) {
-                                            candidates.add(LyricCandidate(
+                                        val lyrics = fetchQrcAsYrc(songid) ?: synced
+                                        if (lyrics != null) {
+                                            return@async LyricCandidate(
                                                 id = songmid.hashCode().toLong(),
                                                 trackName = songName,
                                                 artistName = singer,
                                                 albumName = albumName,
                                                 durationMs = duration,
-                                                syncedLyrics = synced,
+                                                syncedLyrics = lyrics,
                                                 plainLyrics = null,
                                                 source = name,
                                                 score = 0
-                                            ))
-                                            android.util.Log.i("QQMusic", "Added best candidate: $songName - $singer")
+                                            )
                                         }
                                     }
                                 }
@@ -100,9 +108,37 @@ class QQMusicLyricsSource : LyricsSource {
                         }
                     }
                 }
+                null
+                } }.awaitAll().filterNotNull()
+                }
+                candidates.addAll(found)
             } catch (e: Exception) {
                 android.util.Log.w("QQMusic", "Search failed: ${e.message}")
             }
             candidates
         }
+
+    /**
+     * Word-timed QRC via lyric_download.fcg, converted to YRC; null when absent or on any failure.
+     * Request parameters from Lyricify Lyrics Helper (Apache-2.0), `Providers/Web/QQMusic/Api.cs`.
+     */
+    private fun fetchQrcAsYrc(songid: Long): String? = try {
+        val body = FormBody.Builder()
+            .add("version", "15")
+            .add("miniversion", "82")
+            .add("lrctype", "4")
+            .add("musicid", songid.toString())
+            .build()
+        val response = client.newCall(
+            Request.Builder().url("https://c.y.qq.com/qqmusic/fcgi-bin/lyric_download.fcg")
+                .header("Referer", "https://y.qq.com/")
+                .post(body)
+                .build()
+        ).execute().use { it.body?.string() }
+        response?.let(QrcConverter::extractEncrypted)
+            ?.let { QrcConverter.decryptedToYrc(QrcDecrypter.decrypt(it)) }
+    } catch (e: Exception) {
+        android.util.Log.w("QQMusic", "QRC fetch failed: ${e.message}")
+        null
+    }
 }

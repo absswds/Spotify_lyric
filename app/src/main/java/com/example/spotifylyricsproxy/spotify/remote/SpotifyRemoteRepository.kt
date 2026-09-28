@@ -64,10 +64,145 @@ class SpotifyRemoteRepository(
         const val AUTH_REQUEST_CODE = 0x10
         private const val CONNECTION_TIMEOUT_MS = 15_000L
         private const val WATCHDOG_MS = 3_000L
+        private const val OTHER_DEVICE_POLL_MS = 5_000L
+        private const val IDLE_POLL_MS = 15_000L
+        private const val LOCAL_CHECK_POLL_MS = 30_000L
+        private const val IDLE_POLL_MAX_MS = 120_000L
     }
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val imageHttpClient = OkHttpClient()
+
+    /**
+     * Playback is on another Spotify Connect device. The phone's Spotify then keeps
+     * reporting the last local state (paused, old track) through both App Remote and its
+     * MediaSession, so the Web API is the only source; local paused events are ignored.
+     */
+    private val _otherDevicePlaying = MutableStateFlow(false)
+    val otherDevicePlayingFlow: StateFlow<Boolean> = _otherDevicePlaying.asStateFlow()
+    private var otherDevicePlaying: Boolean
+        get() = _otherDevicePlaying.value
+        set(value) { _otherDevicePlaying.value = value }
+
+    /** Off for the UI's copy while the app is in the background; the service keeps polling. */
+    @Volatile var webPollEnabled = true
+
+    // Nothing playing anywhere: back off from IDLE_POLL_MS up to IDLE_POLL_MAX_MS.
+    private var idlePollMs = IDLE_POLL_MS
+
+    /** The track Spotify plays next (from the Web API queue), or null when unknown. */
+    private val _nextTrack = MutableStateFlow<com.example.spotifylyricsproxy.spotify.webapi.SpotifyTrack?>(null)
+    val nextTrack: StateFlow<com.example.spotifylyricsproxy.spotify.webapi.SpotifyTrack?> = _nextTrack.asStateFlow()
+
+    private suspend fun refreshQueue() {
+        val token = SpotifyTokenStore.getAccessToken() ?: return
+        if (SpotifyTokenStore.needsRefresh()) return
+        val queue = runCatching {
+            withContext(Dispatchers.IO) { SpotifyWebApiClient.api.getQueue(SpotifyWebApiClient.authHeader(token)) }
+        }.getOrNull()?.takeIf { it.isSuccessful }?.body() ?: return
+        _nextTrack.value = queue.queue.firstOrNull()?.takeIf { it.id.isNotBlank() }
+    }
+
+    init {
+        // One queue lookup per track change; the queue itself rarely changes mid-song.
+        repositoryScope.launch(Dispatchers.Main) {
+            var lastId = ""
+            while (true) {
+                val id = _currentTrack.value.trackId
+                if (id.isNotBlank() && id != lastId) {
+                    lastId = id
+                    _nextTrack.value = null
+                    delay(1_500) // let Spotify settle the new queue
+                    refreshQueue()
+                }
+                delay(1_000)
+            }
+        }
+        // Plain Main (not immediate): the loop must not run before the fields below exist.
+        repositoryScope.launch(Dispatchers.Main) {
+            while (true) {
+                // Polled even while the phone reports playing: its Spotify can be stuck on a
+                // stale "playing" state too while another device has moved on.
+                val localPlaying = !_currentTrack.value.isPaused && !otherDevicePlaying
+                if (localPlaying) idlePollMs = IDLE_POLL_MS
+                if (webPollEnabled && !SpotifyTokenStore.needsRefresh()) pollOtherDevice()
+                delay(
+                    when {
+                        otherDevicePlaying -> OTHER_DEVICE_POLL_MS
+                        localPlaying -> LOCAL_CHECK_POLL_MS
+                        else -> idlePollMs
+                    }
+                )
+            }
+        }
+    }
+
+    /**
+     * The phone's Spotify can't control another Connect device's playback, so while one
+     * plays, controls go through the Web API; then poll soon to pick up the result.
+     */
+    private fun webControl(call: suspend (com.example.spotifylyricsproxy.spotify.webapi.SpotifyWebApi, String) -> retrofit2.Response<Unit>) {
+        val token = SpotifyTokenStore.getAccessToken() ?: return
+        repositoryScope.launch {
+            val ok = runCatching {
+                withContext(Dispatchers.IO) { call(SpotifyWebApiClient.api, SpotifyWebApiClient.authHeader(token)) }
+            }.getOrNull()?.isSuccessful == true
+            if (!ok) Log.w(TAG, "Web API playback control failed")
+            delay(600)
+            pollOtherDevice()
+        }
+    }
+
+    private suspend fun pollOtherDevice() {
+        val token = SpotifyTokenStore.getAccessToken() ?: return
+        // A 401 means the token expired; it is renewed the next time the app opens.
+        val response = runCatching {
+            withContext(Dispatchers.IO) { SpotifyWebApiClient.api.getPlayer(SpotifyWebApiClient.authHeader(token)) }
+        }.getOrNull()?.takeIf { it.isSuccessful } ?: return
+        val state = response.body()
+        val item = state?.item
+        if (state != null && state.isPlaying && item != null && item.id.isNotBlank()) {
+            idlePollMs = IDLE_POLL_MS
+            // Playing on this phone: App Remote reports it directly.
+            if (state.device?.type.equals("Smartphone", ignoreCase = true)) {
+                otherDevicePlaying = false
+                return
+            }
+            otherDevicePlaying = true
+            watchdogJob?.cancel()
+            _playbackOptions.value = _playbackOptions.value.copy(
+                isShuffling = state.shuffleState,
+                repeatMode = when (state.repeatState) {
+                    "track" -> RepeatMode.TRACK
+                    "context" -> RepeatMode.CONTEXT
+                    else -> RepeatMode.OFF
+                }
+            )
+            val changed = item.id != _currentTrack.value.trackId
+            _currentTrack.value = SpotifyTrackInfo(
+                trackId = item.id,
+                trackUri = item.uri,
+                title = item.name,
+                artist = item.artists.firstOrNull()?.name ?: "",
+                album = item.album?.name ?: "",
+                durationMs = item.durationMs,
+                playbackPositionMs = state.progressMs ?: 0L,
+                isPaused = false
+            )
+            if (changed) {
+                lastImageUri = ""
+                loadAlbumArt(item.id, null)
+            }
+        } else if (!otherDevicePlaying) {
+            idlePollMs = (idlePollMs * 2).coerceAtMost(IDLE_POLL_MAX_MS)
+        } else {
+            otherDevicePlaying = false
+            _currentTrack.value = _currentTrack.value.copy(
+                isPaused = true,
+                playbackPositionMs = state?.progressMs ?: _currentTrack.value.playbackPositionMs
+            )
+        }
+    }
     private val albumArtCache = AlbumArtCache.getInstance(context)
 
     private var spotifyAppRemote: SpotifyAppRemote? = null
@@ -300,6 +435,10 @@ class SpotifyRemoteRepository(
                 // reach the clock so seek/pause in Spotify syncs to our UI and
                 // lyrics stay aligned.
                 if (track.trackId.isBlank()) return@collect
+                if (otherDevicePlaying) {
+                    if (track.isPaused) return@collect
+                    otherDevicePlaying = false
+                }
                 if (_connectionState.value !is SpotifyConnectionState.Connected) {
                     _currentTrack.value = track
                 } else {
@@ -369,9 +508,24 @@ class SpotifyRemoteRepository(
         _connectionState.value = SpotifyConnectionState.Disconnected
     }
 
+    private var playerSubscription: com.spotify.protocol.client.PendingResult<PlayerState>? = null
+
+    /**
+     * The app came back to the foreground: a frozen process may have missed events, so
+     * subscribe again (the first event is the current state) or reconnect.
+     */
+    fun refreshState() {
+        if (spotifyAppRemote?.isConnected == true) subscribeToPlayerState() else tryConnect()
+    }
+
     private fun subscribeToPlayerState() {
-        spotifyAppRemote?.playerApi?.subscribeToPlayerState()
+        playerSubscription?.cancel()
+        playerSubscription = spotifyAppRemote?.playerApi?.subscribeToPlayerState()
             ?.setEventCallback { playerState: PlayerState ->
+                if (otherDevicePlaying) {
+                    if (playerState.isPaused) return@setEventCallback
+                    otherDevicePlaying = false
+                }
                 val rawUri = playerState.track?.imageUri?.raw ?: ""
                 val track = SpotifyTrackInfo(
                     trackId = playerState.track?.uri?.split(":")?.lastOrNull() ?: "",
@@ -419,7 +573,9 @@ class SpotifyRemoteRepository(
     }
 
     fun play() {
-        if (spotifyAppRemote != null) {
+        if (otherDevicePlaying) {
+            webControl { api, auth -> api.resume(auth) }
+        } else if (spotifyAppRemote != null) {
             spotifyAppRemote?.playerApi?.resume()
         } else {
             // Offline fallback: drive Spotify's system MediaSession directly.
@@ -505,7 +661,9 @@ class SpotifyRemoteRepository(
     }
 
     fun pause() {
-        if (spotifyAppRemote != null) {
+        if (otherDevicePlaying) {
+            webControl { api, auth -> api.pause(auth) }
+        } else if (spotifyAppRemote != null) {
             spotifyAppRemote?.playerApi?.pause()
         } else {
             systemTrackSource.pause()
@@ -513,7 +671,9 @@ class SpotifyRemoteRepository(
     }
 
     fun skipNext() {
-        if (spotifyAppRemote != null) {
+        if (otherDevicePlaying) {
+            webControl { api, auth -> api.next(auth) }
+        } else if (spotifyAppRemote != null) {
             spotifyAppRemote?.playerApi?.skipNext()
         } else {
             systemTrackSource.skipNext()
@@ -521,7 +681,9 @@ class SpotifyRemoteRepository(
     }
 
     fun skipPrevious() {
-        if (spotifyAppRemote != null) {
+        if (otherDevicePlaying) {
+            webControl { api, auth -> api.previous(auth) }
+        } else if (spotifyAppRemote != null) {
             spotifyAppRemote?.playerApi?.skipPrevious()
         } else {
             systemTrackSource.skipPrevious()
@@ -529,7 +691,11 @@ class SpotifyRemoteRepository(
     }
 
     fun seekTo(positionMs: Long) {
-        if (spotifyAppRemote != null) {
+        if (otherDevicePlaying) {
+            // Move our clock now so the lyrics don't wait for the next poll.
+            _currentTrack.value = _currentTrack.value.copy(playbackPositionMs = positionMs)
+            webControl { api, auth -> api.seek(auth, positionMs) }
+        } else if (spotifyAppRemote != null) {
             spotifyAppRemote?.playerApi?.seekTo(positionMs)
         } else {
             systemTrackSource.seekTo(positionMs)
@@ -542,6 +708,12 @@ class SpotifyRemoteRepository(
         val newShuffling = !currentOpts.isShuffling
         _playbackOptions.value = currentOpts.copy(isShuffling = newShuffling)
         Log.i(TAG, "toggleShuffle → $newShuffling")
+        if (otherDevicePlaying) {
+            webControl { api, auth -> api.shuffle(auth, newShuffling) }
+            repositoryScope.launch { delay(1_500); refreshQueue() }
+            return
+        }
+        repositoryScope.launch { delay(1_500); refreshQueue() }
 
         spotifyAppRemote?.playerApi?.setShuffle(newShuffling)
             ?.setResultCallback { Log.i(TAG, "Shuffle set to $newShuffling succeeded") }
@@ -559,6 +731,11 @@ class SpotifyRemoteRepository(
         // Optimistic UI update
         _playbackOptions.value = current.copy(repeatMode = next)
         Log.i(TAG, "cycleRepeat → $next")
+        if (otherDevicePlaying) {
+            val state = when (next) { RepeatMode.TRACK -> "track"; RepeatMode.CONTEXT -> "context"; else -> "off" }
+            webControl { api, auth -> api.repeat(auth, state) }
+            return
+        }
 
         spotifyAppRemote?.playerApi?.setRepeat(next)
             ?.setResultCallback { Log.i(TAG, "Repeat set to $next succeeded") }

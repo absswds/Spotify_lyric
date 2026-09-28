@@ -1,91 +1,100 @@
-# Spotify Lyrics Proxy
+# Lyrics Card
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![API](https://img.shields.io/badge/API-26%2B-brightgreen.svg)](https://developer.android.com/about/versions/oreo)
 [![Spotify](https://img.shields.io/badge/Spotify-Android%20Remote-green.svg)](https://developer.spotify.com/documentation/android)
 
-**Reads Spotify playback state and displays synchronized lyrics on system notifications and media cards — no root required.**
+**A lyrics app made for Spotify on Android. Using a standard Android media session and MediaStyle notification, it puts real-time synced lyrics into the system's live media surfaces (the media notification / control-center card, the lock screen, and vendor "island" / capsule-style live activities) and adds a polished Apple Music / Lyricify-style lyric player. No root, no modified Spotify.**
 
 **English** · [简体中文](README-zh.md) · [繁體中文](README-zh-TW.md) · [日本語](README-ja.md)
 
-[Quick Start](#quick-start) · [Features](#features) · [Architecture](#architecture) · [Content Sources & Compliance](#content-sources-references-and-compliance) · [Disclaimer](#disclaimer)
+> ⚠️ **Copyright notice:** lyrics belong to their writers and publishers. NetEase, QQ Music and Kugou are non-public endpoints, and using or caching their lyrics **may raise copyright and terms-of-service issues**. Viewing them on your own phone while you listen is generally low risk; **do not share, export or publish cached lyrics, or use them commercially**. See [Content sources and compliance](#content-sources--compliance) (not legal advice).
 
----
+> 💳 **Playback control needs Spotify Premium:** Spotify documents that its playback-control endpoints (pause, skip, seek…) [only work for Premium users](https://developer.spotify.com/documentation/web-api/reference/skip-users-playback-to-next-track), and on Free mobile [Smart Shuffle is always on](https://support.spotify.com/us/article/shuffle-play/) with [limited skips](https://support.spotify.com/us/article/your-premium-benefits/). With a Free account, this app's play, skip, seek, shuffle and repeat buttons may do nothing, but lyrics still show.
 
-## News
-
-- **2026-07** — Project initialized. Core pipeline: App Remote connection, LRCLIB lyrics fetch, Room cache, MediaSession display, notification, playlist precache, lyrics correction.
-- **2026-07** — Added immersive playback UI, a right-side lyric settings drawer, portrait/landscape layouts, and display controls for font size, weight, alignment, and inactive-line blur.
-- **2026-07** — Added online lyrics sources: NetEase Cloud Music, QQ Music, and LRCLIB; results are searched concurrently, scored against Spotify metadata, and can be manually switched in Lyrics Correction.
-- **2026-07** — Added Simplified Chinese, Traditional Chinese, English, and Japanese interface localization, plus Simplified/Traditional conversion while lyric translation is enabled.
-- **2026-08** — Added offline mode: when Spotify App Remote cannot connect (no network), the app reads the current track, album art, and transport controls from Spotify's own system MediaSession via a notification listener, and serves cached lyrics. Default lyrics source is now LRCLIB (cleanest LRC); NetEase and QQ Music are session-only, so the offline cache only ever holds LRCLIB lyrics.
-
----
-
-## Overview
-
-Spotify Lyrics Proxy is an Android application that bridges Spotify's playback state with third-party lyrics sources. It does not play audio, does not modify the Spotify APK, and does not call private Spotify APIs.
-
-The app reads the currently playing track via Spotify App Remote, queries local cache and compatible third-party sources for synchronized lyrics, and renders the current line on:
-
-- System notification (foreground service)
-- MediaSession media card (lock screen, control center)
+[Features](#features) · [Quick Start](#quick-start) · [Permissions](#permissions) · [Update Log](#update-log) · [Architecture](#architecture) · [Credits](#credits) · [Content Sources & Compliance](#content-sources--compliance) · [Disclaimer](#disclaimer)
 
 ---
 
 ## Features
 
-### Playback Synchronization
+### Live media surfaces
 
-| Feature | |
-|---------|-|
-| Play state | Read current track, playback position, and play/pause state from Spotify |
-| Controls | Forward play/pause/skip/seekTo commands to Spotify |
-| Auto-detection | Reacts to track changes and playback state transitions |
+- The current lyric line appears in the native MediaStyle notification, the control-center media card, the lock screen, and vendor "island" / capsule-style live activities that read media sessions.
+- When Spotify pushes its own session back to the top slot (track change, resume, playback moving back from another device, after another app's audio, after Spotify restarts), the app takes the top slot back automatically.
 
-### Lyrics Display
+Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Fluid Cloud (流体云) work best.
 
-| Feature | |
-|---------|-|
-| Notification | Foreground service notification showing the current lyric line |
-| MediaSession | Media card with synchronized lyrics on lock screen and control center |
-| Customization | Immersive portrait/landscape layouts; adjustable font size, current-line weight, inactive-line blur, dimming, and alignment |
-| Localization | Simplified Chinese, Traditional Chinese, English, and Japanese interface options |
+<!-- TODO: add screenshots (owner will supply the images), then move these lines out of the comment:
+![ColorOS lock-screen island](docs/images/coloros-lockscreen-island.png)
+![ColorOS Fluid Cloud](docs/images/coloros-fluid-cloud.png)
+-->
 
-### Caching
+> The author only has a few (ColorOS) devices and can't test many ROMs. If you're interested, or it misbehaves on another vendor's OS (MIUI/HyperOS, OriginOS, MagicOS, One UI, etc.), please [open an issue](https://github.com/absswds/Spotify_lyric/issues) or send a PR.
 
-| Feature | |
-|---------|-|
-| Auto-cache | First playback searches compatible third-party sources and persists accepted lyrics to Room (LRCLIB only — NetEase/QQ Music are session-only) |
-| Playlist precache | Background WorkManager task precaches lyrics for selected playlists (Wi-Fi / charging) |
-| Offline | Cached lyrics available without network; reads the current track from Spotify's system MediaSession when App Remote cannot connect |
+### Player
 
-### Lyrics Management
+- Mesh-gradient background sampled from the cover.
+- Word-by-word sweep with lift when real word timing exists (TTML / YRC / QRC / KRC); whole-line highlight otherwise.
+- Distance blur and dimming, spring scrolling.
+- Intro countdown dots and mid-song interlude dots (gaps of 6 s or more).
+- Duet lines on opposite sides; translations under each line.
+- Rolling, blurred time digits; marquee for long titles and albums.
+- Layouts: phone portrait, landscape (Lyricify-like left block with cover, title, translate and menu buttons, progress, transport), tablet portrait, and split screen.
 
-| Feature | |
-|---------|-|
-| Correction | Inspect candidates with their provider, select a preferred match, mark incorrect matches, and re-search |
-| Offset | Adjust lyric timing forward or backward |
-| Import | Load local `.lrc` files via system file picker |
-| Manual override | Manually imported lyrics always take priority over online results |
-| Cleanup | Clear lyric cache and album art cache |
+### Lyric sources
 
-### Lyrics Translation
+| Source | Notes |
+|--------|-------|
+| AMLL TTML DB | Exact match by Spotify track id; word timing, duets |
+| NetEase Cloud Music | YRC word timing + translation |
+| QQ Music | QRC word timing, LRC fallback |
+| Kugou | KRC word timing |
+| LRCLIB | Default source |
 
-| Feature | |
-|---------|-|
-| Auto-detect | Detects lyrics language and translates on the fly |
-| Target selector | Choose Simplified Chinese, Traditional Chinese, English, or Japanese |
-| Chinese conversion | Convert original lyric text between Simplified and Traditional Chinese while translation is enabled |
-| ML Kit | On-device translation engine, no network required after model download |
+- All sources are searched in parallel, finishing early once a good enough result is in.
+- Candidates are scored on title / artist / duration match and cross-checked for timing agreement between sources: word-timed lyrics are preferred only when their timing agrees with other sources.
+- Low-confidence matches are not shown (a same-title song by another artist is worse than no lyrics).
+- Manual search / correction and manual `.lrc` import.
 
-### UI
+### Offset
 
-| Feature | |
-|---------|-|
-| Design | Material 3 with dynamic album-art theming |
-| Theme | System / Light / Dark mode |
-| Language | Chinese, English, and Japanese |
+- Saved per song and per lyric source (each source's timing is adjusted separately).
+- Plus a global offset in Settings.
+
+### Caching and offline
+
+- LRCLIB, AMLL and manual lyrics are cached for offline use.
+- Lyrics from unofficial sources (NetEase, QQ Music, Kugou) **may raise copyright issues**, so they stay in memory by default and are cached on the device only after you agree in a prompt (changeable in Settings). The cache is for your own viewing; do not share or export it.
+- Offline mode: when App Remote can't connect, the app reads Spotify's own MediaSession through [notification access](#permissions).
+
+### Playback on another device (Spotify Connect)
+
+- When playing on another device, the phone's Spotify often keeps reporting a stale paused state, so the app follows the Spotify Web API instead (`GET /v1/me/player`, scope `user-read-playback-state`, one [extra authorization](#permissions)).
+- Polls every 5 s while another device plays; backs off up to 2 min when nothing is playing.
+- The menu shows "Syncing another device".
+- The token lasts one hour and is renewed when you open the app.
+
+### Translation and Chinese script
+
+- On-device ML Kit translation; shipped translations (NetEase) shown per line.
+- In Chinese UI locales you choose (in onboarding and Settings) whether Traditional/Simplified conversion replaces the lyrics in place or appears below them.
+
+### Battery
+
+- Wake lock released while paused; the service stops after 30 min paused.
+- Web API polling backs off; the UI copy stops polling in the background.
+
+### Other
+
+- Onboarding guide.
+- 4 UI languages (Simplified Chinese, Traditional Chinese, English, Japanese) and themes.
+
+### Known limits
+
+- ColorOS only: "Hans" may freeze the app a few seconds after Spotify pauses. While frozen it misses Spotify's resume and can't handle media-card buttons; opening the app thaws it.
+- Playback control through App Remote (skip etc.) needs Spotify Premium.
+- The Web API token needs hourly renewal, which requires opening the app.
 
 ---
 
@@ -93,109 +102,115 @@ The app reads the currently playing track via Spotify App Remote, queries local 
 
 ### Prerequisites
 
-- **JDK 17** or later
-- **Android SDK** (API 26+)
-- **Spotify App** installed on your device and logged into a Spotify account
-- A **Spotify Client ID** from the [Developer Dashboard](https://developer.spotify.com/dashboard)
+- **JDK 17**
+- **Android SDK** (compileSdk 35, minSdk 26)
+- **Spotify app** installed and signed in
+- A Client ID from an app registered on the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 
-### Obtain a Client ID
+### Getting a Client ID
 
-This app connects to Spotify using Spotify's Android SDK, which requires a registered application on the Spotify Developer Dashboard.
-
-1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and log in with your Spotify account
-2. Click **Create App**
-3. Fill in the form as follows:
+1. Open the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and sign in.
+2. Click **Create App** and fill in:
 
    | Field | Value |
    |-------|-------|
-   | **App name** | Any name you like (e.g. "Lyrics Card") — this is just for your reference |
+   | **App name** | Anything, e.g. "Lyrics Card" |
    | **App description** | e.g. "Personal lyrics display app" |
    | **Website** | Leave empty |
-   | **Redirect URIs** | Add exactly: `spotifylyricsproxy://callback` |
-   | **Android packages** | Add `com.example.spotifylyricsproxy` |
-   | **Android SHA-1 fingerprint** | Add the SHA-1 fingerprint of the APK signing certificate you will use |
-   | **iOS app bundles** | Leave empty |
-   | **Which API/SDKs are you planning to use?** | Select **Android** |
+   | **Redirect URIs** | `spotifylyricsproxy://callback` (exact match, no trailing slash or spaces) |
+   | **Android packages** | `com.example.spotifylyricsproxy` |
+   | **Android SHA-1 fingerprint** | SHA-1 of the certificate that signs your APK (`./gradlew :app:signingReport`) |
+   | **Which API/SDKs** | Tick **Android** and **Web API** (the Web API is used for other-device sync and playlists) |
 
-   > The **Redirect URI** is the callback URL the app uses to receive the OAuth token after you authorize. It must match **character-for-character** — no trailing slash, no extra spaces.
+3. Click **Save** and copy the **Client ID** at the top.
 
-   > **Android package and SHA-1** — Spotify's Android SDK documentation says to register both under the dashboard's app settings. Use `com.example.spotifylyricsproxy`. For a debug build, Android Studio/Gradle uses the debug signing certificate; for a public release, register the SHA-1 of the release signing certificate too. Spotify uses these values to verify the identity of the Android app.
+> Spotify verifies the package name and signing SHA-1. A debug APK built on another machine has a different key: installing over it fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, and Spotify rejects the connection. Register your release certificate's SHA-1 too before publishing.
 
-4. Click **Save** at the bottom of the page
-5. Copy the **Client ID** from the top of the page (a 32-character hex string, e.g. `81a57006ff4a4d5d96cb72f180aa4ab5`)
+> The Client ID is embedded in the APK and is not a secret, but don't commit it to a public repo.
 
-> The Client ID is not a secret (it's embedded in the APK), but do not commit it to a public repo.
-
-### Build from Source
-
-Clone the repository:
+### Building from source
 
 ```bash
 git clone https://github.com/absswds/Spotify_lyric.git
 cd Spotify_lyric
-```
-
-Configure the Client ID:
-
-```bash
 cp local.properties.example local.properties
 ```
 
-Open `local.properties` and set the value you copied from the dashboard:
+Edit `local.properties` (use forward slashes in `sdk.dir` on Windows):
 
 ```properties
-# Path to your Android SDK
-# Windows: C:\Users\<username>\AppData\Local\Android\Sdk
-# macOS:   ~/Library/Android/sdk
-# Linux:   ~/Android/Sdk
-sdk.dir=C\:\\Users\\YourUser\\AppData\\Local\\Android\\Sdk
-
+sdk.dir=C:/Users/YourUser/AppData/Local/Android/Sdk
 spotify.client.id=YOUR_SPOTIFY_CLIENT_ID
 ```
 
 Build and install:
 
 ```bash
-./gradlew assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
+./gradlew testDebugUnitTest assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-> If you use **Android Studio**, you can also open the project directly — `local.properties` is generated automatically from your SDK settings.
+> Without `spotify.client.id` the build still succeeds but bakes in `MISSING_CLIENT_ID`, and App Remote / auth silently fail. Close Android Studio before building from the command line.
 
-### First Run
+### First run
 
-1. Open the app
-2. Tap **Connect Spotify** — the Spotify App will open for authorization
-3. Authorize **playback state access** when prompted
-4. Play any track in Spotify — the notification will display the current lyric line
+1. Open the app and follow the onboarding guide ([notification permission](#permissions), [notification access](#permissions), Chinese script option, etc.).
+2. Tap **Connect Spotify** and [authorize](#permissions) in Spotify.
+3. Play any song. Lyrics appear in the player, the notification and the media card.
 
-> On **Android 13+**, you need to grant the **notification permission** when prompted, otherwise lyrics won't appear in the notification bar.
+See [Permissions](#permissions) for what each one is for.
 
-> **Offline mode**: the first time you open the app, it may ask you to grant **notification access** (通知使用权) in system settings. This lets the app read the currently playing track from Spotify's own media session when there is no network (airplane mode / offline Spotify playback), so cached lyrics, album art, and playback controls keep working offline. Grant it once — the app only reads media-session data, never your notifications.
+### Permissions
 
-### Keep the App Alive in Background
+| Permission / authorization | Why | Required? |
+|----------------------------|-----|-----------|
+| Notification permission (Android 13+) | Shows lyrics in the notification, media card, lock screen and capsules | Required on Android 13+, or no lyrics appear in the notification |
+| Spotify authorization (App Remote) | Connects to Spotify to read the current track and position and control playback | Required |
+| Notification access | Offline mode: when App Remote can't connect, reads Spotify's own media session (track, artwork, controls); it does not read notification content | Optional |
+| Spotify Web API authorization (`user-read-playback-state`) | Syncs playback on another device (Spotify Connect); requested once the first time you play elsewhere; the token lasts one hour and renews when you open the app | Optional |
+| Battery optimization exemption | Makes the system less likely to kill the app in the background; see [Keeping it alive](#keeping-it-alive-in-the-background-vendor-roms) | Optional (recommended) |
+| Auto-start / 关联启动 for Spotify (system settings) | Lets a force-stopped Spotify be woken; see [Keeping it alive](#keeping-it-alive-in-the-background-vendor-roms) | Optional, some vendor ROMs only |
 
-This app runs a foreground service to display lyrics in the notification. Some Android systems (especially OPPO ColorOS, Xiaomi MIUI, Huawei HarmonyOS, vivo OriginOS) aggressively kill background apps to save battery. If the notification disappears after a while, you need to manually allow the app to run in the background:
+### Keeping it alive in the background (vendor ROMs)
 
-1. **Disable battery optimization** — Settings → Battery → Battery Optimization → Find this app → Select "Don't optimize"
-2. **Enable auto-start** (if available) — Settings → Apps → Manage Apps → Find this app → Enable "Auto-start"
-3. **Lock the app in recent tasks** — Open recent tasks, swipe down on this app's card to lock it (prevents system from killing it)
+Many vendor ROMs (ColorOS, MIUI/HyperOS, OriginOS, MagicOS, etc.) aggressively kill background apps. If lyrics stop updating after a while:
 
-> Without these settings, the system may kill the foreground service and lyrics will stop updating.
+1. **[Disable battery optimization](#permissions)**: Settings → Battery → this app → Don't optimize / allow full background activity (names vary by ROM).
+2. **[Allow auto-start / 关联启动 for Spotify](#permissions)**: otherwise a force-stopped Spotify can't be woken. These vendor screens are signature-protected, so the app can only open the app-details page; you have to enable it yourself.
+3. **Lock the app** in the recent-apps screen.
 
-### Troubleshooting
+> **ColorOS only**: even with all of the above, ColorOS "Hans" may still freeze the app 5 to 20 s after Spotify pauses. Check with `adb logcat | grep OplusHans`; opening the app thaws it.
+
+### FAQ / Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `MISSING_CLIENT_ID` in logs | `local.properties` not configured | Set `spotify.client.id` |
-| Gradle build fails with JDK error | JDK 17+ not installed | Install JDK 17, set `JAVA_HOME` |
-| "Spotify not installed" | Spotify App missing | Install Spotify from Play Store |
-| "Connection failed" on tap | Spotify not logged in | Log in to the Spotify App first |
-| Lyrics not showing in notification | Notification permission denied | Grant permission in Settings → Notifications |
-| Auth redirect closes immediately | Wrong redirect URI in Dashboard | Verify `spotifylyricsproxy://callback` is set |
-| Notification disappears after a while | System killed the background service | Disable battery optimization, enable auto-start, lock in recent tasks (see [Keep the App Alive](#keep-the-app-alive-in-background)) |
-| Lyrics page shows blank / player loses focus / lyrics not updating after returning from background | App entered background and Spotify UI took over, or playback clock drifted | Swipe the app away from recent tasks and reopen it. The player reconnects and displays lyrics. |
-| Offline (airplane mode): no lyrics shown | Offline mode needs notification access | Grant notification access (通知使用权) in system settings; only LRCLIB lyrics cached while online are available offline |
+| `MISSING_CLIENT_ID` in logs | `local.properties` not set up | Set `spotify.client.id` |
+| Closes right after authorizing | Redirect URI mismatch | Make sure the Dashboard has `spotifylyricsproxy://callback` |
+| Spotify rejects the connection / `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | Signing SHA-1 doesn't match the Dashboard | Register the current SHA-1, or uninstall the old build first |
+| No lyrics in the notification | [Notification permission](#permissions) not granted | Enable it in system settings |
+| Lyrics stop updating after a while | Background kill (or a Hans freeze on ColorOS) | See [Keeping it alive](#keeping-it-alive-in-the-background-vendor-roms); open the app |
+| Lyrics stuck while playing on another device | [Web API not authorized](#permissions), or token expired | Open the app to authorize / renew |
+| Skip and other controls don't work | Not a Premium account | App Remote playback control needs Premium |
+| No lyrics offline | No [notification access](#permissions), or the song was never cached | Grant notification access; offline shows cached lyrics only |
+| "Low confidence", no lyrics shown | No candidate matched well enough | Search manually from the menu or import an `.lrc` |
+
+---
+
+## Update Log
+
+- **2026-07**: Initial release. App Remote connection, LRCLIB lyrics, Room cache, MediaSession, foreground notification, playlist pre-caching, lyric correction; manual `.lrc` import, translation target language, Japanese UI.
+- **2026-08**: Offline mode (reads Spotify's MediaSession via notification access); LRCLIB became the default source; Apple Music-style player, word-by-word lyrics, onboarding, media-card priority.
+- **2026-09**:
+  - Lyric-source consensus scoring (cross-source timing check) and faster selection (parallel search, early finish).
+  - New word-level sources: QQ Music QRC and Kugou KRC.
+  - Lyricify-style player polish: countdown / interlude dots, blur, rolling time digits, landscape layout, marquee.
+  - Choice of Traditional/Simplified Chinese conversion mode.
+  - Per-source offsets.
+  - Other-device sync via the Web API.
+  - Media-card reclaim improvements.
+  - Background and battery fixes.
+  - Lyrics from unofficial sources are cached only with user consent.
 
 ---
 
@@ -203,86 +218,78 @@ This app runs a foreground service to display lyrics in the notification. Some A
 
 ```
 app/src/main/java/com/example/spotifylyricsproxy/
-├── core/model/          Data models
-├── database/            Room database and DAOs
-├── lyrics/              Lyrics fetching, parsing, matching, sync
-│   ├── lrclib/         LRCLIB source
-│   ├── netease/        NetEase Cloud Music source
-│   └── qqmusic/        QQ Music source
-├── mediasession/        MediaSession controls
-├── notification/        Foreground service notification
+├── core/                Settings and data models
+├── database/            Room database, DAOs, entities
+├── lyrics/              Search, parsing, matching, consensus, translation
+│   ├── amll/  lrclib/  netease/  qqmusic/   Lyric sources
+├── mediasession/        MediaSession and media buttons
+├── notification/        Foreground service and notification
 ├── playback/clock/      Playback position estimation
-├── spotify/             Spotify integration
-│   ├── remote/         App Remote connection and state subscription
-│   └── webapi/         Web API (OAuth, playlists)
-├── ui/                  Compose screens
-│   ├── cache/          Cache management
-│   ├── playback/       Playback screen and ViewModel
-│   ├── playlist/       Playlist precache
-│   ├── precache/       Precache management
-│   ├── settings/       Settings screen
-│   └── theme/          Theme and locale configuration
-└── worker/              WorkManager background tasks
+├── spotify/
+│   ├── remote/          App Remote, system MediaSession fallback, other-device sync
+│   └── webapi/          OAuth token, Web API
+├── ui/                  Compose UI (player, navigation, onboarding, settings, playlists, cache, theme)
+├── util/                Connectivity
+└── worker/              Playlist lyric pre-caching
 ```
 
-### Data Flow
+- **One pipeline, two consumers**: `LyricsForegroundService` owns lyric sync (clock, `updatePosition()`, searching on track change) and publishes the notification and media session. `PlaybackViewModel` reads the same `LyricsRepository` for the UI and doesn't drive sync.
+- **Playback state**: `SpotifyRemoteRepository` wraps App Remote, falls back to Spotify's system MediaSession when it can't connect, and follows the Web API while another device plays.
+- **Lyric formats**: TTML, YRC, LRC and others share one text field; `LrcParser` detects the format from the content, so a new format needs no database change.
+- **Media-card priority**: the system puts the session that most recently transitioned into playing at the top. About 1.2 s after Spotify changes track or resumes, `MediaSessionController` briefly flips the lyric session to paused and back to playing so it returns to the top.
 
-```
-Spotify PlayerState
-  → SpotifyRemoteRepository
-  → LyricsRepository
-  → Room cache / LRCLIB
-  → LrcParser
-  → PlaybackClock
-  → LyricSyncEngine
-  → Notification / MediaSession / UI
-```
-
-### Technology Stack
+### Tech stack
 
 | Component | |
 |-----------|-|
 | UI | Jetpack Compose + Material 3 |
-| Architecture | MVVM + Repository Pattern |
-| Database | Room (SQLite) |
-| Networking | Retrofit + OkHttp |
+| Architecture | MVVM + Repository |
+| Database | Room |
+| Network | Retrofit + OkHttp + Gson |
 | Async | Kotlin Coroutines + Flow |
-| Background | WorkManager |
-| Image Loading | Coil |
-| Lyrics Translation | ML Kit (on-device, offline) |
-| Spotify Integration | Spotify Android SDK (App Remote + Auth) |
+| Background | Foreground service + WorkManager |
+| Images | Coil |
+| Translation | ML Kit (on-device translation and language ID) |
+| Spotify | Spotify Android SDK (App Remote + Auth) + Web API |
 
 ---
 
-## Content Sources, References, and Compliance
+## Credits
 
-### What this repository includes
+This project uses or draws on the following projects. Thanks to their authors.
 
-- Original application code, configuration, and documentation released under the repository's [Apache-2.0 license](LICENSE).
-- A source adapter interface and optional adapters for LRCLIB, NetEase Cloud Music, and QQ Music. The adapters search and render lyrics only on the user's device; this repository does **not** include a lyrics corpus, track metadata dump, album-art archive, or hosted lyrics API.
-- Spotify integration through the official Spotify Android SDK / Web API dependencies declared in `gradle/libs.versions.toml`.
+| Project | Used for | License |
+|---|---|---|
+| [Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper) | NetEase, QQ Music and Kugou request parameters, and QRC/KRC decryption and parsing: `QrcDecrypter.kt`, `QrcConverter.kt` and `KrcDecoder.kt` are ported from it, and each file names its source | Apache-2.0 |
+| [AMLL TTML DB](https://github.com/amll-dev/amll-ttml-db) | Word-timed TTML lyrics looked up by Spotify track id | Contributors' own work CC0-1.0; lyric text belongs to its rights holders |
+| [LRCLIB](https://lrclib.net) | Default line-synced lyric source | Free public API |
+| Apple Music, Lyricify | Visual and motion design reference for the player (countdown dots, blur, rolling time); no code used | — |
+| [Spotify Android SDK](https://developer.spotify.com/documentation/android) / [Web API](https://developer.spotify.com/documentation/web-api) | Playback state, playback control, playlists | Spotify Developer Terms |
+| [Google ML Kit](https://developers.google.com/ml-kit) | On-device language identification and translation | ML Kit terms |
+| AndroidX / Jetpack Compose, Room, WorkManager, OkHttp, Retrofit, Gson, Coil | UI, database, networking | Their own open-source licenses (mostly Apache-2.0) |
 
-### What it does **not** grant
+More detail: [`docs/ATTRIBUTION_AND_COMPLIANCE.md`](docs/ATTRIBUTION_AND_COMPLIANCE.md).
 
-The Apache-2.0 license covers this repository's code only. It does **not** grant any right to redistribute, publish, sublicense, train on, mirror, or commercially exploit lyrics, translations, album artwork, Spotify content, or metadata returned by third-party services.
+## Content Sources & Compliance
 
-### Third-party sources and legal risk
+> Project documentation, **not legal advice**.
 
-| Item | How the app uses it | Important limit |
-|------|---------------------|-----------------|
-| Spotify Android SDK / Web API | Reads playback state, controls playback, obtains playlist metadata after user authorization | Spotify remains the playback provider. Follow the [Spotify Developer Terms](https://developer.spotify.com/terms) and [design guidelines](https://developer.spotify.com/documentation/design). Do not imply Spotify endorsement. |
-| LRCLIB | Optional on-device synchronized-lyrics lookup | Check LRCLIB's current terms and API policy before distribution or commercial use. |
-| NetEase Cloud Music | Optional on-device lookup adapter; lyrics are session-only and are never written to the local Room cache | The endpoint may be undocumented or change. Availability is not authorization; do not operate a proxy, mirror, bulk downloader, public lyrics API, or prebuilt lyric database. |
-| QQ Music | Optional on-device lookup adapter | The endpoint may be undocumented or change. Availability is not authorization; do not operate a proxy, mirror, bulk downloader, public lyrics API, or prebuilt lyric database. |
-| ML Kit Translation | On-device lyric-language detection and translation | Translation does not remove underlying lyrics copyright restrictions. |
+This repository's [Apache-2.0](LICENSE) license covers code, configuration and documentation only. Lyrics (including translations), artwork and metadata remain the property of their rights holders.
 
-**Before publishing an APK, app-store listing, paid product, server feature, or public hosted service:** obtain legal review and re-check the current terms of every provider and the law applicable to your jurisdiction. The maintainers make no claim that any optional third-party lyrics adapter is suitable for public distribution.
+| Source | Nature | Cache policy |
+|--------|--------|--------------|
+| AMLL TTML DB | Public community database on GitHub; contributors' timing work is CC0-1.0, lyric text still belongs to rights holders | Cached |
+| LRCLIB | Public free API, no key | Cached |
+| NetEase / QQ Music / Kugou | Undocumented, non-public endpoints; availability is not authorization | Session memory only unless you consent to local caching; never proxied, mirrored or exported |
+| Musixmatch | Not used: full / synced lyrics require a paid commercial license; the free tier only gives 30% of lyrics | — |
+| Spotify private lyric API | Not used | — |
 
-### Reference implementations and attribution
+**Personal study and research use**: in China, Article 24(1) of the Copyright Law allows using a published work for personal study, research or appreciation, and many jurisdictions have similar private-use / fair-use exceptions. This lowers the risk of personal use, but it:
 
-See [Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIANCE.md) for the detailed source-by-source boundary and public-release checklist.
+- does **not** cover redistributing lyrics;
+- does **not** override the providers' terms of service.
 
-- [Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper) — consulted as a protocol/reference implementation for the NetEase lyrics adapter. Its repository is Apache-2.0; this project does not copy its lyric data or bundle its code.
+Anyone distributing builds (public APK, store listing, paid offering, server features) should first read [Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIANCE.md).
 
 ---
 
@@ -290,28 +297,25 @@ See [Attribution, Content Sources, and Compliance](docs/ATTRIBUTION_AND_COMPLIAN
 
 **This project is not affiliated with Spotify AB and is not an official Spotify product.**
 
-- This application does not play audio or replace the Spotify player
-- All audio playback remains handled by the Spotify App
-- This application only reads playback state and displays lyrics
-- Lyrics are sourced from compatible third-party services or user-provided local files; provider terms and copyright restrictions remain applicable
-- This repository license covers only this project's code, not externally sourced lyrics, artwork, or metadata
-- The app is intended for personal on-device use and must not be used to host, mirror, bulk-export, or redistribute third-party lyrics or artwork
-- This application does not call private Spotify APIs or modify the Spotify APK
-- This application does not collect, store, or transmit user listening history outside the user's device
-- Users must comply with Spotify Developer Terms, provider terms, and applicable copyright law
+- The app plays no audio; all playback is handled by the Spotify app.
+- It does not modify the Spotify APK or call private Spotify APIs.
+- It does not collect or upload listening history; caches stay on your own device.
+- Users must follow the Spotify Developer Terms and each lyric source's terms.
 
 ---
 
 ## Contributing
 
-1. Fork the repository
+1. Fork this repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+4. Push the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+New UI strings go into all 4 `strings.xml` locales; new lyric sources or protocol references must be recorded with their license in the [compliance doc](docs/ATTRIBUTION_AND_COMPLIANCE.md).
 
 ---
 
 ## License
 
-This project is licensed under the [Apache License 2.0](LICENSE).
+Code is licensed under the [Apache License 2.0](LICENSE).
