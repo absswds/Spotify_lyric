@@ -8,6 +8,14 @@ import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -53,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -158,6 +167,23 @@ fun SettingsScreen(
                         selected = currentLocale,
                         onSelect = { code -> if (ThemePreferences.setLocale(code)) (context as? Activity)?.recreate() }
                     )
+                }
+
+                if (LocalConfiguration.current.locales[0].language == "zh") {
+                GroupTitle(stringResource(R.string.settings_group_chinese))
+                SettingsGroup {
+                    val mode by LyricDisplayPreferences.chineseConvertMode
+                    SettingsRow(stringResource(R.string.settings_chinese_mode), stringResource(R.string.settings_chinese_mode_desc))
+                    ChineseModePreview(mode)
+                    ChoiceRow(
+                        options = listOf(
+                            "replace" to stringResource(R.string.settings_chinese_replace),
+                            "below" to stringResource(R.string.settings_chinese_below)
+                        ),
+                        selected = mode,
+                        onSelect = LyricDisplayPreferences::setChineseConvertMode
+                    )
+                }
                 }
 
                 // Network
@@ -325,6 +351,59 @@ private fun SettingsRow(
 }
 
 /** Segmented choice; the selected pill's colour animates between options. */
+/**
+ * Loops "before -> after" so the two modes can be compared: "replace" swaps the
+ * lyric line itself to the other script, "below" keeps it and fades in a second line.
+ */
+@Composable
+internal fun ChineseModePreview(
+    mode: String,
+    lineColor: Color = MaterialTheme.colorScheme.onSurface,
+    background: Color = MaterialTheme.colorScheme.surfaceVariant
+) {
+    var converted by remember { mutableStateOf(false) }
+    LaunchedEffect(mode) {
+        converted = false
+        while (true) {
+            delay(1400)
+            converted = !converted
+        }
+    }
+    // Lines with many characters that differ between the two scripts.
+    val original = listOf("说起来并不寂寞孤单", "你有没有想过这种可能呢", "这样的爱让人难以忘怀")
+    val result = listOf("說起來並不寂寞孤單", "你有沒有想過這種可能呢", "這樣的愛讓人難以忘懷")
+    val alpha by animateFloatAsState(if (converted) 0.6f else 0f, tween(450), label = "below")
+    val offset by animateDpAsState(if (converted) 0.dp else 6.dp, tween(450), label = "belowOffset")
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(background)
+            .padding(16.dp)
+    ) {
+        original.indices.forEach { i ->
+            val current = i == 1
+            val size = if (current) 20.sp else 17.sp
+            val color = lineColor.copy(alpha = if (current) 1f else 0.45f)
+            if (mode == "replace") {
+                Crossfade(targetState = converted, animationSpec = tween(450), label = "replace") { c ->
+                    Text(if (c) result[i] else original[i], fontSize = size, fontWeight = FontWeight.Bold, color = color)
+                }
+            } else {
+                Text(original[i], fontSize = size, fontWeight = FontWeight.Bold, color = color)
+                Text(
+                    result[i],
+                    fontSize = 14.sp,
+                    color = lineColor.copy(alpha = alpha * (if (current) 1f else 0.6f)),
+                    modifier = Modifier.offset(y = offset).height(20.dp)
+                )
+            }
+            if (i < original.lastIndex) Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
 @Composable
 private fun ChoiceRow(options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
     Row(

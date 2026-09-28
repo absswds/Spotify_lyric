@@ -98,24 +98,18 @@
     <!-- Playback Screen - Lyric display settings dialog -->
     <string name="lyric_settings_title">Lyrics Display Settings</string>
     <string name="lyric_settings_description">These settings affect the fullscreen lyrics view and landscape lyrics area. The main screen preview remains compact.</string>
-    <string name="lyric_settings_font_size">Font size</string>
     <string name="lyric_settings_font_small">Small</string>
     <string name="lyric_settings_font_default">Default</string>
     <string name="lyric_settings_font_large">Large</string>
     <string name="lyric_settings_font_xlarge">X-Large</string>
-    <string name="lyric_settings_bold">Current line bold</string>
-    <string name="lyric_settings_bold_label">Bold</string>
     <string name="lyric_settings_dim_level">Dim level</string>
     <string name="lyric_settings_dim_low">Low</string>
     <string name="lyric_settings_dim_medium">Medium</string>
     <string name="lyric_settings_dim_high">High</string>
-    <string name="lyric_settings_alignment">Alignment</string>
     <string name="lyric_settings_align_center">Center</string>
     <string name="lyric_settings_align_left">Left</string>
     <string name="lyric_settings_done">Done</string>
-    <string name="lyric_settings_inactive_blur">Blur inactive lines</string>
-    <string name="lyric_settings_font_size_current">Current line font: %1$s</string>
-    <string name="lyric_settings_font_size_other">Other line font: %1$s</string>
+    <string name="lyric_settings_font_size">Lyrics font: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">Translate</string>
@@ -372,4 +366,9 @@
     <string name="onboarding_open_settings">Settings</string>
     <string name="onboarding_granted">On</string>
     <string name="menu_quick_word_by_word">Word sync</string>
+    <string name="settings_group_chinese">Chinese script</string>
+    <string name="settings_chinese_mode">Chinese lyrics and script</string>
+    <string name="settings_chinese_mode_desc">When both the lyrics and the translation target are Chinese</string>
+    <string name="settings_chinese_replace">Convert the lyrics</string>
+    <string name="settings_chinese_below">Show below as a second line</string>
 </resources>

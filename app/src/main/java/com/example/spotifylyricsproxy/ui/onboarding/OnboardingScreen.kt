@@ -70,7 +70,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalConfiguration
 import com.example.spotifylyricsproxy.R
+import com.example.spotifylyricsproxy.ui.playback.LyricDisplayPreferences
+import com.example.spotifylyricsproxy.ui.settings.ChineseModePreview
 import com.example.spotifylyricsproxy.notification.NotificationPermissionPolicy
 import kotlinx.coroutines.launch
 
@@ -87,7 +90,10 @@ private val Accent = Color(0xFF1ED760)
  */
 @Composable
 fun OnboardingScreen(onFinish: () -> Unit) {
-    val pager = rememberPagerState { 2 }
+    // Chinese UIs get an extra page for how Chinese lyrics meet a Chinese target.
+    val chinese = LocalConfiguration.current.locales[0].language == "zh"
+    val pageCount = if (chinese) 3 else 2
+    val pager = rememberPagerState { pageCount }
     val scope = rememberCoroutineScope()
     Box(
         modifier = Modifier
@@ -118,7 +124,11 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 28.dp)
                     ) {
-                        if (page == 0) WelcomePage() else PermissionsPage()
+                        when {
+                            page == 0 -> WelcomePage()
+                            chinese && page == 1 -> ChineseModePage()
+                            else -> PermissionsPage()
+                        }
                     }
                 }
             }
@@ -126,9 +136,9 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PagerDots(count = 2, current = pager.currentPage)
+                PagerDots(count = pageCount, current = pager.currentPage)
                 Spacer(modifier = Modifier.weight(1f))
-                val last = pager.currentPage == 1
+                val last = pager.currentPage == pageCount - 1
                 Text(
                     text = stringResource(if (last) R.string.onboarding_start else R.string.onboarding_next),
                     color = Color.Black,
@@ -138,12 +148,43 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                         .clip(RoundedCornerShape(50))
                         .background(Accent)
                         .clickable {
-                            if (last) onFinish() else scope.launch { pager.animateScrollToPage(1) }
+                            if (last) onFinish() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
                         }
                         .padding(horizontal = 26.dp, vertical = 12.dp)
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ChineseModePage() {
+    val mode by LyricDisplayPreferences.chineseConvertMode
+    Spacer(modifier = Modifier.height(24.dp))
+    Text(stringResource(R.string.settings_chinese_mode), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(stringResource(R.string.settings_chinese_mode_desc), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
+    Spacer(modifier = Modifier.height(12.dp))
+    ChineseModePreview(mode, lineColor = Ink, background = Color.White.copy(alpha = 0.07f))
+    Spacer(modifier = Modifier.height(12.dp))
+    listOf(
+        "replace" to R.string.settings_chinese_replace,
+        "below" to R.string.settings_chinese_below
+    ).forEach { (value, label) ->
+        val selected = mode == value
+        Text(
+            text = stringResource(label),
+            color = if (selected) Color.Black else Ink,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 5.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(if (selected) Accent else Color.White.copy(alpha = 0.07f))
+                .clickable { LyricDisplayPreferences.setChineseConvertMode(value) }
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        )
     }
 }
 

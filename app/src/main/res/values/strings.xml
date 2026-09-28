@@ -98,24 +98,18 @@
     <!-- Playback Screen - Lyric display settings dialog -->
     <string name="lyric_settings_title">歌词显示设置</string>
     <string name="lyric_settings_description">这些设置影响展开歌词页和横屏歌词区，主页预览歌词会保持紧凑显示。</string>
-    <string name="lyric_settings_font_size">字体大小</string>
     <string name="lyric_settings_font_small">小</string>
     <string name="lyric_settings_font_default">默认</string>
     <string name="lyric_settings_font_large">大</string>
     <string name="lyric_settings_font_xlarge">超大</string>
-    <string name="lyric_settings_bold">当前行加粗</string>
-    <string name="lyric_settings_bold_label">加粗显示</string>
     <string name="lyric_settings_dim_level">非当前行透明度</string>
     <string name="lyric_settings_dim_low">低</string>
     <string name="lyric_settings_dim_medium">中</string>
     <string name="lyric_settings_dim_high">高</string>
-    <string name="lyric_settings_alignment">对齐方式</string>
     <string name="lyric_settings_align_center">居中</string>
     <string name="lyric_settings_align_left">左对齐</string>
     <string name="lyric_settings_done">完成</string>
-    <string name="lyric_settings_inactive_blur">非当前行模糊</string>
-    <string name="lyric_settings_font_size_current">当前行字号: %1$s</string>
-    <string name="lyric_settings_font_size_other">非当前行字号: %1$s</string>
+    <string name="lyric_settings_font_size">歌词字号: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻译</string>
@@ -377,4 +371,9 @@
     <string name="onboarding_open_settings">去设置</string>
     <string name="onboarding_granted">已开启</string>
     <string name="menu_quick_word_by_word">逐字</string>
+    <string name="settings_group_chinese">繁简转换</string>
+    <string name="settings_chinese_mode">中文歌词的繁简显示</string>
+    <string name="settings_chinese_mode_desc">翻译目标是中文、歌词本身也是中文时，怎么处理</string>
+    <string name="settings_chinese_replace">直接转换原歌词</string>
+    <string name="settings_chinese_below">在下方另起一行</string>
 </resources>

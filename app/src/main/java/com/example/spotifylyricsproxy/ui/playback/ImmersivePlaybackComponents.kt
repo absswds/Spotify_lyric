@@ -62,6 +62,18 @@ import androidx.compose.runtime.withFrameMillis
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.animation.core.animateDp
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.runtime.key
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
@@ -417,7 +429,7 @@ fun ImmersiveTrackHeader(
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 2000)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -434,7 +446,7 @@ fun ImmersiveTrackHeader(
                 fontSize = 16.sp,
                 color = Color.White.copy(alpha = 0.6f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 2000)
             )
         }
 
@@ -646,7 +658,7 @@ private fun SyncedLyricsList(
         if (visible != null && !immediate) {
             listState.animateScrollBy(
                 value = (visible.offset - anchorPx).toFloat(),
-                animationSpec = spring(dampingRatio = 0.86f, stiffness = 90f)
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = 110f)
             )
         } else {
             listState.scrollToItem(currentIndex, -anchorPx)
@@ -673,6 +685,21 @@ private fun SyncedLyricsList(
             itemsIndexed(lines, key = { index, line -> "${line.startMs}_$index" }) { index, line ->
                 val isCurrent = index == currentIndex
                 Column(modifier = Modifier.fillMaxWidth()) {
+                    if (index == 0 && line.startMs >= INTRO_DOTS_MIN_MS) {
+                        AnimatedVisibility(
+                            visible = currentIndex < 0,
+                            enter = fadeIn(tween(300)) + expandVertically(),
+                            exit = fadeOut(tween(250)) + shrinkVertically(tween(450))
+                        ) {
+                            IntroCountdownDots(
+                                endMs = line.startMs,
+                                positionMs = smoothPosition,
+                                textScale = textScale,
+                                alignEnd = config.textAlign == TextAlign.End || config.textAlign == TextAlign.Right,
+                                center = config.textAlign == TextAlign.Center
+                            )
+                        }
+                    }
                     // Duet: the second singer's lines sit on the opposite side.
                     val lineConfig = if (line.isSecondaryVoice && config.textAlign != TextAlign.Center) {
                         config.copy(textAlign = if (config.textAlign == TextAlign.End || config.textAlign == TextAlign.Right) TextAlign.Start else TextAlign.End)
@@ -696,12 +723,18 @@ private fun SyncedLyricsList(
                             onSeek(line.startMs)
                         }
                     )
-                    if (isCurrent && isTranslationEnabled && !translatedLine.isNullOrBlank()) {
+                    // Like Lyricify: every line carries its translation; the current one is
+                    // brighter. Other lines only have the translation shipped with the lyrics.
+                    val lineTranslation = if (isCurrent) translatedLine else line.translation
+                    if (isTranslationEnabled && !lineTranslation.isNullOrBlank()) {
+                        val tAlpha by animateFloatAsState(
+                            if (isCurrent) 0.7f else 0.28f, tween(450), label = "translationAlpha"
+                        )
                         Text(
-                            text = translatedLine,
+                            text = convertChineseForm(lineTranslation, lineConfig.chineseForm),
                             fontSize = 16.sp * textScale,
                             lineHeight = 23.sp * textScale,
-                            color = Color.White.copy(alpha = 0.62f),
+                            color = Color.White.copy(alpha = tAlpha),
                             textAlign = lineConfig.textAlign,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -763,6 +796,55 @@ private fun LyricsStatusMessage(text: String, textScale: Float, onSearchManually
     }
 }
 
+private const val INTRO_DOTS_MIN_MS = 3_000L
+
+/**
+ * Intro countdown after Lyricify / Apple Music: three dots that light up one by one
+ * as the first line approaches, breathing gently, then swell and vanish just before
+ * it starts. Position is read in the draw phase only.
+ */
+@Composable
+private fun IntroCountdownDots(
+    endMs: Long,
+    positionMs: () -> Long,
+    textScale: Float,
+    alignEnd: Boolean,
+    center: Boolean
+) {
+    val dot = 10.dp * textScale
+    val gap = 8.dp * textScale
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 14.dp * textScale)
+            .height(dot * 1.6f)
+    ) {
+        val now = positionMs().coerceAtMost(endMs)
+        val progress = (now.toFloat() / endMs).coerceIn(0f, 1f)
+        // Last 400 ms: swell then collapse.
+        val outro = ((endMs - now) / 400f).coerceIn(0f, 1f)
+        val pop = if (outro < 1f) (1f + 0.25f * kotlin.math.sin(outro * Math.PI.toFloat())) * outro else 1f
+        val breathe = 1f + 0.08f * kotlin.math.sin(now / 1000f * 2f * Math.PI.toFloat() / 1.6f)
+        val r = dot.toPx() / 2f * breathe * pop
+        val step = dot.toPx() + gap.toPx()
+        val groupWidth = step * 2 + dot.toPx()
+        val startX = when {
+            center -> (size.width - groupWidth) / 2
+            alignEnd -> size.width - groupWidth
+            else -> 0f
+        } + dot.toPx() / 2
+        for (i in 0 until 3) {
+            // Each dot fills over its own third of the wait.
+            val fill = ((progress * 3f) - i).coerceIn(0f, 1f)
+            drawCircle(
+                color = Color.White.copy(alpha = (0.25f + 0.75f * fill) * outro.coerceAtLeast(0.001f)),
+                radius = r,
+                center = Offset(startX + step * i, size.height / 2)
+            )
+        }
+    }
+}
+
 /**
  * One lyric line. Every line is laid out at the current-line size so nothing reflows;
  * non-current lines are shrunk with a graphics-layer scale, dimmed and blurred by distance,
@@ -784,7 +866,7 @@ internal fun LyricLine(
     onClick: () -> Unit
 ) {
     val displayText = remember(text, config.chineseForm) { convertChineseForm(text, config.chineseForm) }
-    val restScale = (config.otherLineSp.value / config.currentLineSp.value).coerceIn(0.6f, 1f) * 0.97f
+    val restScale = (config.otherLineSp.value / config.currentLineSp.value).coerceIn(0.6f, 1f)
     val scale by animateFloatAsState(
         targetValue = if (isCurrent) 1f else restScale,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 140f),
@@ -801,7 +883,7 @@ internal fun LyricLine(
         animationSpec = tween(600, easing = FastOutSlowInEasing),
         label = "lyricAlpha"
     )
-    val blurTarget = if (!config.blurEnabled || isCurrent || browsing) 0.dp else (0.7.dp * distance).coerceAtMost(2.4.dp)
+    val blurTarget = if (!config.blurEnabled || isCurrent || browsing) 0.dp else (0.4.dp * distance).coerceAtMost(1.5.dp)
     val blur by animateDpAsState(blurTarget, tween(450), label = "lyricBlur")
     val originX = when (config.textAlign) {
         TextAlign.Start, TextAlign.Left -> 0f
@@ -820,16 +902,28 @@ internal fun LyricLine(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            // No clip here: the current line is scaled up and its lifted descenders
+            // would be cut off. Without a clip the ripple would be square, so none.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            // Blur renders into a layer clipped to its bounds: apply it outside the
+            // padding so descenders (g, y) that reach past the text box aren't cut.
+            .then(if (blur > 0.dp) Modifier.blur(blur, BlurredEdgeTreatment.Unbounded) else Modifier)
             .padding(horizontal = 10.dp, vertical = 6.dp * textScale)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
                 transformOrigin = TransformOrigin(originX, 0.5f)
             }
-            .alpha(alpha)
-            .then(if (blur > 0.dp) Modifier.blur(blur, BlurredEdgeTreatment.Unbounded) else Modifier)
+            // ModulateAlpha instead of .alpha(): no offscreen layer, so nothing is
+            // clipped to the line's bounds (lowered descenders stay whole).
+            .graphicsLayer {
+                this.alpha = alpha
+                compositingStrategy = CompositingStrategy.ModulateAlpha
+            }
     ) {
         if (isCurrent) {
             // Chinese-form conversion keeps one char per char; if it ever doesn't, the word
@@ -859,10 +953,29 @@ private fun SweepText(
     wordRanges: List<IntRange>
 ) {
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
-    val boxes = remember(layout) { layout?.let { l -> List(text.length) { l.getBoundingBox(it) } } }
     val fontPx = with(LocalDensity.current) { style.fontSize.toPx() }
     val softEdge = fontPx * 0.9f
     val lift = fontPx * 0.10f
+    // Clip box per character: its own width, and its own row's height so a wrapped
+    // line never draws the neighbouring row's glyphs (the "ghost" under line one).
+    // Only the outer edges get extra room for the lift.
+    val boxes = remember(layout, lift, fontPx) {
+        layout?.let { l ->
+            // Rows split just below each baseline, so descenders (g, y, p) stay
+            // with their own row even when the line height is tight.
+            fun split(row: Int) = rowSplit(l, row, fontPx)
+            List(text.length) { i ->
+                val row = l.getLineForOffset(i)
+                val b = l.getBoundingBox(i)
+                Rect(
+                    b.left,
+                    if (row == 0) l.getLineTop(0) - lift * 3f else split(row - 1),
+                    b.right,
+                    if (row == l.lineCount - 1) l.getLineBottom(row) + lift * 3f else split(row)
+                )
+            }
+        }
+    }
     Box(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = text,
@@ -888,7 +1001,7 @@ private fun SweepText(
                     if (l == null || b == null) return@drawWithContent
                     val sung = charReveal()
                     drawLiftedWords(b, wordRanges, sung, lift) { drawContent() }
-                    drawCharReveal(l, sung, softEdge, lift)
+                    drawCharReveal(l, sung, softEdge, lift, fontPx)
                 }
         )
     }
@@ -912,7 +1025,7 @@ private inline fun DrawScope.drawLiftedWords(
         val dy = maxLift - maxLift * 2f * eased
         for (i in range) {
             val box = boxes.getOrNull(i) ?: continue
-            clipRect(box.left, box.top - maxLift * 3f, box.right, box.bottom + maxLift * 3f) {
+            clipRect(box.left, box.top, box.right, box.bottom) {
                 translate(top = dy) { glyphs() }
             }
         }
@@ -944,15 +1057,18 @@ private fun revealedChars(words: List<LyricWord>, ranges: List<IntRange>, positi
 }
 
 /** Erase the unsung part of each row, with the soft edge sitting at the exact sung position. */
-private fun DrawScope.drawCharReveal(l: TextLayoutResult, sung: Float, softEdge: Float, lift: Float) {
+/** Boundary between [row] and the next one: just below the baseline, past descenders. */
+private fun rowSplit(l: TextLayoutResult, row: Int, fontPx: Float) = l.getLineBaseline(row) + fontPx * 0.42f
+
+private fun DrawScope.drawCharReveal(l: TextLayoutResult, sung: Float, softEdge: Float, lift: Float, fontPx: Float) {
     for (row in 0 until l.lineCount) {
         val start = l.getLineStart(row)
         val end = l.getLineEnd(row, visibleEnd = true)
         if (sung >= end) continue
         val left = l.getLineLeft(row)
         val right = l.getLineRight(row)
-        val top = l.getLineTop(row)
-        val height = l.getLineBottom(row) - top
+        val bandTop = if (row == 0) l.getLineTop(0) - lift * 3f else rowSplit(l, row - 1, fontPx)
+        val bandBottom = if (row == l.lineCount - 1) l.getLineBottom(row) + lift * 3f else rowSplit(l, row, fontPx)
         val x = if (sung <= start) {
             left - softEdge
         } else {
@@ -967,8 +1083,10 @@ private fun DrawScope.drawCharReveal(l: TextLayoutResult, sung: Float, softEdge:
                 startX = x - softEdge / 2,
                 endX = x + softEdge / 2
             ),
-            topLeft = Offset(left - softEdge, top - lift * 3f),
-            size = Size(right - left + softEdge * 2, height + lift * 6f),
+            // Same row bands as the lift clip, so erasing an unsung row never
+            // eats the descenders of the row above it.
+            topLeft = Offset(left - softEdge, bandTop),
+            size = Size(right - left + softEdge * 2, bandBottom - bandTop),
             blendMode = BlendMode.DstOut
         )
     }
@@ -1166,8 +1284,8 @@ internal fun AppleProgressBar(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             val shownMs = (fraction * durationMs).toLong()
             val timeColor = Color.White.copy(alpha = if (dragFraction != null) 0.9f else 0.5f)
-            Text(text = formatMs(shownMs), fontSize = 11.sp * scale, color = timeColor)
-            Text(text = "-" + formatMs((durationMs - shownMs).coerceAtLeast(0L)), fontSize = 11.sp * scale, color = timeColor)
+            BouncyTime(formatMs(shownMs), 11.sp * scale, timeColor)
+            BouncyTime("-" + formatMs((durationMs - shownMs).coerceAtLeast(0L)), 11.sp * scale, timeColor)
         }
     }
 }
@@ -1177,4 +1295,41 @@ internal fun formatMs(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "$minutes:${seconds.toString().padStart(2, '0')}"
+}
+
+/**
+ * Time label whose changing digits roll, after Lyricify: the old digit slides up and
+ * out while blurring and fading, the new one rises from below and sharpens into place.
+ * Tabular figures keep the width steady.
+ */
+@Composable
+private fun BouncyTime(text: String, fontSize: TextUnit, color: Color) {
+    val style = TextStyle(fontSize = fontSize, color = color, fontFeatureSettings = "tnum")
+    Row {
+        // Key by position from the right so "9:59" -> "10:00" keeps the seconds aligned.
+        text.forEachIndexed { i, ch ->
+            key(text.length - i) {
+                AnimatedContent(
+                    targetState = ch,
+                    transitionSpec = {
+                        val ease = tween<IntOffset>(380, easing = FastOutSlowInEasing)
+                        (slideInVertically(ease) { it / 2 } + fadeIn(tween(300)))
+                            .togetherWith(slideOutVertically(ease) { -it / 2 } + fadeOut(tween(260)))
+                            .using(SizeTransform(clip = false))
+                    },
+                    label = "timeDigit"
+                ) { c ->
+                    val blur by transition.animateDp(
+                        transitionSpec = { tween(380) },
+                        label = "digitBlur"
+                    ) { state -> if (state == EnterExitState.Visible) 0.dp else 2.5.dp }
+                    Text(
+                        c.toString(),
+                        style = style,
+                        modifier = if (blur > 0.dp) Modifier.blur(blur, BlurredEdgeTreatment.Unbounded) else Modifier
+                    )
+                }
+            }
+        }
+    }
 }

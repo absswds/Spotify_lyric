@@ -98,24 +98,18 @@
     <!-- Playback Screen - Lyric display settings dialog -->
     <string name="lyric_settings_title">歌詞表示設定</string>
     <string name="lyric_settings_description">これらの設定はフルスクリーン歌詞ビューと横画面エリアに影響します。メイン画面のプレビューはコンパクトなまま表示されます。</string>
-    <string name="lyric_settings_font_size">フォントサイズ</string>
     <string name="lyric_settings_font_small">小</string>
     <string name="lyric_settings_font_default">標準</string>
     <string name="lyric_settings_font_large">大</string>
     <string name="lyric_settings_font_xlarge">特大</string>
-    <string name="lyric_settings_bold">現在の行を太字</string>
-    <string name="lyric_settings_bold_label">太字</string>
     <string name="lyric_settings_dim_level">非現在行の透明度</string>
     <string name="lyric_settings_dim_low">低</string>
     <string name="lyric_settings_dim_medium">中</string>
     <string name="lyric_settings_dim_high">高</string>
-    <string name="lyric_settings_alignment">揃え</string>
     <string name="lyric_settings_align_center">中央揃え</string>
     <string name="lyric_settings_align_left">左揃え</string>
     <string name="lyric_settings_done">完了</string>
-    <string name="lyric_settings_inactive_blur">非アクティブ行をぼかす</string>
-    <string name="lyric_settings_font_size_current">現在行の文字サイズ: %1$s</string>
-    <string name="lyric_settings_font_size_other">他行の文字サイズ: %1$s</string>
+    <string name="lyric_settings_font_size">歌詞の文字サイズ: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻訳</string>
@@ -372,4 +366,9 @@
     <string name="onboarding_open_settings">設定へ</string>
     <string name="onboarding_granted">オン</string>
     <string name="menu_quick_word_by_word">単語同期</string>
+    <string name="settings_group_chinese">簡体字・繁体字</string>
+    <string name="settings_chinese_mode">中国語歌詞の字体</string>
+    <string name="settings_chinese_mode_desc">歌詞と翻訳先がどちらも中国語の場合の表示方法</string>
+    <string name="settings_chinese_replace">歌詞をそのまま変換</string>
+    <string name="settings_chinese_below">下に別の行で表示</string>
 </resources>

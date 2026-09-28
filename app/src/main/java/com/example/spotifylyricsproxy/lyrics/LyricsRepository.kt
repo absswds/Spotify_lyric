@@ -1,6 +1,7 @@
 package com.example.spotifylyricsproxy.lyrics
 
 import com.example.spotifylyricsproxy.core.AppSettings
+import android.os.SystemClock
 import android.util.Log
 import com.example.spotifylyricsproxy.core.model.LrcLine
 import com.example.spotifylyricsproxy.core.model.LyricCandidate
@@ -35,6 +36,11 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
          * singer's song of the same name): don't show it or cache it; offer a manual search.
          */
         private const val MIN_ACCEPT_SCORE = 50
+        private const val EARLY_GRACE_MS = 600L
+        /** NetEase YRC word timing: `[lineStart,lineDur](wordStart,wordDur,0)`. */
+        private val YRC_HINT = Regex("""^\[\d+,\d+]\(\d+,\d+,\d+\)""", RegexOption.MULTILINE)
+        private const val CONSENSUS_OK = 0.6
+        private const val CONSENSUS_BAD = 0.3
         /** Per-provider cap so the fastest good answer is not held back by a slow one. */
         private const val SOURCE_TIMEOUT_MS = 5_000L
         private const val NETEASE_SOURCE = "netease"
@@ -75,26 +81,43 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     /** Query every source IN PARALLEL, collect all candidates, return all for scoring. */
     private suspend fun aggregateSearch(request: LyricsSearchRequest): List<LyricCandidate> = coroutineScope {
         val allCandidates = mutableListOf<LyricCandidate>()
-        val deferred = sources.map { source ->
-            async {
-                try {
-                    // One slow provider must not hold every other result hostage.
-                    val result = withTimeoutOrNull(SOURCE_TIMEOUT_MS) { source.search(request) }.orEmpty()
-                    if (result.isNotEmpty()) {
-                        Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
-                        result
-                    } else emptyList()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "Source '${source.name}' failed: ${e.message}")
-                    emptyList()
-                }
+        val results = kotlinx.coroutines.channels.Channel<List<LyricCandidate>>(sources.size)
+        val jobs = sources.map { source ->
+            launch { results.send(searchOne(source, request)) }
+        }
+        // Don't wait for the slowest source once the answer is settled: an exact AMLL
+        // hit, or word-timed lyrics plus another source to cross-check their timing
+        // (then only a short grace for stragglers).
+        var deadline = SystemClock.uptimeMillis() + SOURCE_TIMEOUT_MS
+        repeat(sources.size) {
+            val remaining = deadline - SystemClock.uptimeMillis()
+            val batch = (if (remaining > 0) withTimeoutOrNull(remaining) { results.receive() } else null)
+                ?: return@repeat
+            allCandidates.addAll(batch)
+            if (allCandidates.any { it.source == AmllTtmlLyricsSource.SOURCE && !it.syncedLyrics.isNullOrEmpty() }) {
+                deadline = 0L
+            } else if (allCandidates.map { it.source }.distinct().size >= 2 &&
+                allCandidates.any { c -> c.syncedLyrics?.let { YRC_HINT.containsMatchIn(it) || it.trimStart().startsWith("<tt") } == true }
+            ) {
+                deadline = minOf(deadline, SystemClock.uptimeMillis() + EARLY_GRACE_MS)
             }
         }
-        deferred.forEach { allCandidates.addAll(it.await()) }
+        jobs.forEach { it.cancel() }
         allCandidates
     }
+
+    private suspend fun searchOne(source: LyricsSource, request: LyricsSearchRequest): List<LyricCandidate> =
+        try {
+            // One slow provider must not hold every other result hostage.
+            val result = withTimeoutOrNull(SOURCE_TIMEOUT_MS) { source.search(request) }.orEmpty()
+            if (result.isNotEmpty()) Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
+            result
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Source '${source.name}' failed: ${e.message}")
+            emptyList()
+        }
 
     private val cacheDao = database.lyricCacheDao()
     private val historyDao = database.trackPlayHistoryDao()
@@ -105,20 +128,38 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
      * word-timed lyrics: an AMLL hit is keyed by the exact Spotify id, so it scores a full 100;
      * other word-level results get a small nudge over line-only ones of similar score.
      */
-    private fun adjustForQuality(c: LyricCandidate): LyricCandidate {
-        var score = c.score
-        if (LyricMatcher.looksLikeCover(c.trackName)) score -= 30
-        if (c.source == AmllTtmlLyricsSource.SOURCE) score = 100 // exact Spotify-id match
-        else if (c.syncedLyrics?.let { LrcParser.parse(it).any { line -> line.words.isNotEmpty() } } == true) {
-            score = (score + 5).coerceAtMost(99)
+    private fun adjustForQuality(list: List<LyricCandidate>): List<LyricCandidate> {
+        val parsed = list.map { c -> c.source to (c.syncedLyrics?.let { LrcParser.parse(it) } ?: emptyList()) }
+        val agreement = LyricConsensus.bestAgreement(parsed)
+        // Other sources agree with each other: a candidate that disagrees with all of
+        // them is likely the wrong song or badly timed.
+        val othersAgree = agreement.any { it != null && it >= CONSENSUS_OK }
+        return list.mapIndexed { i, c ->
+            var score = c.score
+            if (LyricMatcher.looksLikeCover(c.trackName)) score -= 30
+            val agree = agreement[i]
+            if (c.source == AmllTtmlLyricsSource.SOURCE) {
+                score = 100 // exact Spotify-id match
+            } else {
+                // Word timing is only worth preferring when its timing is confirmed
+                // (or there is nothing to compare against).
+                if (parsed[i].second.any { it.words.isNotEmpty() } && (agree == null || agree >= CONSENSUS_OK)) {
+                    score = (score + 5).coerceAtMost(100)
+                }
+                if (othersAgree && agree != null && agree < CONSENSUS_BAD) score -= 25
+                // Unconfirmed word timing must not win a tie against line-only lyrics.
+                else if (agree != null && agree < CONSENSUS_OK && parsed[i].second.any { it.words.isNotEmpty() }) score -= 1
+            }
+            Log.i(TAG, "Quality: source=${c.source} base=${c.score} final=$score agree=$agree words=${parsed[i].second.any { it.words.isNotEmpty() }} lines=${parsed[i].second.size}")
+            c.copy(score = score)
         }
-        return c.copy(score = score)
     }
 
     /** Sort candidates by score desc; on ties, prefer the default source. */
     private fun sortCandidates(list: List<LyricCandidate>): List<LyricCandidate> =
         list.sortedWith(
             compareByDescending<LyricCandidate> { it.score }
+                .thenByDescending { c -> c.syncedLyrics?.let { LrcParser.parse(it).any { l -> l.words.isNotEmpty() } } == true }
                 .thenByDescending { it.source == DEFAULT_SOURCE }
         )
 
@@ -219,6 +260,9 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             }
         }
         if (stale()) return
+        // Cached line-only lyrics are shown right away, but we still search online:
+        // NetEase word timing is never cached, so it can only be found live.
+        var upgrading = false
         if (cached != null) {
             _offsetMs = cached.offsetMs
             _currentOffsetMs.value = _offsetMs
@@ -246,7 +290,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                             _parsedLyrics.value = lines
                             _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
                             _lyricSource.value = cached.source
-                            return
+                            if (lines.any { it.words.isNotEmpty() } || cached.source == AmllTtmlLyricsSource.SOURCE) return
+                            upgrading = true
                         }
                     }
                 } else {
@@ -271,7 +316,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         }
 
         // Not cached or needs refresh — keep old lyrics visible when forceOnline
-        if (!forceOnline) {
+        if (!forceOnline && !upgrading) {
             _lyricStatus.value = LyricStatus.Searching
         }
 
@@ -305,9 +350,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             // Penalize cover/remix/fan versions so original recordings rank higher.
             // The NetEase cloudsearch/pc endpoint frequently returns covers as top results,
             // and artist matching via contains() can let wrong matches through (e.g., "周杰伦-" vs "周杰伦").
-            scored = scored.map { c ->
-                adjustForQuality(c)
-            }
+            scored = adjustForQuality(scored)
             // DEBUG: dump every candidate's score breakdown
             scored.forEach { c ->
                 Log.i(TAG, "Candidate: source=${c.source} title='${c.trackName}' artist='${c.artistName}' score=${c.score} synced=${!c.syncedLyrics.isNullOrEmpty()}")
@@ -472,9 +515,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 LyricMatcher.score(it, searchTitle, searchArtist, searchAlbum, searchDuration)
             }
             // Penalize cover/remix/fan versions so original recordings rank higher.
-            scored = scored.map { c ->
-                adjustForQuality(c)
-            }
+            scored = adjustForQuality(scored)
             scored = sortCandidates(scored)
             val filtered = LyricMatcher.filterRejected(scored, rejectedIds)
 

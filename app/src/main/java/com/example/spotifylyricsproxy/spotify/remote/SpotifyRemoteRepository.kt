@@ -63,6 +63,7 @@ class SpotifyRemoteRepository(
         private const val SPOTIFY_PACKAGE = "com.spotify.music"
         const val AUTH_REQUEST_CODE = 0x10
         private const val CONNECTION_TIMEOUT_MS = 15_000L
+        private const val WATCHDOG_MS = 3_000L
     }
 
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -73,6 +74,7 @@ class SpotifyRemoteRepository(
     private var albumArtJob: Job? = null
     private var lastImageUri: String = ""
     private var connectionTimeoutJob: Job? = null
+    private var watchdogJob: Job? = null
 
     /**
      * Offline fallback: App Remote requires a network to connect, so when the
@@ -181,8 +183,13 @@ class SpotifyRemoteRepository(
     fun tryConnect() {
         // Already connected — nothing to do
         if (_connectionState.value is SpotifyConnectionState.Connected) {
-            Log.d(TAG, "tryConnect: already connected, skipping")
-            return
+            if (spotifyAppRemote?.isConnected == true) {
+                Log.d(TAG, "tryConnect: already connected, skipping")
+                return
+            }
+            // The SDK dropped the connection without telling us (common after
+            // hours in the background): start over.
+            dropRemote()
         }
 
         Log.i(TAG, "tryConnect: state=${_connectionState.value}, attempting connection")
@@ -229,9 +236,8 @@ class SpotifyRemoteRepository(
                     Log.i(TAG, "Connected to Spotify")
                     spotifyAppRemote = appRemote
                     _connectionState.value = SpotifyConnectionState.Connected
-                    // App Remote is now the source of truth — stop the
-                    // offline MediaSession fallback.
-                    stopSystemTrackFallback()
+                    // App Remote is now the source of truth; the system
+                    // MediaSession keeps running only as a watchdog.
                     subscribeToPlayerState()
                 }
 
@@ -293,8 +299,11 @@ class SpotifyRemoteRepository(
                 // MediaSession also emits paused/position updates, which must
                 // reach the clock so seek/pause in Spotify syncs to our UI and
                 // lyrics stay aligned.
-                if (track.trackId.isNotBlank()) {
+                if (track.trackId.isBlank()) return@collect
+                if (_connectionState.value !is SpotifyConnectionState.Connected) {
                     _currentTrack.value = track
+                } else {
+                    checkRemoteAlive(track.trackId)
                 }
             }
         }
@@ -302,7 +311,7 @@ class SpotifyRemoteRepository(
         // offline; the URI is kept for online fetch attempts).
         systemAlbumArtJob = repositoryScope.launch {
             systemTrackSource.albumArt.collect { art ->
-                if (art != null) {
+                if (art != null && _connectionState.value !is SpotifyConnectionState.Connected) {
                     _albumArt.value = art
                 }
             }
@@ -332,6 +341,34 @@ class SpotifyRemoteRepository(
         }
     }
 
+    /**
+     * Spotify's own MediaSession reports a different track than App Remote
+     * (e.g. another device skipped): if that lasts, App Remote's subscription
+     * is dead, so reconnect.
+     */
+    private fun checkRemoteAlive(systemTrackId: String) {
+        watchdogJob?.cancel()
+        if (systemTrackId == _currentTrack.value.trackId) return
+        watchdogJob = repositoryScope.launch {
+            delay(WATCHDOG_MS)
+            if (_connectionState.value is SpotifyConnectionState.Connected &&
+                systemTrackId != _currentTrack.value.trackId
+            ) {
+                Log.w(TAG, "App Remote is stale (system=$systemTrackId), reconnecting")
+                dropRemote()
+                tryConnect()
+            }
+        }
+    }
+
+    /** Forget a dead App Remote connection, keeping the system fallback running. */
+    private fun dropRemote() {
+        spotifyAppRemote?.let { SpotifyAppRemote.disconnect(it) }
+        spotifyAppRemote = null
+        lastImageUri = ""
+        _connectionState.value = SpotifyConnectionState.Disconnected
+    }
+
     private fun subscribeToPlayerState() {
         spotifyAppRemote?.playerApi?.subscribeToPlayerState()
             ?.setEventCallback { playerState: PlayerState ->
@@ -348,6 +385,7 @@ class SpotifyRemoteRepository(
                     imageUri = rawUri
                 )
                 _currentTrack.value = track
+                watchdogJob?.cancel()
 
                 // Extract playback options (shuffle / repeat) and restrictions
                 val opts = playerState.playbackOptions
@@ -375,6 +413,8 @@ class SpotifyRemoteRepository(
             }
             ?.setErrorCallback { error: Throwable ->
                 Log.e(TAG, "Player state subscription error", error)
+                dropRemote()
+                tryConnect()
             }
     }
 

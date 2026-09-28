@@ -26,6 +26,7 @@ import com.example.spotifylyricsproxy.spotify.remote.SpotifyTrackInfo
 import com.spotify.sdk.android.auth.AuthorizationRequest
 import com.spotify.sdk.android.auth.AuthorizationResponse
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -147,6 +148,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         observePlayRequests()
         observeCurrentLineForTranslation()
         observeLyricsForFullTranslation()
+        viewModelScope.launch {
+            androidx.compose.runtime.snapshotFlow { LyricDisplayPreferences.chineseConvertMode.value }
+                .drop(1)
+                .collect { onChineseConvertModeChanged() }
+        }
         autoReconnectOnFailure()
         viewModelScope.launch {
             ConnectivityObserver.observe(getApplication()).collect { state ->
@@ -522,6 +528,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun syncChineseFormFromTarget(lang: String) {
+        // "below" keeps the lyrics as-is; the converted text goes in the translation line.
+        if (LyricDisplayPreferences.chineseConvertMode.value == "below") {
+            LyricDisplayPreferences.setChineseForm("original")
+            return
+        }
         when (lang) {
             "zh-TW" -> LyricDisplayPreferences.setChineseForm("traditional")
             else -> LyricDisplayPreferences.setChineseForm("simplified")
@@ -599,6 +610,40 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
         return tradTarget && !detectedAlreadyTrad
     }
 
+    /**
+     * Language ID only says "zh", never which script, so Chinese lyrics with a
+     * Chinese target skip the translator and are converted by script instead.
+     */
+    private fun isChineseToChinese(detected: String, target: String): Boolean =
+        translationService.normalizeLang(detected) == "zh" && (target == "zh" || target == "zh-TW")
+
+    private fun applyChineseConversion(
+        lines: List<com.example.spotifylyricsproxy.core.model.LrcLine>,
+        target: String
+    ) {
+        val form = if (target == "zh-TW") "traditional" else "simplified"
+        _fullTranslation.value = null
+        if (LyricDisplayPreferences.chineseConvertMode.value == "below") {
+            LyricDisplayPreferences.setChineseForm("original")
+            translationMap = lines.mapNotNull { l ->
+                val converted = convertChineseForm(l.text, form)
+                if (converted != l.text) l.startMs to converted else null
+            }.toMap()
+            _translatedLine.value = lyricsRepo.currentLine.value?.let { translationMap[it.startMs] }
+        } else {
+            LyricDisplayPreferences.setChineseForm(form)
+            translationMap = emptyMap()
+            _translatedLine.value = null
+        }
+    }
+
+    /** Re-apply after the user switches between "replace" and "below". */
+    private fun onChineseConvertModeChanged() {
+        syncChineseFormFromTarget(_targetTranslationLang.value)
+        val lines = lyricsRepo.parsedLyrics.value
+        if (_isTranslationEnabled.value && lines.isNotEmpty()) translateLyricsInFull(lines)
+    }
+
     /** Translate all lines together (better context than line-by-line). */
     private fun translateLyricsInFull(lines: List<com.example.spotifylyricsproxy.core.model.LrcLine>) {
         fullTranslationJob?.cancel()
@@ -629,6 +674,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             try {
                 val detected = translationService.detectLanguage(fullText)
                 _detectedLyricsLang.value = detected
+                if (detected != null && isChineseToChinese(detected, target)) {
+                    applyChineseConversion(lines, target)
+                    return@run
+                }
                 if (detected == null || !needsTranslation(detected, target)) {
                     // Same language — no translation needed.
                     _fullTranslation.value = null
@@ -671,7 +720,7 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
             try {
                 val detected = translationService.detectLanguage(text)
                 _detectedLyricsLang.value = detected
-                if (detected == null || !needsTranslation(detected, target)) {
+                if (detected == null || isChineseToChinese(detected, target) || !needsTranslation(detected, target)) {
                     _translatedLine.value = null
                     return@launch
                 }

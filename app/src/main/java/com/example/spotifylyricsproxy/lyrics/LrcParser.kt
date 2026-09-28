@@ -56,7 +56,8 @@ object LrcParser {
      * on the opposite side; group parts stay on the main side.
      */
     internal fun assignSpeakers(lines: List<LrcLine>): List<LrcLine> {
-        if (lines.none { SPEAKER_LABEL.matches(it.text) }) return lines
+        val inlineLabels = inlineSpeakers(lines)
+        if (inlineLabels.isEmpty() && lines.none { SPEAKER_LABEL.matches(it.text) }) return lines
         var main: String? = null
         var current: String? = null
         val out = ArrayList<LrcLine>(lines.size)
@@ -68,9 +69,47 @@ object LrcParser {
                 if (main == null && current != null) main = current
                 continue
             }
-            out.add(line.copy(isSecondaryVoice = current != null && current != main))
+            var l = line
+            val inline = INLINE_LABEL.find(line.text)
+            val inlineKey = inline?.groupValues?.get(1)?.trim()?.lowercase()
+            if (inline != null && inlineKey in inlineLabels) {
+                current = if (inlineKey in GROUP_LABELS) null else inlineKey
+                if (main == null && current != null) main = current
+                l = stripPrefix(line, inline.value.length)
+            }
+            out.add(l.copy(isSecondaryVoice = current != null && current != main))
         }
         return out
+    }
+
+    // "王菲：歌词" — a speaker name at the start of a sung line.
+    private val INLINE_LABEL = Regex("""^\s*([^:：\s][^:：]{0,9}?)\s*[:：]\s*(?=\S)""")
+    private val CREDIT_WORDS = listOf("词", "詞", "曲", "编", "編", "制作", "製作", "混音", "录音", "錄音", "监制", "監製",
+        "lyrics", "music", "composer", "arrange", "produc", "作")
+
+    /** Inline labels that look like singers: repeated at least twice and not credits. */
+    private fun inlineSpeakers(lines: List<LrcLine>): Set<String> {
+        val labels = lines.mapNotNull { l ->
+            if (SPEAKER_LABEL.matches(l.text)) null
+            else INLINE_LABEL.find(l.text)?.groupValues?.get(1)?.trim()?.lowercase()
+        }.filter { key -> CREDIT_WORDS.none { key.contains(it) } }
+        val counts = labels.groupingBy { it }.eachCount()
+        val named = counts.filter { (k, n) -> n >= 2 && k !in GROUP_LABELS }.keys
+        // Only a duet if at least two different singers are named.
+        if (named.size < 2) return emptySet()
+        return named + counts.keys.filter { it in GROUP_LABELS }
+    }
+
+    /** Drop the first [n] characters of the text, and the words that covered them. */
+    private fun stripPrefix(line: LrcLine, n: Int): LrcLine {
+        if (line.words.isEmpty()) return line.copy(text = line.text.substring(n))
+        var consumed = 0
+        val words = line.words.dropWhile { w ->
+            val drop = consumed + w.text.length <= n
+            if (drop) consumed += w.text.length
+            drop
+        }
+        return line.copy(text = words.joinToString("") { it.text }, words = words)
     }
 
     fun hasSyncedLyrics(lrcText: String): Boolean {

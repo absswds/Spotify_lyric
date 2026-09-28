@@ -118,6 +118,18 @@ class LyricsForegroundService : Service() {
         super.onDestroy()
     }
 
+    // Nothing played for a while: end the service so it stops holding the
+    // App Remote connection and waking up. Opening the app starts it again.
+    private var idleStopJob: Job? = null
+
+    private fun scheduleIdleStop() {
+        if (idleStopJob?.isActive == true) return
+        idleStopJob = serviceScope.launch {
+            delay(IDLE_STOP_MS)
+            stopSelf()
+        }
+    }
+
     private fun startNotificationLoop() {
         if (observerJob != null) return
 
@@ -137,7 +149,13 @@ class LyricsForegroundService : Service() {
                         reclaimJob?.cancel()
                         reclaimJob = launch {
                             delay(RECLAIM_DELAY_MS)
-                            mediaSessionController.reclaimPriority(playbackClock.estimatedPositionMs())
+                            try {
+                                if (mediaSessionController.beginReclaim(playbackClock.estimatedPositionMs())) {
+                                    delay(MediaSessionController.RECLAIM_GAP_MS)
+                                }
+                            } finally {
+                                mediaSessionController.endReclaim(playbackClock.estimatedPositionMs())
+                            }
                         }
                     }
                     playbackClock.update(
@@ -145,6 +163,12 @@ class LyricsForegroundService : Service() {
                         paused = track.isPaused,
                         duration = track.durationMs
                     )
+                    if (track.isPaused) {
+                        // Nothing to sync while paused: let the CPU sleep.
+                        releaseWakeLock()
+                    } else {
+                        acquireWakeLock()
+                    }
                     fetchLyricsWhenTrackChanges(track)
                 }
             }
@@ -378,6 +402,7 @@ class LyricsForegroundService : Service() {
         private const val CHANNEL_ID = "lyrics_foreground"
         /** Let Spotify finish its own state change before we re-promote our session. */
         private const val RECLAIM_DELAY_MS = 1_200L
+        private const val IDLE_STOP_MS = 30 * 60_000L
         private const val NOTIFICATION_ID = 4001
         private const val REQUEST_OPEN_APP = 4002
         private const val REDIRECT_URI = "spotifylyricsproxy://callback"

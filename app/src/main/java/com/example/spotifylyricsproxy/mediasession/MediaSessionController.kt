@@ -27,6 +27,8 @@ class MediaSessionController(
 
     private var currentTrack: SpotifyTrackInfo = SpotifyTrackInfo()
 
+    private var reclaiming = false
+
     fun create(context: Context) {
         val cb = ProxyCallback()
         callback = cb
@@ -119,23 +121,37 @@ class MediaSessionController(
      * card, lock screen and 流体云 show our lyrics instead of Spotify's own session.
      * The stack (AOSP MediaSessionStack) promotes a session when it *transitions* into
      * PLAYING; Spotify does exactly that on every track change, so we repeat the transition
-     * right after it. Only while actually playing; the flip lasts one state update.
+     * right after it. Only while actually playing.
+     *
+     * The PAUSED step has to last a moment: SystemUI debounces session updates, and an
+     * instant PAUSED→PLAYING flip moves the priority stack but not the 流体云 capsule.
+     * Returns false when there is nothing to reclaim; otherwise call [endReclaim] after
+     * [RECLAIM_GAP_MS].
      */
-    fun reclaimPriority(positionMs: Long) {
-        if (currentTrack.trackId.isBlank() || currentTrack.isPaused) return
+    fun beginReclaim(positionMs: Long): Boolean {
+        if (currentTrack.trackId.isBlank() || currentTrack.isPaused) return false
+        reclaiming = true
         mediaSession?.setPlaybackState(
             PlaybackStateCompat.Builder()
                 .setActions(TRANSPORT_ACTIONS)
                 .setState(PlaybackStateCompat.STATE_PAUSED, positionMs, 0f)
                 .build()
         )
-        updatePlaybackState(isPlaying = true, positionMs = positionMs)
+        return true
+    }
+
+    fun endReclaim(positionMs: Long) {
+        if (!reclaiming) return
+        reclaiming = false
+        updatePlaybackState(isPlaying = !currentTrack.isPaused, positionMs = positionMs)
     }
 
     /**
      * Update just the playback state (position, playing/paused).
      */
     fun updatePlaybackState(isPlaying: Boolean, positionMs: Long) {
+        // Keep the reclaim's PAUSED step until endReclaim(); the position tick would undo it.
+        if (reclaiming) return
         val actions = TRANSPORT_ACTIONS
 
         val state = if (isPlaying) PlaybackStateCompat.STATE_PLAYING
@@ -162,6 +178,9 @@ class MediaSessionController(
 
     companion object {
         private const val TAG = "LyricsMediaSession"
+
+        /** How long the reclaim's PAUSED step lasts; see [beginReclaim]. */
+        const val RECLAIM_GAP_MS = 500L
     }
 }
 

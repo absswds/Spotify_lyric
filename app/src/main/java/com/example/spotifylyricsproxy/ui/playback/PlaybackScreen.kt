@@ -1,5 +1,6 @@
 package com.example.spotifylyricsproxy.ui.playback
 
+import androidx.compose.foundation.basicMarquee
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.animation.Crossfade
@@ -68,6 +69,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.Immutable
 import androidx.compose.foundation.layout.widthIn
@@ -391,7 +395,10 @@ private fun SplitPlayerLayout(state: PlayerUiState, actions: PlayerActions, scal
             // Phones are short in landscape: a smaller cover leaves room for the rest,
             // and the whole block is centred on the cover's axis.
             val compact = scale <= 1f
-            val coverSize = if (compact) min(maxHeight * 0.46f, maxWidth * 0.26f) else min(maxHeight * 0.58f, maxWidth * 0.34f)
+            // Compact: the cover takes whatever height the title, progress and
+            // transport rows (~180dp) leave, capped by the left pane's width.
+            val coverSize = if (compact) min(maxHeight - 180.dp, maxWidth * 0.45f * 0.82f)
+                else min(maxHeight * 0.58f, maxWidth * 0.34f)
             Row(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
@@ -419,12 +426,13 @@ private fun SplitPlayerLayout(state: PlayerUiState, actions: PlayerActions, scal
                             actions = actions,
                             config = LyricDisplayPreferences.resolvedConfig(),
                             textScale = scale * 1.08f,
-                            anchorFraction = 0.34f,
-                            contentPadding = PaddingValues(top = maxHeight * 0.34f, bottom = maxHeight * 0.55f),
+                            // Current line in the upper third, like Lyricify / Apple Music.
+                            anchorFraction = 0.24f,
+                            contentPadding = PaddingValues(top = maxHeight * 0.24f, bottom = maxHeight * 0.65f),
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(horizontal = 32.dp * scale)
-                                .fadingEdges(top = 0.22f, bottom = 0.30f)
+                                .fadingEdges(top = 0.16f, bottom = 0.30f)
                         )
                     } else {
                         ConnectActionPanel(
@@ -442,14 +450,17 @@ private fun SplitPlayerLayout(state: PlayerUiState, actions: PlayerActions, scal
                 }
             }
 
-            PlayerChrome(
-                state = state,
-                actions = actions,
-                scale = scale,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 10.dp, end = 14.dp)
-            )
+            // Phone landscape carries these beside the title instead.
+            if (!compact) {
+                PlayerChrome(
+                    state = state,
+                    actions = actions,
+                    scale = scale,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 10.dp, end = 14.dp)
+                )
+            }
         }
     }
 }
@@ -576,14 +587,27 @@ private fun PlayerLyrics(
 @Composable
 private fun NowPlayingBlock(state: PlayerUiState, actions: PlayerActions, coverSize: Dp, scale: Float, compact: Boolean = false) {
     if (compact) {
-        // Phone landscape: fixed rhythm, everything centred under the cover.
+        // Phone landscape, after Lyricify: every row shares the cover's width and edges;
+        // only a very small cover lets the five transport buttons run a little wider.
         Column(
-            modifier = Modifier.width(coverSize * 1.35f),
+            modifier = Modifier.width(maxOf(coverSize, 250.dp)),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AlbumCover(state.albumArt, state.isPlaying, coverSize)
             Spacer(modifier = Modifier.height(16.dp))
-            TrackMeta(state.trackInfo, scale, centered = true)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) { TrackMeta(state.trackInfo, scale) }
+                Spacer(modifier = Modifier.width(8.dp))
+                // The circles sit 4dp inside their touch boxes: nudge right so the last
+                // circle's edge meets the progress bar's end.
+                PlayerChrome(
+                    state = state,
+                    actions = actions,
+                    scale = scale,
+                    inline = true,
+                    modifier = Modifier.offset(x = 4.dp * scale)
+                )
+            }
             Spacer(modifier = Modifier.height(10.dp))
             LiveProgressBar(state, actions, scale)
             TransportRow(state, actions, scale)
@@ -662,17 +686,20 @@ private fun AlbumCover(albumArt: Bitmap?, isPlaying: Boolean, size: Dp) {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun TrackMeta(trackInfo: SpotifyTrackInfo, scale: Float, centered: Boolean = false) {
     val align = if (centered) TextAlign.Center else TextAlign.Start
-    val rowModifier = if (centered) Modifier.fillMaxWidth() else Modifier
+    // Long titles scroll instead of being cut off.
+    // Marquee lays its content out from the left; centre the box first when centred.
+    val rowModifier = (if (centered) Modifier.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally) else Modifier)
+        .basicMarquee(iterations = Int.MAX_VALUE, initialDelayMillis = 2000)
     Text(
         text = trackInfo.title.ifEmpty { stringResource(R.string.playback_title_waiting) },
         fontSize = 16.sp * scale,
         fontWeight = FontWeight.SemiBold,
         color = Color.White,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
         textAlign = align,
         modifier = rowModifier
     )
@@ -683,8 +710,7 @@ private fun TrackMeta(trackInfo: SpotifyTrackInfo, scale: Float, centered: Boole
             fontSize = 14.sp * scale,
             color = Color.White.copy(alpha = 0.62f),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = align,
+                textAlign = align,
             modifier = rowModifier
         )
     }
@@ -701,13 +727,17 @@ private fun TransportRow(state: PlayerUiState, actions: PlayerActions, scale: Fl
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ModeToggle(
-            icon = Icons.Filled.Shuffle,
-            active = state.playbackOptions.isShuffling,
-            contentDescription = stringResource(R.string.playback_cd_shuffle),
-            scale = scale,
-            onClick = actions.onToggleShuffle
-        )
+        // The toggles' touch boxes are wider than their icons: shift them outward so the
+        // icons themselves line up with the cover and progress bar edges.
+        Box(Modifier.offset(x = -8.dp * scale)) {
+            ModeToggle(
+                icon = Icons.Filled.Shuffle,
+                active = state.playbackOptions.isShuffling,
+                contentDescription = stringResource(R.string.playback_cd_shuffle),
+                scale = scale,
+                onClick = actions.onToggleShuffle
+            )
+        }
         BareIconButton(onClick = actions.onSkipPrevious, size = 48.dp * scale, enabled = enabled) {
             Icon(Icons.Filled.SkipPrevious, stringResource(R.string.playback_cd_previous), Modifier.size(36.dp * scale), tint = Color.White)
         }
@@ -717,13 +747,15 @@ private fun TransportRow(state: PlayerUiState, actions: PlayerActions, scale: Fl
         BareIconButton(onClick = actions.onSkipNext, size = 48.dp * scale, enabled = enabled) {
             Icon(Icons.Filled.SkipNext, stringResource(R.string.playback_cd_next), Modifier.size(36.dp * scale), tint = Color.White)
         }
-        ModeToggle(
-            icon = if (state.playbackOptions.repeatMode == RepeatMode.TRACK) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
-            active = state.playbackOptions.repeatMode != RepeatMode.OFF,
-            contentDescription = stringResource(R.string.playback_cd_repeat),
-            scale = scale,
-            onClick = actions.onCycleRepeat
-        )
+        Box(Modifier.offset(x = 8.dp * scale)) {
+            ModeToggle(
+                icon = if (state.playbackOptions.repeatMode == RepeatMode.TRACK) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
+                active = state.playbackOptions.repeatMode != RepeatMode.OFF,
+                contentDescription = stringResource(R.string.playback_cd_repeat),
+                scale = scale,
+                onClick = actions.onCycleRepeat
+            )
+        }
     }
 }
 
@@ -762,18 +794,30 @@ private fun PlayerChrome(
     state: PlayerUiState,
     actions: PlayerActions,
     modifier: Modifier = Modifier,
-    scale: Float = 1f
+    scale: Float = 1f,
+    /** Beside the title (phone landscape): translate becomes a frosted circle too. */
+    inline: Boolean = false
 ) {
     var pickerOpen by remember { mutableStateOf(false) }
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Box {
-            ModeToggle(
-                icon = Icons.Filled.Translate,
-                active = state.isTranslationEnabled,
-                contentDescription = stringResource(R.string.settings_translate_lyrics),
-                scale = scale * 1.15f,
-                onClick = { pickerOpen = true }
-            )
+            if (inline) {
+                CircleIconButton(
+                    icon = Icons.Filled.Translate,
+                    contentDescription = stringResource(R.string.settings_translate_lyrics),
+                    active = state.isTranslationEnabled,
+                    scale = scale,
+                    onClick = { pickerOpen = true }
+                )
+            } else {
+                ModeToggle(
+                    icon = Icons.Filled.Translate,
+                    active = state.isTranslationEnabled,
+                    contentDescription = stringResource(R.string.settings_translate_lyrics),
+                    scale = scale * 1.15f,
+                    onClick = { pickerOpen = true }
+                )
+            }
             TranslationPicker(
                 expanded = pickerOpen,
                 state = state,
@@ -784,12 +828,39 @@ private fun PlayerChrome(
                 onDismiss = { pickerOpen = false }
             )
         }
-        BareIconButton(onClick = actions.onOpenMenu, size = 42.dp * scale) {
+        MenuCircleButton(onClick = actions.onOpenMenu, scale = scale)
+    }
+}
+
+/** Frosted-circle "more" button like Apple Music / Lyricify. */
+@Composable
+private fun MenuCircleButton(onClick: () -> Unit, scale: Float) {
+    CircleIconButton(Icons.Filled.MoreHoriz, stringResource(R.string.playback_cd_more), true, scale, onClick)
+}
+
+/** Frosted circle icon button; an inactive toggle is dimmer. */
+@Composable
+private fun CircleIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    active: Boolean,
+    scale: Float,
+    onClick: () -> Unit
+) {
+    val bg by animateColorAsState(Color.White.copy(alpha = if (active) 0.16f else 0.08f), label = "circleBg")
+    BareIconButton(onClick = onClick, size = 42.dp * scale) {
+        Box(
+            modifier = Modifier
+                .size(34.dp * scale)
+                .clip(CircleShape)
+                .background(bg),
+            contentAlignment = Alignment.Center
+        ) {
             Icon(
-                imageVector = Icons.Filled.MoreHoriz,
-                contentDescription = stringResource(R.string.playback_cd_more),
-                modifier = Modifier.size(26.dp * scale),
-                tint = Color.White.copy(alpha = 0.85f)
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(20.dp * scale),
+                tint = Color.White.copy(alpha = if (active) 1f else 0.55f)
             )
         }
     }
@@ -1051,9 +1122,9 @@ private fun readableOn(color: Color): Color {
 private fun LyricDisplaySettingsDialog(
     onDismiss: () -> Unit
 ) {
-    val currentBold by LyricDisplayPreferences.boldCurrentLine
+    // Alignment and blur live in the player menu's quick tiles; only what has no
+    // other home is here.
     val currentDim by LyricDisplayPreferences.dimLevel
-    val currentAlign by LyricDisplayPreferences.alignment
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1070,14 +1141,10 @@ private fun LyricDisplaySettingsDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-
-                // Font size sliders
                 val currentSp = LyricDisplayPreferences.fontSizeCurrent.value
-                val otherSp = LyricDisplayPreferences.fontSizeOther.value
-
                 Column {
                     Text(
-                        text = stringResource(R.string.lyric_settings_font_size_current, "${currentSp.toInt()}sp"),
+                        text = stringResource(R.string.lyric_settings_font_size, "${currentSp.toInt()}sp"),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1088,103 +1155,29 @@ private fun LyricDisplaySettingsDialog(
                         steps = 22
                     )
                 }
-                Column {
-                    Text(
-                        text = stringResource(R.string.lyric_settings_font_size_other, "${otherSp.toInt()}sp"),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Slider(
-                        value = otherSp,
-                        onValueChange = { LyricDisplayPreferences.setFontSizeOther(it) },
-                        valueRange = 12f..36f,
-                        steps = 22
-                    )
-                }
 
                 Column {
                     Text(
-                        text = stringResource(R.string.lyric_settings_bold),
+                        text = stringResource(R.string.lyric_settings_dim_level),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(stringResource(R.string.lyric_settings_bold_label), fontSize = 16.sp)
-                        Switch(
-                            checked = currentBold,
-                            onCheckedChange = { LyricDisplayPreferences.setBoldCurrentLine(it) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val dimLabels = listOf(
+                            "low" to stringResource(R.string.lyric_settings_dim_low),
+                            "medium" to stringResource(R.string.lyric_settings_dim_medium),
+                            "high" to stringResource(R.string.lyric_settings_dim_high)
                         )
-                    }
-                }
-
-                // Blur toggle for inactive lines
-                val blurEnabled = LyricDisplayPreferences.blurEnabled.value
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(stringResource(R.string.lyric_settings_inactive_blur), fontSize = 16.sp)
-                        Switch(
-                            checked = blurEnabled,
-                            onCheckedChange = { LyricDisplayPreferences.setBlurEnabled(it) }
-                        )
-                    }
-                }
-
-                // Dim level is a sub-setting of blur: only visible when blur is on.
-                    if (blurEnabled) {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.lyric_settings_dim_level),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        dimLabels.forEach { (value, label) ->
+                            FilterChip(
+                                selected = currentDim == value,
+                                onClick = { LyricDisplayPreferences.setDimLevel(value) },
+                                label = { Text(label) }
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                val dimLabels = listOf(
-                                    "low" to stringResource(R.string.lyric_settings_dim_low),
-                                    "medium" to stringResource(R.string.lyric_settings_dim_medium),
-                                    "high" to stringResource(R.string.lyric_settings_dim_high)
-                                )
-                                dimLabels.forEach { (value, label) ->
-                                    FilterChip(
-                                        selected = currentDim == value,
-                                        onClick = { LyricDisplayPreferences.setDimLevel(value) },
-                                        label = { Text(label) }
-                                    )
-                                }
-                            }
                         }
                     }
-
-                    Column {
-                        Text(
-                            text = stringResource(R.string.lyric_settings_alignment),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            val alignLabels = listOf(
-                                "center" to stringResource(R.string.lyric_settings_align_center),
-                                "start" to stringResource(R.string.lyric_settings_align_left)
-                            )
-                            alignLabels.forEach { (value, label) ->
-                                FilterChip(
-                                    selected = currentAlign == value,
-                                    onClick = { LyricDisplayPreferences.setAlignment(value) },
-                                    label = { Text(label) }
-                                )
-                            }
-                        }
-                    }
+                }
             }
         },
         confirmButton = {
