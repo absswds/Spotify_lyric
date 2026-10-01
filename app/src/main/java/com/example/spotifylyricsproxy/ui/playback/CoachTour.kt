@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -39,6 +40,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -63,8 +67,19 @@ import com.example.spotifylyricsproxy.R
 private val coachBounds = mutableStateMapOf<String, Rect>()
 
 /** Marks a control the button tour can point at. */
-fun Modifier.coachTarget(key: String): Modifier =
-    onGloballyPositioned { coachBounds[key] = it.boundsInRoot() }
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+fun Modifier.coachTarget(key: String): Modifier = composed {
+    val requester = remember { BringIntoViewRequester() }
+    DisposableEffect(key, requester) {
+        coachRequesters[key] = requester
+        onDispose { coachRequesters.remove(key) }
+    }
+    bringIntoViewRequester(requester).onGloballyPositioned { coachBounds[key] = it.boundsInRoot() }
+}
+
+/** Lets the tour scroll a control into view first (the menu is taller than a landscape screen). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private val coachRequesters = mutableMapOf<String, BringIntoViewRequester>()
 
 /** [inMenu]: the control lives in the player menu, which the tour opens first. */
 private data class CoachStep(val key: String, val title: Int, val desc: Int, val inMenu: Boolean = false)
@@ -93,6 +108,7 @@ private val TourAccent = Color(0xFF1ED760)
  * controls; tapping anywhere moves on.
  */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 fun CoachTour(menuOpen: Boolean, onOpenMenu: () -> Unit, onDone: () -> Unit) {
     // Player controls not in this layout are left out; menu ones only exist once it opens.
     val steps = remember { STEPS.filter { it.inMenu || coachBounds[it.key]?.isEmpty == false } }
@@ -112,6 +128,9 @@ fun CoachTour(menuOpen: Boolean, onOpenMenu: () -> Unit, onDone: () -> Unit) {
         }
     }
     if (step.inMenu && !menuSettled) return
+    LaunchedEffect(step.key) {
+        coachRequesters[step.key]?.bringIntoView()
+    }
     val target = coachBounds[step.key]
     if (target == null || target.isEmpty) {
         // Not shown right now (e.g. a toggle these lyrics don't offer).
