@@ -25,11 +25,15 @@
 
 主に OPPO ColorOS でテストしており、ロック画面アイランド（锁屏岛）と流体雲（流体云、Fluid Cloud）で最もよく動作します。
 
-<!-- TODO: 以下の画像を docs/images/ に置いてからコメントを外す：
-![プレーヤー](docs/images/player.gif)
-![ColorOS Fluid Cloud](docs/images/coloros-fluid-cloud.png)
-![ロック画面とメディアカード](docs/images/lockscreen-media-card.png)
--->
+<p align="center">
+  <img src="docs/images/player.gif" alt="Player" width="520">
+</p>
+<p align="center">
+  <img src="docs/images/coloros-fluid-cloud.jpg" alt="ColorOS Fluid Cloud" width="420">
+  <img src="docs/images/lockscreen-media-card.jpg" alt="Lock screen media card" width="260">
+</p>
+
+<sub>スクリーンショットの曲：Jonathan Coulton の [Code Monkey](https://www.jonathancoulton.com/2006/04/14/thing-a-week-29-code-monkey)（[CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/)）。アルバムアートと歌詞の権利は各権利者に帰属します。</sub>
 
 > 作者の手元には限られた（ColorOS）端末しかなく、多くの ROM ではテストできません。興味がある方や、他メーカーの OS（MIUI/HyperOS、OriginOS、MagicOS、One UI など）で正しく動かない場合は、[Issue を作成](https://github.com/absswds/Spotify_lyric/issues)するか PR を送ってください。
 

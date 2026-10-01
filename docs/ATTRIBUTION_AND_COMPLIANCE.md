@@ -40,6 +40,7 @@ Provider terms reviewed on 2026-10-01 (not legal advice): NetEase's service term
 - Creating a Spotify Developer Dashboard account/app follows Spotify's current account requirements. As of Spotify's February 2026 Developer Access update, the owner of a Development Mode app must have a **Spotify Premium** account; re-check the [current quota-mode rules](https://developer.spotify.com/documentation/web-api/concepts/quota-modes) before release.
 - This app forwards play, pause, previous, next, seek, shuffle, and repeat commands to the installed Spotify app through Spotify App Remote. It does not bypass Spotify account entitlements. **Previous/next and other playback controls have the same Premium restriction as Spotify's native remote/player controls.** A free account may still be able to use Spotify normally according to Spotify's own product rules, but this project must not promise remote playback control for it.
 - The app subscribes to the Spotify client installed on the Android device running this app. When playback runs on another Spotify Connect device, that client often keeps reporting a stale paused state, so the app follows the Web API playback state instead (polling every 5 s while another device plays, backing off when nothing plays). The implicit-grant token lasts about an hour and is renewed only when the app is opened, so cross-device sync is best effort, not a guarantee.
+- A Development Mode app lets at most **5 allow-listed Spotify accounts** use the Web API. A prebuilt APK using the maintainer's Client ID therefore offers Web API features (other-device sync, playlists, next-track prefetch) only to those accounts; everyone else should build with their own Client ID. The README and onboarding say so.
 
 ## 4. Explicitly out of scope
 
@@ -60,6 +61,10 @@ Many jurisdictions allow some private use of published works; for example, China
 ### Reference implementation
 
 - **[Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)** — consulted as a protocol/reference implementation for the NetEase, QQ Music (QRC) and Kugou (KRC) adapters. Its repository is Apache-2.0. The QRC/KRC decryption and parsing are ported from it (Apache-2.0 permits this with attribution); each ported file names its source in a header comment. No lyric data is taken from it.
+
+### README screenshots
+
+The screenshots and GIF in `docs/images/` show [Code Monkey](https://www.jonathancoulton.com/2006/04/14/thing-a-week-29-code-monkey) by Jonathan Coulton, whose songs are licensed under [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/); the READMEs credit it under the images. They are used non-commercially, to demonstrate the app. Replace them rather than adding screenshots of songs without such a license.
 
 ### Runtime/build dependencies
 

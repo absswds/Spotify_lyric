@@ -25,11 +25,15 @@
 
 主要在 OPPO ColorOS 上测试，锁屏岛和流体云效果最好。
 
-<!-- TODO: 用户提供以下图片并放到 docs/images/ 后取消注释：
-![播放器](docs/images/player.gif)
-![ColorOS 流体云](docs/images/coloros-fluid-cloud.png)
-![锁屏与控制中心](docs/images/lockscreen-media-card.png)
--->
+<p align="center">
+  <img src="docs/images/player.gif" alt="Player" width="520">
+</p>
+<p align="center">
+  <img src="docs/images/coloros-fluid-cloud.jpg" alt="ColorOS Fluid Cloud" width="420">
+  <img src="docs/images/lockscreen-media-card.jpg" alt="Lock screen media card" width="260">
+</p>
+
+<sub>截图中的歌曲：Jonathan Coulton 的 [Code Monkey](https://www.jonathancoulton.com/2006/04/14/thing-a-week-29-code-monkey)，以 [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/) 授权；专辑封面和歌词归其权利人所有。</sub>
 
 > 我手上只有一台 ColorOS 手机，没法测试更多系统。如果你感兴趣，或者在其他厂商系统（MIUI/HyperOS、OriginOS、MagicOS、One UI 等）上表现异常，欢迎[提 Issue](https://github.com/absswds/Spotify_lyric/issues) 或发 PR。
 

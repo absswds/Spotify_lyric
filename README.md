@@ -25,11 +25,15 @@
 
 Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Fluid Cloud (流体云) work best.
 
-<!-- TODO: add these user-supplied images under docs/images/, then uncomment:
-![Player](docs/images/player.gif)
-![ColorOS Fluid Cloud](docs/images/coloros-fluid-cloud.png)
-![Lock screen and media card](docs/images/lockscreen-media-card.png)
--->
+<p align="center">
+  <img src="docs/images/player.gif" alt="Player" width="520">
+</p>
+<p align="center">
+  <img src="docs/images/coloros-fluid-cloud.jpg" alt="ColorOS Fluid Cloud" width="420">
+  <img src="docs/images/lockscreen-media-card.jpg" alt="Lock screen media card" width="260">
+</p>
+
+<sub>Song in the screenshots: [Code Monkey](https://www.jonathancoulton.com/2006/04/14/thing-a-week-29-code-monkey) by Jonathan Coulton, licensed under [CC BY-NC 3.0](https://creativecommons.org/licenses/by-nc/3.0/); album art and lyrics belong to their rights holders.</sub>
 
 > The author only has a few (ColorOS) devices and can't test many ROMs. If you're interested, or it misbehaves on another vendor's OS (MIUI/HyperOS, OriginOS, MagicOS, One UI, etc.), please [open an issue](https://github.com/absswds/Spotify_lyric/issues) or send a PR.
 
