@@ -25,9 +25,10 @@
 
 Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Fluid Cloud (流体云) work best.
 
-<!-- TODO: add screenshots (owner will supply the images), then move these lines out of the comment:
-![ColorOS lock-screen island](docs/images/coloros-lockscreen-island.png)
+<!-- TODO: add these user-supplied images under docs/images/, then uncomment:
+![Player](docs/images/player.gif)
 ![ColorOS Fluid Cloud](docs/images/coloros-fluid-cloud.png)
+![Lock screen and media card](docs/images/lockscreen-media-card.png)
 -->
 
 > The author only has a few (ColorOS) devices and can't test many ROMs. If you're interested, or it misbehaves on another vendor's OS (MIUI/HyperOS, OriginOS, MagicOS, One UI, etc.), please [open an issue](https://github.com/absswds/Spotify_lyric/issues) or send a PR.
@@ -53,7 +54,7 @@ Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Flui
 | LRCLIB | Default source |
 
 - All sources are searched in parallel, finishing early once a good enough result is in.
-- Candidates are scored on title / artist / duration match and cross-checked for timing agreement between sources: word-timed lyrics are preferred only when their timing agrees with other sources.
+- Candidates are scored on title / artist / duration match and cross-checked for timing agreement between sources. The onboarding and Settings let you prefer word-by-word or line-by-line lyrics; the selected timing type is preferred when choosing a match.
 - Low-confidence matches are not shown (a same-title song by another artist is worse than no lyrics).
 - Manual search / correction and manual `.lrc` import.
 
@@ -65,7 +66,7 @@ Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Flui
 ### Caching and offline
 
 - LRCLIB, AMLL and manual lyrics are cached for offline use.
-- Lyrics from unofficial sources (NetEase, QQ Music, Kugou) **may raise copyright issues**, so they stay in memory by default and are cached on the device only after you agree in a prompt (changeable in Settings). The cache is for your own viewing; do not share or export it.
+- Lyrics from unofficial sources (NetEase, QQ Music, Kugou) are on by default, with a dedicated onboarding page explaining their use and responsibility; turn them off in onboarding or Settings to use LRCLIB and AMLL only. They stay in memory by default and are cached on the device only after you agree in the onboarding guide (changeable in Settings). The cache is for your own viewing; do not share or export it.
 - Offline mode: when App Remote can't connect, the app reads Spotify's own MediaSession through [notification access](#permissions).
 
 ### Playback on another device (Spotify Connect)
@@ -82,7 +83,7 @@ Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Flui
 
 ### Battery
 
-- Wake lock released while paused; the service stops after 30 min paused.
+- Wake lock released while paused; the foreground service stops after 10 min paused and asks Android to stop Spotify too.
 - Web API polling backs off; the UI copy stops polling in the background.
 
 ### Other
@@ -201,16 +202,9 @@ Many vendor ROMs (ColorOS, MIUI/HyperOS, OriginOS, MagicOS, etc.) aggressively k
 
 - **2026-07**: Initial release. App Remote connection, LRCLIB lyrics, Room cache, MediaSession, foreground notification, playlist pre-caching, lyric correction; manual `.lrc` import, translation target language, Japanese UI.
 - **2026-08**: Offline mode (reads Spotify's MediaSession via notification access); LRCLIB became the default source; Apple Music-style player, word-by-word lyrics, onboarding, media-card priority.
-- **2026-09**:
-  - Lyric-source consensus scoring (cross-source timing check) and faster selection (parallel search, early finish).
-  - New word-level sources: QQ Music QRC and Kugou KRC.
-  - Lyricify-style player polish: countdown / interlude dots, blur, rolling time digits, landscape layout, marquee.
-  - Choice of Traditional/Simplified Chinese conversion mode.
-  - Per-source offsets.
-  - Other-device sync via the Web API.
-  - Media-card reclaim improvements.
-  - Background and battery fixes.
-  - Lyrics from unofficial sources are cached only with user consent.
+- **2026-10**: Multi-page onboarding for lyric sources, word/line preference with animated examples, and caching. Unofficial sources (NetEase, QQ Music, Kugou) are on by default and can be disabled. Copyright notice appears before cache-related screens.
+  - Settings can prefer word-by-word or line-by-line lyrics.
+  - Fixed: stale lyrics when mobile data isn't allowed; missing candidates on the correction screen; offset residue after source changes; Spotify authorization error text; Kugou results cancelled too early; compound credit lines; doubled glyphs on wrapped word-timed lines.
 
 ---
 

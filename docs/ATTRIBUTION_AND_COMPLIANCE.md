@@ -14,7 +14,7 @@ It does **not** grant a license to redistribute, republish, sublicense, train on
 - Spotify content, trademarks, or user data; or
 - content returned by AMLL TTML DB, LRCLIB, NetEase Cloud Music, QQ Music, Kugou, or another provider.
 
-The application may store data locally on the user's device for its cache feature. Lyrics from unofficial sources (NetEase Cloud Music, QQ Music, Kugou) are kept in memory only, unless the user agrees in a one-time prompt to cache them on the device (changeable in Settings). This repository must not contain cached lyrics, sample lyric collections, album-art archives, user listening history, credentials, tokens, or a hosted lyrics database.
+The application may store data locally on the user's device for its cache feature. Lyrics from unofficial sources (NetEase Cloud Music, QQ Music, Kugou) are kept in memory only unless the user opts into local caching in the onboarding guide (changeable in Settings). This repository must not contain cached lyrics, sample lyric collections, album-art archives, user listening history, credentials, tokens, or a hosted lyrics database.
 
 ## 2. External services and risk boundaries
 
@@ -31,7 +31,7 @@ The application may store data locally on the user's device for its cache featur
 
 ### Unofficial providers: notice and opt-out
 
-NetEase Cloud Music, QQ Music and Kugou are on by default, as in other open-source lyric tools (e.g. [LyricsX](https://github.com/ddddxxx/LyricsX), [Lyrimuse](https://github.com/Yudaotor/lyrimuse), [Lyricify Lyrics Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)). The first-run guide has a page of its own explaining that the endpoints are non-public and requested from the user's device, that lyrics are for personal viewing only, and that the user is responsible for how they use them. The same page and Settings can turn these sources off, leaving only LRCLIB and AMLL TTML DB. Screens that store lyrics (lyric cache, playlist pre-cache) show a copyright notice each time they are opened.
+NetEase Cloud Music, QQ Music and Kugou are on by default, as in other open-source lyric tools (e.g. [LyricsX](https://github.com/ddddxxx/LyricsX), [Lyrimuse](https://github.com/Yudaotor/lyrimuse), [Lyricify Lyrics Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)). The first-run guide has a page of its own explaining that the endpoints are non-public and requested from the user's device, that lyrics are for personal viewing only, and that the user is responsible for how they use them. The same page and Settings can turn these sources off, leaving only LRCLIB and AMLL TTML DB. Lyrics remain in memory unless local caching is separately enabled in the guide. Screens that store lyrics (lyric cache, playlist pre-cache) show a copyright notice each time they are opened.
 
 Provider terms reviewed on 2026-10-01 (not legal advice): NetEase's service terms (clause 8.5) and QQ Music / Tencent Music's agreements (clause 10.6 and 10.4) prohibit reverse engineering, unauthorised third-party clients and derivative products, and claim the lyric content; Kugou's agreement uses the same wording. LRCLIB requires a descriptive User-Agent and asks clients to honour `Retry-After`.
 
@@ -53,7 +53,7 @@ The project must not add features that:
 
 ## 5. Personal use
 
-Many jurisdictions allow some private use of published works; for example, China's Copyright Law Art. 24(1) permits using a published work for personal study, research or appreciation. That lowers the risk of an individual showing and caching lyrics on their own device. It does not cover redistributing lyrics, publishing a lyric cache, or any commercial use, and it does not override a provider's terms of service, which are a separate (contractual) matter. This is why unofficial sources stay session-only unless the user opts in, and why nothing in section 4 changes for personal-use builds.
+Many jurisdictions allow some private use of published works; for example, China's Copyright Law Art. 24(1) permits using a published work for personal study, research or appreciation. That lowers the risk of an individual showing and caching lyrics on their own device. It does not cover redistributing lyrics, publishing a lyric cache, or any commercial use, and it does not override a provider's terms of service, which are a separate (contractual) matter. This is why unofficial-source lyrics remain session-only unless local caching is separately enabled, and why nothing in section 4 changes for personal-use builds.
 
 ## 6. Third-party code, protocol references, and dependencies
 

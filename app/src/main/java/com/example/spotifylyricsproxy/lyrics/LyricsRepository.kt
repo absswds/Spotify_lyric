@@ -43,6 +43,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         private const val CONSENSUS_BAD = 0.3
         /** Per-provider cap so the fastest good answer is not held back by a slow one. */
         private const val SOURCE_TIMEOUT_MS = 5_000L
+        /** Kugou checks several endpoints sequentially for word-timed lyrics. */
+        private const val KUGOU_TIMEOUT_MS = 10_000L
         private const val NETEASE_SOURCE = "netease"
         private const val QQ_MUSIC_SOURCE = "qqmusic"
 
@@ -89,19 +91,22 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     private suspend fun aggregateSearch(request: LyricsSearchRequest, waitAll: Boolean = false): List<LyricCandidate> = coroutineScope {
         val sources = sources
         val allCandidates = mutableListOf<LyricCandidate>()
-        val results = kotlinx.coroutines.channels.Channel<List<LyricCandidate>>(sources.size)
+        val results = kotlinx.coroutines.channels.Channel<Pair<String, List<LyricCandidate>>>(sources.size)
         val jobs = sources.map { source ->
-            launch { results.send(searchOne(source, request)) }
+            launch { results.send(source.name to searchOne(source, request)) }
         }
         // Don't wait for the slowest source once the answer is settled: an exact AMLL
         // hit, or word-timed lyrics plus another source to cross-check their timing
         // (then only a short grace for stragglers).
-        var deadline = SystemClock.uptimeMillis() + SOURCE_TIMEOUT_MS
+        var deadline = SystemClock.uptimeMillis() + if (AppSettings.preferWordLyrics.value) KUGOU_TIMEOUT_MS else SOURCE_TIMEOUT_MS
+        var kugouResponded = false
         repeat(sources.size) {
             val remaining = deadline - SystemClock.uptimeMillis()
             val batch = (if (remaining > 0) withTimeoutOrNull(remaining) { results.receive() } else null)
                 ?: return@repeat
-            allCandidates.addAll(batch)
+            val (source, candidates) = batch
+            allCandidates.addAll(candidates)
+            if (source == com.example.spotifylyricsproxy.lyrics.kugou.KugouLyricsSource.NAME) kugouResponded = true
             if (waitAll) {
                 // keep the full timeout
             } else if (allCandidates.any { it.source == AmllTtmlLyricsSource.SOURCE && !it.syncedLyrics.isNullOrEmpty() }) {
@@ -109,7 +114,11 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             } else if (allCandidates.map { it.source }.distinct().size >= 2 &&
                 allCandidates.any { c -> c.syncedLyrics?.let { YRC_HINT.containsMatchIn(it) || it.trimStart().startsWith("<tt") } == true }
             ) {
-                deadline = minOf(deadline, SystemClock.uptimeMillis() + EARLY_GRACE_MS)
+                // Word-timing preference is common for Kugou: don't cancel it just because
+                // another provider returned first. It still has its own bounded timeout.
+                if (!AppSettings.preferWordLyrics.value || kugouResponded) {
+                    deadline = minOf(deadline, SystemClock.uptimeMillis() + EARLY_GRACE_MS)
+                }
             }
         }
         jobs.forEach { it.cancel() }
@@ -119,7 +128,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     private suspend fun searchOne(source: LyricsSource, request: LyricsSearchRequest): List<LyricCandidate> =
         try {
             // One slow provider must not hold every other result hostage.
-            val result = withTimeoutOrNull(SOURCE_TIMEOUT_MS) { source.search(request) }.orEmpty()
+            val timeout = if (source.name == com.example.spotifylyricsproxy.lyrics.kugou.KugouLyricsSource.NAME) KUGOU_TIMEOUT_MS else SOURCE_TIMEOUT_MS
+            val result = withTimeoutOrNull(timeout) { source.search(request) }.orEmpty()
             if (result.isNotEmpty()) Log.i(TAG, "Source '${source.name}' returned ${result.size} candidates for ${request.trackName}")
             result
         } catch (e: CancellationException) {
@@ -171,8 +181,9 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         c.syncedLyrics?.let { LrcParser.parse(it).any { l -> l.words.isNotEmpty() } } == true
 
     /**
-     * Best first: an acceptable match in the format the user prefers (word or line timing)
-     * beats a higher-scored one in the other format; then score; ties to the default source.
+     * Best first: an acceptable candidate with the preferred timing (word or line) beats a
+     * higher-scored candidate in the other format; then score; close-scoring word-timed Kugou
+     * results get the tie-break when word timing is preferred, otherwise the default source.
      */
     private fun sortCandidates(list: List<LyricCandidate>): List<LyricCandidate> {
         val preferWords = AppSettings.preferWordLyrics.value
@@ -180,6 +191,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         return list.sortedWith(
             compareByDescending<LyricCandidate> { it.score >= MIN_ACCEPT_SCORE && words[it] == preferWords }
                 .thenByDescending { it.score }
+                .thenByDescending { c -> preferWords && words[c] == true && c.score >= 60 && c.source == com.example.spotifylyricsproxy.lyrics.kugou.KugouLyricsSource.NAME }
                 .thenByDescending { it.source == DEFAULT_SOURCE }
         )
     }

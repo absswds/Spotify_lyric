@@ -25,9 +25,10 @@
 
 主要在 OPPO ColorOS 上測試，鎖屏島（锁屏岛）與流體雲（流体云）效果最好。
 
-<!-- TODO: add screenshots (owner will supply the images), then move these lines out of the comment:
-![ColorOS lock-screen island](docs/images/coloros-lockscreen-island.png)
-![ColorOS Fluid Cloud](docs/images/coloros-fluid-cloud.png)
+<!-- TODO: 請將以下圖片放到 docs/images/ 後取消註解：
+![播放器](docs/images/player.gif)
+![ColorOS 流體雲](docs/images/coloros-fluid-cloud.png)
+![鎖定畫面與控制中心](docs/images/lockscreen-media-card.png)
 -->
 
 > 作者手邊只有有限的（ColorOS）裝置，無法測試更多系統。如果你有興趣，或在其他廠商系統（MIUI/HyperOS、OriginOS、MagicOS、One UI 等）上表現異常，歡迎[提 Issue](https://github.com/absswds/Spotify_lyric/issues) 或發 PR。
@@ -53,7 +54,7 @@
 | LRCLIB | 預設來源 |
 
 - 所有來源平行搜尋，結果夠好時提前結束。
-- 候選依標題／歌手／長度評分，並在來源之間交叉比對時間軸：逐字歌詞只有在時間軸與其他來源一致時才優先。
+- 候選依標題／歌手／長度評分，並在來源之間交叉比對時間軸。引導頁與設定中可選擇優先逐字或逐行歌詞；選定的時間軸類型會在挑選結果時優先。
 - 低信心比對結果不顯示（同名不同歌手的歌詞比沒有歌詞更糟）。
 - 支援手動搜尋／修正，以及手動匯入 `.lrc` 檔案。
 
@@ -65,7 +66,7 @@
 ### 快取與離線
 
 - LRCLIB、AMLL 與手動歌詞會快取，供離線使用。
-- 非官方來源（網易雲、QQ 音樂、酷狗）的歌詞**可能有版權問題**，預設只在記憶體中顯示；你在提示中同意後才會快取到本機，可在設定中變更。快取僅供自己看，不要分享或匯出。
+- 非官方來源（網易雲、QQ 音樂、酷狗）預設開啟，引導頁會說明用途與責任，可在引導頁或設定中關閉；歌詞預設只在記憶體中顯示，同意後才會快取到本機。快取僅供自己觀看，不要分享或匯出。
 - 離線模式：App Remote 無法連線時，透過[通知存取權](#權限說明)讀取 Spotify 本身的 MediaSession。
 
 ### 其他裝置播放（Spotify Connect）
@@ -82,7 +83,7 @@
 
 ### 省電
 
-- 暫停時釋放喚醒鎖；暫停 30 分鐘後停止服務。
+- 暫停時釋放喚醒鎖；暫停 10 分鐘後停止前景服務，並請 Android 停止 Spotify。
 - Web API 輪詢退避；介面端在背景時停止輪詢。
 
 ### 其他
@@ -201,16 +202,9 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 - **2026-07**：專案初始化。App Remote 連線、LRCLIB 歌詞、Room 快取、MediaSession、前景通知、播放清單預先快取、歌詞修正；手動 `.lrc` 匯入、翻譯目標語言、日文介面。
 - **2026-08**：離線模式（透過通知存取權讀取 Spotify 的 MediaSession）；預設來源改為 LRCLIB；Apple Music 風格播放器、逐字歌詞、引導頁、媒體卡片優先順序。
-- **2026-09**：
-  - 歌詞來源共識評分（跨來源時間軸比對），選擇更快（平行搜尋、提前結束）。
-  - 新增 QQ 音樂 QRC 與酷狗 KRC 逐字來源。
-  - Lyricify 風格播放器打磨：前奏倒數／間奏圓點、模糊、捲動時間數字、橫向版面、跑馬燈。
-  - 中文繁簡轉換方式可選。
-  - 依來源分別儲存的偏移。
-  - 透過 Web API 同步其他裝置的播放。
-  - 媒體卡片搶回首位的改進。
-  - 背景與省電修正。
-  - 非官方來源的歌詞改為經使用者同意後才快取。
+- **2026-10**：引導頁拆分為多頁：歌詞來源說明（網易雲、QQ 音樂、酷狗預設開啟，可關閉）、優先逐字或逐行歌詞、是否快取；進入快取相關頁面前再次提示版權。
+  - 設定中可選擇優先逐字或逐行歌詞，並加入逐字／逐行示範動畫。
+  - 修復：未授權行動數據時卡在上一首歌詞；歌詞修正頁只顯示一個來源；偏移在換來源後殘留；Spotify 授權錯誤提示；酷狗搜尋結果偶爾被過早取消；複合職位的署名行；逐字換行時的重影。
 
 ---
 

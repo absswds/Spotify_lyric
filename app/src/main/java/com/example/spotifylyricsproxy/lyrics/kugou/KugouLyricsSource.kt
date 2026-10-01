@@ -35,7 +35,7 @@ class KugouLyricsSource : LyricsSource {
         private const val SEARCH_URL = "https://songsearch.kugou.com/song_search_v2"
         private const val CANDIDATES_URL = "https://krcs.kugou.com/search"
         private const val DOWNLOAD_URL = "https://lyrics.kugou.com/download"
-        private const val MAX_SONGS = 3
+        private const val MAX_SONGS = 6
         private val TAGS = Regex("<[^>]+>")
     }
 
