@@ -212,10 +212,17 @@ class SpotifyRemoteRepository(
             idlePollMs = (idlePollMs * 2).coerceAtMost(IDLE_POLL_MAX_MS)
         } else {
             otherDevicePlaying = false
-            _currentTrack.value = _currentTrack.value.copy(
-                isPaused = true,
-                playbackPositionMs = state?.progressMs ?: _currentTrack.value.playbackPositionMs
-            )
+            if (state == null || state.device?.type.equals("Smartphone", ignoreCase = true)) {
+                // No active device, or playback just moved back to this phone: the web state
+                // lags, so forcing "paused" here left the player stuck while music played.
+                // Let the phone's own state decide.
+                refreshState()
+            } else {
+                _currentTrack.value = _currentTrack.value.copy(
+                    isPaused = true,
+                    playbackPositionMs = state.progressMs ?: _currentTrack.value.playbackPositionMs
+                )
+            }
         }
     }
     private val albumArtCache = AlbumArtCache.getInstance(context)
@@ -788,12 +795,10 @@ class SpotifyRemoteRepository(
             // 2. Cache miss: fetch from network. Order is Web API (highest res,
             //    needs token) → scdn direct URL (no token, original size) →
             //    App Remote imagesApi (lowest).
-            val bitmap = fetchHighResAlbumArt(trackId)
+            val bitmap = (fetchHighResAlbumArt(trackId)
                 ?: fetchScdnDirectAlbumArt(imageUri)
-                ?: fetchAppRemoteAlbumArt(imageUri)
-            if (bitmap != null) {
-                albumArtCache.put(trackId, bitmap)
-            }
+                ?: fetchAppRemoteAlbumArt(imageUri))
+                ?.let { albumArtCache.put(trackId, it) }
             if (trackId == _currentTrack.value.trackId) {
                 _albumArt.value = bitmap
             }

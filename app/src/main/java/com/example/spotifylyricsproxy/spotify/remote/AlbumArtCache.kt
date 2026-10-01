@@ -30,14 +30,14 @@ class AlbumArtCache private constructor(context: Context) {
         memory[trackId]?.let { return it }
         val file = fileFor(trackId).takeIf { it.exists() } ?: return null
         return runCatching {
-            BitmapFactory.decodeFile(file.absolutePath).also { bmp ->
-                if (bmp != null) memory.put(trackId, bmp)
-            }
+            BitmapFactory.decodeFile(file.absolutePath)?.toSquare()?.also { memory.put(trackId, it) }
         }.getOrNull()
     }
 
-    fun put(trackId: String, bitmap: Bitmap) {
-        if (trackId.isBlank()) return
+    /** Stores the artwork and returns the (square) bitmap to show. */
+    fun put(trackId: String, source: Bitmap): Bitmap {
+        val bitmap = source.toSquare()
+        if (trackId.isBlank()) return bitmap
         memory.put(trackId, bitmap)
         val file = fileFor(trackId)
         runCatching {
@@ -45,11 +45,19 @@ class AlbumArtCache private constructor(context: Context) {
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
         }
+        return bitmap
     }
 
     fun clear() {
         memory.evictAll()
         cacheDir.listFiles()?.forEach { it.delete() }
+    }
+
+    /** Some releases ship landscape/odd-sized art; cover slots everywhere expect a square. */
+    private fun Bitmap.toSquare(): Bitmap {
+        val side = minOf(width, height)
+        if (maxOf(width, height) - side <= side / 50) return this
+        return Bitmap.createBitmap(this, (width - side) / 2, (height - side) / 2, side, side)
     }
 
     private fun fileFor(trackId: String): File {
