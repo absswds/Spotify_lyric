@@ -94,28 +94,40 @@ class SpotifyRemoteRepository(
     private val _nextTrack = MutableStateFlow<com.example.spotifylyricsproxy.spotify.webapi.SpotifyTrack?>(null)
     val nextTrack: StateFlow<com.example.spotifylyricsproxy.spotify.webapi.SpotifyTrack?> = _nextTrack.asStateFlow()
 
-    private suspend fun refreshQueue() {
-        val token = SpotifyTokenStore.getAccessToken() ?: return
-        if (SpotifyTokenStore.needsRefresh()) return
-        val queue = runCatching {
+    /** False when the queue could not be read (signed out, expired token, offline). */
+    private suspend fun refreshQueue(): Boolean {
+        val token = SpotifyTokenStore.getAccessToken()
+        if (token == null || SpotifyTokenStore.needsRefresh()) {
+            Log.d(TAG, "Queue skipped: token=${token != null} age=${SpotifyTokenStore.ageMs()}")
+            return false
+        }
+        val response = runCatching {
             withContext(Dispatchers.IO) { SpotifyWebApiClient.api.getQueue(SpotifyWebApiClient.authHeader(token)) }
-        }.getOrNull()?.takeIf { it.isSuccessful }?.body() ?: return
-        _nextTrack.value = queue.queue.firstOrNull()?.takeIf { it.id.isNotBlank() }
+        }.getOrNull()
+        if (response?.isSuccessful != true) {
+            Log.w(TAG, "Queue lookup failed: ${response?.code()}")
+            return false
+        }
+        _nextTrack.value = response.body()?.queue?.firstOrNull()?.takeIf { it.id.isNotBlank() }
+        Log.i(TAG, "Next up: ${_nextTrack.value?.name}")
+        return true
     }
 
     init {
         // One queue lookup per track change; the queue itself rarely changes mid-song.
         repositoryScope.launch(Dispatchers.Main) {
-            var lastId = ""
+            var seenId = ""
+            var queuedFor = ""
             while (true) {
                 val id = _currentTrack.value.trackId
-                if (id.isNotBlank() && id != lastId) {
-                    lastId = id
+                if (id != seenId) {
+                    seenId = id
                     _nextTrack.value = null
                     delay(1_500) // let Spotify settle the new queue
-                    refreshQueue()
                 }
-                delay(1_000)
+                // Retried until it works, e.g. once the user signs in.
+                if (id.isNotBlank() && id != queuedFor && refreshQueue()) queuedFor = id
+                delay(if (id == queuedFor) 1_000 else 10_000)
             }
         }
         // Plain Main (not immediate): the loop must not run before the fields below exist.
@@ -125,7 +137,10 @@ class SpotifyRemoteRepository(
                 // stale "playing" state too while another device has moved on.
                 val localPlaying = !_currentTrack.value.isPaused && !otherDevicePlaying
                 if (localPlaying) idlePollMs = IDLE_POLL_MS
-                if (webPollEnabled && !SpotifyTokenStore.needsRefresh()) pollOtherDevice()
+                if (!com.example.spotifylyricsproxy.core.AppSettings.followOtherDevices.value) {
+                    // Off: only this phone counts; drop a leftover "other device" state.
+                    if (otherDevicePlaying) otherDevicePlaying = false
+                } else if (webPollEnabled && !SpotifyTokenStore.needsRefresh()) pollOtherDevice()
                 delay(
                     when {
                         otherDevicePlaying -> OTHER_DEVICE_POLL_MS
@@ -393,6 +408,8 @@ class SpotifyRemoteRepository(
                         }
 
                         message.contains("UserNotAuthorized") ||
+                            message.contains("authorization is required", ignoreCase = true) ||
+                            message.contains("auth-flow", ignoreCase = true) ||
                             message.contains("user is required to use Spotify") -> {
                             SpotifyConnectionState.Error(context.getString(R.string.error_auth_required))
                         }
@@ -514,8 +531,13 @@ class SpotifyRemoteRepository(
      * The app came back to the foreground: a frozen process may have missed events, so
      * subscribe again (the first event is the current state) or reconnect.
      */
-    fun refreshState() {
-        if (spotifyAppRemote?.isConnected == true) subscribeToPlayerState() else tryConnect()
+    fun refreshState(hard: Boolean = false) {
+        if (hard) {
+            // After a long stretch in the background the SDK connection can look alive while
+            // no events arrive any more, so the lyric line stays frozen: start over.
+            dropRemote()
+            tryConnect()
+        } else if (spotifyAppRemote?.isConnected == true) subscribeToPlayerState() else tryConnect()
     }
 
     private fun subscribeToPlayerState() {

@@ -350,9 +350,11 @@ private fun PhonePortraitLayout(state: PlayerUiState, actions: PlayerActions) {
                     estimatedPositionMs = position,
                     durationMs = state.trackInfo.durationMs,
                     onSeek = actions.onSeek,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 14.dp)
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = if (state.nextUp.isNullOrBlank()) 14.dp else 4.dp)
                 )
             }
+            Box(Modifier.padding(horizontal = 24.dp)) { NextUpLine(state) }
+            if (!state.nextUp.isNullOrBlank()) Spacer(Modifier.height(10.dp))
             if (state.hasTrack) {
                 PlayerLyrics(
                     state = state,
@@ -400,8 +402,9 @@ private fun SplitPlayerLayout(state: PlayerUiState, actions: PlayerActions, scal
             // and the whole block is centred on the cover's axis.
             val compact = scale <= 1f
             // Compact: the cover takes whatever height the title, progress and
-            // transport rows (~180dp) leave, capped by the left pane's width.
-            val coverSize = if (compact) min(maxHeight - 180.dp, maxWidth * 0.45f * 0.82f)
+            // transport rows (~180dp, plus the "next" line) leave, capped by the left pane's width.
+            val reserved = if (state.nextUp.isNullOrBlank()) 180.dp else 200.dp
+            val coverSize = if (compact) min(maxHeight - reserved, maxWidth * 0.45f * 0.82f)
                 else min(maxHeight * 0.58f, maxWidth * 0.34f)
             Row(modifier = Modifier.fillMaxSize()) {
                 Box(
@@ -726,6 +729,12 @@ private fun TrackMeta(trackInfo: SpotifyTrackInfo, scale: Float, centered: Boole
 @Composable
 private fun TransportRow(state: PlayerUiState, actions: PlayerActions, scale: Float) {
     TransportButtons(state, actions, scale)
+    NextUpLine(state, scale)
+}
+
+/** "Next: title · artist" under the controls, when the queue is known. */
+@Composable
+private fun NextUpLine(state: PlayerUiState, scale: Float = 1f) {
     val nextUp = state.nextUp
     if (!nextUp.isNullOrBlank()) {
         Text(
