@@ -436,4 +436,7 @@
     <string name="lyric_mode_line">Prefer line-by-line lyrics (better timing)</string>
     <string name="settings_prefer_word">Prefer word-by-word lyrics</string>
     <string name="settings_prefer_word_desc">Off prefers line-timed lyrics, which are usually more accurate. Applies to songs searched from now on</string>
+    <!-- "|" separates the words the demo lights up one by one; not real lyrics. -->
+    <string name="lyric_mode_demo_1">The |wind |is |calling |my |name</string>
+    <string name="lyric_mode_demo_2">Sing |along |word |by |word</string>
 </resources>

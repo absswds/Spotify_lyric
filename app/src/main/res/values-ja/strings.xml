@@ -436,4 +436,7 @@
     <string name="lyric_mode_line">行単位の歌詞を優先（タイミングが正確）</string>
     <string name="settings_prefer_word">単語単位の歌詞を優先</string>
     <string name="settings_prefer_word_desc">オフにすると行単位の歌詞を優先します（タイミングが一般に正確）。これから検索する曲に適用</string>
+    <!-- "|" separates the words the demo lights up one by one; not real lyrics. -->
+    <string name="lyric_mode_demo_1">風が|そっと|窓を|たたく</string>
+    <string name="lyric_mode_demo_2">いっしょに|この歌を|歌おう</string>
 </resources>

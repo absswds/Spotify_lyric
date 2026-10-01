@@ -64,6 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -415,11 +416,67 @@ private fun LyricModePage() {
     Spacer(modifier = Modifier.height(6.dp))
     Text(stringResource(R.string.lyric_mode_desc), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
     Spacer(modifier = Modifier.height(16.dp))
-    ChoiceRows(
-        selected = preferWord,
-        options = listOf(true to R.string.lyric_mode_word, false to R.string.lyric_mode_line),
-        onPick = AppSettings::setPreferWordLyrics
+    // Each choice plays a short demo of how lyrics light up in that mode.
+    val demo = listOf(stringResource(R.string.lyric_mode_demo_1), stringResource(R.string.lyric_mode_demo_2))
+    listOf(true to R.string.lyric_mode_word, false to R.string.lyric_mode_line).forEach { (value, label) ->
+        val selected = preferWord == value
+        val border by animateColorAsState(if (selected) Accent else Color.Transparent, label = "modeBorder")
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.White.copy(alpha = if (selected) 0.10f else 0.06f))
+                .border(2.dp, border, RoundedCornerShape(16.dp))
+                .clickable { AppSettings.setPreferWordLyrics(value) }
+                .padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(label), color = Ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                if (selected) Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Accent, modifier = Modifier.size(22.dp))
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            LyricModeDemo(wordByWord = value, lines = demo)
+        }
+    }
+    Spacer(modifier = Modifier.height(24.dp))
+}
+
+/**
+ * Two demo lines sung in a loop. Word mode lights each word as it is reached; line mode
+ * lights the whole line at once. Tokens are separated by "|" in the string resources.
+ */
+@Composable
+private fun LyricModeDemo(wordByWord: Boolean, lines: List<String>) {
+    val tokens = remember(lines) { lines.map { it.split('|') } }
+    val t by rememberInfiniteTransition(label = "lyricDemo").animateFloat(
+        0f, tokens.size.toFloat(),
+        infiniteRepeatable(tween(2800 * tokens.size, easing = LinearEasing)),
+        label = "lyricDemoT"
     )
+    val current = t.toInt().coerceAtMost(tokens.size - 1)
+    // Each line is sung over its first 80 %, then holds a moment.
+    val progress = ((t - current) / 0.8f).coerceIn(0f, 1f)
+    tokens.forEachIndexed { i, words ->
+        val isCurrent = i == current
+        val text = androidx.compose.ui.text.buildAnnotatedString {
+            words.forEachIndexed { w, word ->
+                val lit = when {
+                    !isCurrent -> 0f
+                    !wordByWord -> 1f
+                    else -> (progress * words.size - w).coerceIn(0f, 1f)
+                }
+                withStyle(androidx.compose.ui.text.SpanStyle(color = Ink.copy(alpha = 0.32f + 0.68f * lit))) { append(word) }
+            }
+        }
+        Text(
+            text = text,
+            fontSize = if (isCurrent) 20.sp else 17.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 28.sp,
+            modifier = Modifier.padding(vertical = 2.dp)
+        )
+    }
 }
 
 @Composable

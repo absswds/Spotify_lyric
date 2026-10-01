@@ -439,4 +439,7 @@
     <string name="lyric_mode_line">優先逐行歌詞（時間更準）</string>
     <string name="settings_prefer_word">優先逐字歌詞</string>
     <string name="settings_prefer_word_desc">關閉後優先選逐行歌詞，時間一般更準。對之後搜尋的歌曲生效</string>
+    <!-- "|" separates the words the demo lights up one by one; not real lyrics. -->
+    <string name="lyric_mode_demo_1">風|輕輕|吹過|窗外的|樹梢</string>
+    <string name="lyric_mode_demo_2">我們|一起|唱著|這首歌</string>
 </resources>
