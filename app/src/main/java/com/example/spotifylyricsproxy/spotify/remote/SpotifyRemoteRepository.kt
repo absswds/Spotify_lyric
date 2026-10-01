@@ -178,8 +178,10 @@ class SpotifyRemoteRepository(
         val item = state?.item
         if (state != null && state.isPlaying && item != null && item.id.isNotBlank()) {
             idlePollMs = IDLE_POLL_MS
-            // Playing on this phone: App Remote reports it directly.
-            if (state.device?.type.equals("Smartphone", ignoreCase = true)) {
+            val here = isThisDevice(state.device, item.id)
+            Log.i(TAG, "Web player: device='${state.device?.name}' type=${state.device?.type} thisDevice=$here local=$localDeviceNames")
+            // Playing on this device: App Remote reports it directly.
+            if (here) {
                 otherDevicePlaying = false
                 return
             }
@@ -212,8 +214,8 @@ class SpotifyRemoteRepository(
             idlePollMs = (idlePollMs * 2).coerceAtMost(IDLE_POLL_MAX_MS)
         } else {
             otherDevicePlaying = false
-            if (state == null || state.device?.type.equals("Smartphone", ignoreCase = true)) {
-                // No active device, or playback just moved back to this phone: the web state
+            if (state == null || isThisDevice(state.device, state.item?.id)) {
+                // No active device, or playback just moved back to this device: the web state
                 // lags, so forcing "paused" here left the player stuck while music played.
                 // Let the phone's own state decide.
                 refreshState()
@@ -225,6 +227,29 @@ class SpotifyRemoteRepository(
             }
         }
     }
+
+    /** Names Spotify may list this device under (the system device name, or the model). */
+    private val localDeviceNames: Set<String> by lazy {
+        setOfNotNull(
+            runCatching { android.provider.Settings.Global.getString(context.contentResolver, "device_name") }.getOrNull(),
+            android.os.Build.MODEL
+        ).map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
+    }
+
+    /**
+     * Whether the Web API's active device is this one. Its type alone isn't enough: a tablet
+     * reports "Tablet", and the user's phone is a "Smartphone" too when this app runs on the
+     * tablet. Match the name first; failing that, a phone or tablet playing the same track
+     * this device's Spotify says it is playing.
+     */
+    private fun isThisDevice(device: com.example.spotifylyricsproxy.spotify.webapi.SpotifyDevice?, itemId: String?): Boolean {
+        if (device == null) return false
+        if (device.name.trim().lowercase() in localDeviceNames) return true
+        val handheld = device.type.equals("Smartphone", ignoreCase = true) || device.type.equals("Tablet", ignoreCase = true)
+        val local = _currentTrack.value
+        return handheld && !local.isPaused && !otherDevicePlaying && itemId != null && local.trackId == itemId
+    }
+
     private val albumArtCache = AlbumArtCache.getInstance(context)
 
     private var spotifyAppRemote: SpotifyAppRemote? = null
