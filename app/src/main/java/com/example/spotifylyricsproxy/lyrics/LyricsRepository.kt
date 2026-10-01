@@ -64,13 +64,17 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         }
     }
 
-    private val sources: List<LyricsSource> = listOf(
-        AmllTtmlLyricsSource(),
+    private val officialSources: List<LyricsSource> = listOf(AmllTtmlLyricsSource(), LrclibLyricsSource())
+
+    /** Third-party services without a public lyric API: used only after the user agreed to it. */
+    private val unofficialSources: List<LyricsSource> = listOf(
         NeteaseLyricsSource(),
         QQMusicLyricsSource(),
-        com.example.spotifylyricsproxy.lyrics.kugou.KugouLyricsSource(),
-        LrclibLyricsSource()
+        com.example.spotifylyricsproxy.lyrics.kugou.KugouLyricsSource()
     )
+
+    private val sources: List<LyricsSource>
+        get() = if (AppSettings.useUnofficialSources.value == true) officialSources + unofficialSources else officialSources
 
     /**
      * Providers whose lyrics may be displayed during the current process but
@@ -83,6 +87,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     /** Query every source IN PARALLEL, collect all candidates, return all for scoring. */
     /** [waitAll]: the correction screen wants every version, so no early finish. */
     private suspend fun aggregateSearch(request: LyricsSearchRequest, waitAll: Boolean = false): List<LyricCandidate> = coroutineScope {
+        val sources = sources
         val allCandidates = mutableListOf<LyricCandidate>()
         val results = kotlinx.coroutines.channels.Channel<List<LyricCandidate>>(sources.size)
         val jobs = sources.map { source ->
@@ -238,7 +243,9 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         artist: String,
         album: String = "",
         durationMs: Long = 0,
-        forceOnline: Boolean = false
+        forceOnline: Boolean = false,
+        /** False: answer from the cache only (offline, or mobile data not allowed). */
+        allowOnline: Boolean = true
     ) {
         if (title.isEmpty() || artist.isEmpty()) return
         val generation = ++fetchGeneration
@@ -340,6 +347,11 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                     }
                 }
             }
+        }
+
+        if (!allowOnline) {
+            if (_parsedLyrics.value.isEmpty()) _lyricStatus.value = LyricStatus.MobileDataRestricted
+            return
         }
 
         // Not cached or needs refresh — keep old lyrics visible when forceOnline
@@ -551,6 +563,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
 
             val best = filtered.maxByOrNull { it.score }
             if (best != null && LyricMatcher.isAutoAccept(best.score)) {
+                setSource(best.source)
                 cacheResult(t, searchTitle, searchArtist, searchAlbum, searchDuration, best)
                 val synced = best.syncedLyrics
                 if (!synced.isNullOrEmpty()) {
@@ -561,6 +574,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                     _lyricStatus.value = LyricStatus.PlainOnly
                 }
             } else if (best != null && best.score >= MIN_ACCEPT_SCORE) {
+                setSource(best.source)
                 val synced = best.syncedLyrics
                 if (!synced.isNullOrEmpty()) {
                     _parsedLyrics.value = LrcParser.parse(synced, best.translation)
@@ -577,6 +591,20 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             Log.e(TAG, "Re-search failed", e)
             _lyricStatus.value = LyricStatus.Error(e.message ?: "重新搜索失败")
         }
+    }
+
+    /**
+     * Fill the candidate list for the manual picker without touching the lyrics on screen
+     * (a cached or hand-picked version stays in place).
+     */
+    suspend fun loadCandidates(title: String, artist: String, album: String, durationMs: Long) {
+        val t = currentTrackId.ifBlank { return }
+        if (title.isBlank() || artist.isBlank()) return
+        val results = withContext(Dispatchers.IO) {
+            aggregateSearch(LyricsSearchRequest(title, artist, album, durationMs, t), waitAll = true)
+        }
+        if (t != currentTrackId) return
+        _candidates.value = sortCandidates(adjustForQuality(results.map { LyricMatcher.score(it, title, artist, album, durationMs) }))
     }
 
     /** Mark the current best match as wrong and blacklist it. */
@@ -631,7 +659,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         if (currentTrackId.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 val entity = cacheDao.getByTrackId(currentTrackId)
-                if (entity != null) {
+                if (entity != null && entity.source == _lyricSource.value) {
                     cacheDao.upsert(entity.copy(offsetMs = offsetMs))
                 }
             }
@@ -773,7 +801,13 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     }
 
     /** Set status to indicate online search was skipped because of metered connection. */
-    fun setMobileDataRestricted() {
+    fun setMobileDataRestricted(trackId: String = "") {
+        // The previous song's lyrics must not stay on screen under the new track.
+        fetchGeneration++
+        if (trackId.isNotBlank()) currentTrackId = trackId
+        _parsedLyrics.value = emptyList()
+        _currentLine.value = null
+        _candidates.value = emptyList()
         _lyricStatus.value = LyricStatus.MobileDataRestricted
     }
 

@@ -56,6 +56,7 @@ class LyricsForegroundService : Service() {
     private var observerJob: Job? = null
     private var reclaimJob: Job? = null
     private var lastFetchedTrackId = ""
+    private var lastStartAt = 0L
     private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
@@ -177,10 +178,18 @@ class LyricsForegroundService : Service() {
     private fun startNotificationLoop() {
         if (observerJob != null) {
             // Already running (the app came back to the foreground): catch up on missed events.
-            spotifyRepository.refreshState()
+            val now = android.os.SystemClock.elapsedRealtime()
+            spotifyRepository.refreshState(hard = now - lastStartAt > STALE_AFTER_MS)
+            lastStartAt = now
             return
         }
+        lastStartAt = android.os.SystemClock.elapsedRealtime()
         watchSessionOrder()
+        // The app UI may never be opened (service restarted, notification only): read the
+        // network state here instead of waiting for the ViewModel to report it.
+        serviceScope.launch {
+            com.example.spotifylyricsproxy.util.ConnectivityObserver.observe(applicationContext).collect { setMeteredState(it) }
+        }
 
         acquireWakeLock()
         startForeground(NOTIFICATION_ID, buildNotification(waitingSnapshot(), null))
@@ -306,11 +315,12 @@ class LyricsForegroundService : Service() {
                         artist = track.artist,
                         album = track.album,
                         durationMs = track.durationMs,
-                        forceOnline = false
+                        forceOnline = false,
+                        allowOnline = false
                     )
                 }
             }
-            !isMetered || todayChoice == "allow" -> {
+            !isMetered && !isOffline || todayChoice == "allow" -> {
                 serviceScope.launch {
                     Log.i(TAG, "Calling fetchLyrics forceOnline=${!isMetered} todayChoice=$todayChoice")
                     lyricsRepository.fetchLyrics(
@@ -333,13 +343,22 @@ class LyricsForegroundService : Service() {
                         artist = track.artist,
                         album = track.album,
                         durationMs = track.durationMs,
-                        forceOnline = false
+                        forceOnline = false,
+                        allowOnline = false
                     )
                 }
             }
-            else -> { // no todayChoice — ViewModel will show dialog
+            else -> { // no choice yet: show cached lyrics if any, else the Allow/Deny prompt
                 serviceScope.launch {
-                    lyricsRepository.setMobileDataRestricted()
+                    lyricsRepository.fetchLyrics(
+                        trackId = track.trackId,
+                        title = track.title,
+                        artist = track.artist,
+                        album = track.album,
+                        durationMs = track.durationMs,
+                        forceOnline = false,
+                        allowOnline = false
+                    )
                 }
             }
         }
@@ -451,6 +470,8 @@ class LyricsForegroundService : Service() {
         private const val CHANNEL_ID = "lyrics_foreground"
         /** Let Spotify finish its own state change before we re-promote our session. */
         private const val RECLAIM_DELAY_MS = 1_200L
+        /** Longer than this since the last start: assume the Spotify connection went stale. */
+        private const val STALE_AFTER_MS = 60_000L
         private const val IDLE_STOP_MS = 30 * 60_000L
         private const val NOTIFICATION_ID = 4001
         private const val REQUEST_OPEN_APP = 4002

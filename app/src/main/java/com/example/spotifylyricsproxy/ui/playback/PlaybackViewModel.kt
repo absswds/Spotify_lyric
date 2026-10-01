@@ -303,6 +303,15 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun connect() {
+        // Spotify asks for its own authorization first (shown as "authorization required"):
+        // reconnecting cannot fix that, the auth flow can.
+        val state = repository.connectionState.value
+        if (state is SpotifyConnectionState.Error &&
+            state.message == getApplication<Application>().getString(com.example.spotifylyricsproxy.R.string.error_auth_required)
+        ) {
+            authorize()
+            return
+        }
         android.util.Log.i("PlaybackVM", "connect() called — force reconnecting")
         // Try a fresh connection. If Spotify isn't running, the SDK will
         // call onFailure quickly; we also auto-launch Spotify so the user
@@ -343,8 +352,11 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
 
     /** Called from MainActivity.onResume — gentle auto-reconnect when returning
      *  to foreground (e.g. after opening Spotify). */
+    private var pausedAt = 0L
+
     fun onPause() {
         repository.webPollEnabled = false
+        pausedAt = android.os.SystemClock.elapsedRealtime()
     }
 
     fun onResume() {
@@ -364,10 +376,10 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
                 lastTokenRequestAt = android.os.SystemClock.elapsedRealtime()
                 SpotifyAuthHolder.startAuth?.let { authorize() }
             }
-            repository.refreshState()
-            if (repository.connectionState.value is SpotifyConnectionState.Connected) {
-                LyricsForegroundService.start(getApplication())
-            }
+            val away = pausedAt != 0L && android.os.SystemClock.elapsedRealtime() - pausedAt > 60_000L
+            repository.refreshState(hard = away)
+            // Not only when connected: the service keeps its own connection and may need the nudge.
+            LyricsForegroundService.start(getApplication())
         }
     }
 
@@ -449,6 +461,15 @@ class PlaybackViewModel(application: Application) : AndroidViewModel(application
     }
 
     // ---- Mobile data confirmation ----
+
+    /** Candidates for the correction screen while good lyrics are already showing. */
+    fun loadCandidatesIfNeeded() {
+        if (lyricsRepo.candidates.value.isNotEmpty()) return
+        val track = repository.currentTrack.value
+        viewModelScope.launch {
+            lyricsRepo.loadCandidates(track.title, track.artist, track.album, track.durationMs)
+        }
+    }
 
     /** User confirmed: fetch lyrics online even on mobile data. */
     fun confirmMobileDataFetch() {

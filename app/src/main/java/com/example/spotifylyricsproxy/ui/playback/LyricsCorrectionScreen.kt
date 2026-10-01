@@ -71,11 +71,15 @@ fun LyricsCorrectionScreen(
     LaunchedEffect(Unit) {
         if (parsedLyrics.isEmpty() && lyricStatus !is com.example.spotifylyricsproxy.lyrics.LyricStatus.Searching) {
             viewModel.reSearchLyrics()
+        } else {
+            // Lyrics came from the cache or an earlier search: still list every provider's
+            // version so another one can be picked, without replacing what is showing.
+            viewModel.loadCandidatesIfNeeded()
         }
     }
 
     // Candidate picker dialog
-    if (showCandidatePicker && candidates.size > 1) {
+    if (showCandidatePicker && candidates.isNotEmpty()) {
         val selectedIndex = remember { mutableStateOf(-1) }
         AlertDialog(
             onDismissRequest = viewModel::dismissCandidatePicker,
@@ -315,7 +319,7 @@ fun LyricsCorrectionScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    if (candidates.size > 1) {
+                    if (candidates.isNotEmpty()) {
                         OutlinedButton(
                             onClick = viewModel::showCandidateSelection,
                             modifier = Modifier.fillMaxWidth(),
@@ -366,6 +370,8 @@ private fun statusLabel(status: com.example.spotifylyricsproxy.lyrics.LyricStatu
 private fun sourceDisplayName(source: String): String = when (source) {
     "netease" -> "${stringResource(R.string.lyric_source_netease)}"
     "qqmusic" -> "${stringResource(R.string.lyric_source_qqmusic)}"
+    "kugou" -> stringResource(R.string.lyric_source_kugou)
+    "amll" -> "AMLL TTML DB"
     "lrclib" -> "LRCLIB"
     "cache" -> "${stringResource(R.string.lyric_source_cache)}"
     "manual" -> "${stringResource(R.string.lyric_source_manual)}"
