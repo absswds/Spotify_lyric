@@ -29,6 +29,12 @@ The application may store data locally on the user's device for its cache featur
 | Musixmatch, Spotify's own lyrics | Not used | Musixmatch's full/synced lyrics need a paid commercial license (the free API tier returns only part of each lyric); Spotify's lyric API is private. |
 | Google ML Kit | On-device language identification and translation | A translation does not remove the copyright or contractual restrictions applicable to the source lyric. |
 
+### Unofficial providers are opt-in
+
+NetEase Cloud Music, QQ Music and Kugou are **off by default**. They are queried only after the user accepts a notice (first-run guide or Settings) saying the endpoints are non-public, that the providers' user agreements forbid third-party clients and reverse engineering, and that the user accepts the risk. Without that consent only LRCLIB and AMLL TTML DB are used. Screens that store lyrics (lyric cache, playlist pre-cache) show a copyright notice each time they are opened.
+
+Provider terms reviewed on 2026-10-01 (not legal advice): NetEase's service terms (clause 8.5) and QQ Music / Tencent Music's agreements (clause 10.6 and 10.4) prohibit reverse engineering, unauthorised third-party clients and derivative products, and claim the lyric content; Kugou's agreement uses the same wording. LRCLIB requires a descriptive User-Agent and asks clients to honour `Retry-After`.
+
 ## 3. Spotify account and playback-control requirements
 
 - Creating a Spotify Developer Dashboard account/app follows Spotify's current account requirements. As of Spotify's February 2026 Developer Access update, the owner of a Development Mode app must have a **Spotify Premium** account; re-check the [current quota-mode rules](https://developer.spotify.com/documentation/web-api/concepts/quota-modes) before release.

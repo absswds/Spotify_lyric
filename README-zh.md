@@ -8,7 +8,7 @@
 
 [English](README.md) · **简体中文** · [繁體中文](README-zh-TW.md) · [日本語](README-ja.md)
 
-> ⚠️ **版权提醒**：歌词版权归原作者和唱片公司所有。网易云、QQ 音乐、酷狗是非公开接口，使用和缓存它们的歌词**可能涉及版权和服务条款问题**。如果只是自己在自己手机上听歌时看，一般风险很低；**不要分享、导出、公开发布缓存的歌词，也不要拿来商用**。详见[致谢与引用的项目](#致谢与引用的项目) · [内容来源与合规](#内容来源与合规)（非法律意见）。
+> ⚠️ **版权提醒**：歌词版权归原作者和唱片公司所有。网易云、QQ 音乐、酷狗没有公开的歌词接口，它们的用户协议禁止第三方客户端和逆向工程，所以这三个来源**默认关闭**，只有你在首次使用引导或设置里确认风险后才会启用，风险由你自己承担。默认只用 LRCLIB 和 AMLL 两个公开来源。如果只是自己在自己手机上听歌时看，一般风险很低；**不要分享、导出、公开发布缓存的歌词，也不要拿来商用**。进入"歌词缓存"和"歌单预缓存"页面前，还会再弹一次版权提示。详见[致谢与引用的项目](#致谢与引用的项目) · [内容来源与合规](#内容来源与合规)（非法律意见）。
 
 > 💳 **播放控制需要 Spotify Premium**：Spotify 官方文档写明，通过网络接口控制播放（暂停、切歌、拖动进度等）[只对 Premium 用户有效](https://developer.spotify.com/documentation/web-api/reference/skip-users-playback-to-next-track)；免费账号在手机上[始终是智能随机播放](https://support.spotify.com/us/article/shuffle-play/)，跳歌次数也[有限制](https://support.spotify.com/us/article/your-premium-benefits/)。所以免费账号用本应用的播放、切歌、进度、随机、循环按钮可能无效，但歌词显示不受影响。
 
@@ -25,12 +25,13 @@
 
 主要在 OPPO ColorOS 上测试，锁屏岛和流体云效果最好。
 
-<!-- TODO: add screenshots (owner will supply the images), then move these lines out of the comment:
-![ColorOS lock-screen island](docs/images/coloros-lockscreen-island.png)
-![ColorOS Fluid Cloud](docs/images/coloros-fluid-cloud.png)
+<!-- TODO: 图片/动图到位后取消注释（文件放在 docs/images/）：
+![播放器](docs/images/player.gif)
+![ColorOS 流体云](docs/images/coloros-fluid-cloud.png)
+![锁屏与控制中心](docs/images/lockscreen-media-card.png)
 -->
 
-> 作者手上只有有限的（ColorOS）设备，没法测试更多系统。如果你感兴趣，或者在其他厂商系统（MIUI/HyperOS、OriginOS、MagicOS、One UI 等）上表现异常，欢迎[提 Issue](https://github.com/absswds/Spotify_lyric/issues) 或发 PR。
+> 我手上只有一台 ColorOS 手机，没法测试更多系统。如果你感兴趣，或者在其他厂商系统（MIUI/HyperOS、OriginOS、MagicOS、One UI 等）上表现异常，欢迎[提 Issue](https://github.com/absswds/Spotify_lyric/issues) 或发 PR。
 
 ### 播放器
 
@@ -65,7 +66,7 @@
 ### 缓存与离线
 
 - LRCLIB、AMLL 和手动歌词会缓存，供离线使用。
-- 非官方来源（网易云、QQ 音乐、酷狗）的歌词**可能有版权问题**，默认只在内存里显示；你在提示中同意后才会缓存到本机，可在设置中更改。缓存仅供自己看，不要分享或导出。
+- 非官方来源（网易云、QQ 音乐、酷狗）**默认关闭**：你在引导页或设置里确认风险后才会使用；启用后歌词默认只在内存里显示，再次同意后才会缓存到本机。缓存仅供自己看，不要分享或导出。
 - 离线模式：App Remote 连不上时，通过[通知使用权](#权限说明)读取 Spotify 自身的 MediaSession。
 
 ### 其他设备播放（Spotify Connect）
@@ -211,6 +212,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
   - 媒体卡片夺回首位的改进。
   - 后台与省电修复。
   - 非官方来源的歌词改为经用户同意后才缓存。
+- **2026-10**：
+  - 非官方来源（网易云、QQ 音乐、酷狗）改为默认关闭，需确认风险后启用；进入缓存相关页面前再次提示版权。
+  - 修复：没有授权移动数据时卡在上一首歌词；歌词修正页只显示一个来源；偏移在换来源后残留；Spotify 授权错误提示。
+  - 后台停留很久后回到应用会重连 Spotify，避免歌词停在同一行。
 
 ---
 
