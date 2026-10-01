@@ -50,7 +50,7 @@ object LrcParser {
     // A short role label ("和声编写", "录音工程", "Bass") before a colon. The label only has
     // to contain one of the roles, so compound titles like "录音助理" are caught too.
     private val CREDIT_LINE = Regex(
-        """^\s*[^:：]{0,8}?(作?[词詞曲]|[编編]曲|[编編]写|[编編]寫|制作|製作|监制|監製|混音|[录錄]音|母[带帶]|和[声聲音]|吉他|[贝貝]斯|鼓|[键鍵]盘|[键鍵]盤|弦乐|弦樂|钢琴|鋼琴|合成器|配唱|人声|人聲|[统統]筹|[企策]划|[企策]劃|[发發]行|出品|版权|版權|OP|SP|ISRC|Lyrics?|Lyricist|Music|Composer|Arrang|Producer|Produced|Written|Words|Vocal|Guitar|Bass|Drums?|Keyboards?|Piano|Strings?|Mix|Master|Record|Engineer)[^:：]{0,8}\s*[:：]""",
+        """^\s*[^:：]{0,8}?(作?[词詞曲]|[编編]曲|[编編]写|[编編]寫|制作|製作|监制|監製|混音|[录錄]音|母[带帶]|[和合][声聲音唱]|伴唱|吉他|[贝貝]斯|鼓|[键鍵]盘|[键鍵]盤|弦乐|弦樂|钢琴|鋼琴|合成器|配唱|人声|人聲|[统統]筹|[企策]划|[企策]劃|[发發]行|出品|版权|版權|OP|SP|ISRC|Lyrics?|Lyricist|Music|Composer|Arrang|Producer|Produced|Written|Words|Vocal|Guitar|Bass|Drums?|Keyboards?|Piano|Strings?|Mix|Master|Record|Engineer)[^:：]{0,8}\s*[:：]""",
         RegexOption.IGNORE_CASE
     )
     private val TITLE_LINE = Regex("""^.{1,40}\s[-–—]\s.{1,40}$""")

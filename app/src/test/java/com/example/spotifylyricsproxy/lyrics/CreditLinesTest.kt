@@ -28,6 +28,21 @@ class CreditLinesTest {
     }
 
     @Test
+    fun `Kugou word-timed credits with title line and 合声 are dropped`() {
+        // Trimmed from Kugou's KRC for 晴天: the title line and credits are word-timed too.
+        // KugouLyricsSource turns KRC into YRC (absolute word times) before parsing.
+        val krc = listOf(
+            "[0,2250](0,1000,0)晴天 - (1000,1250,0)周杰伦",
+            "[2250,2250](2250,1000,0)词：(3250,1250,0)周杰伦",
+            "[11250,2250](11250,1000,0)合声：(12250,1250,0)周杰伦",
+            "[13500,2250](13500,1000,0)合声编写：(14500,1250,0)周杰伦",
+            "[27010,2250](27010,1000,0)混音工程：(28010,1250,0)杨大纬",
+            "[29264,3446](29264,390,0)故(29654,392,0)事"
+        ).joinToString("\n")
+        assertEquals(listOf("故事"), LrcParser.parse(krc).map { it.text })
+    }
+
+    @Test
     fun `sung lines with colons later in the song are kept`() {
         val lrc = "[00:10.00]First line\n[00:20.00]Note: I said no"
         assertEquals(2, LrcParser.parse(lrc).size)
