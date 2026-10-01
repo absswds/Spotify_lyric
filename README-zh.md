@@ -74,6 +74,8 @@
 - 在其他设备上播放时，手机上的 Spotify 常会一直报告过时的暂停状态，因此应用改为跟随 Spotify Web API（`GET /v1/me/player`，scope `user-read-playback-state`，需要[额外授权](#权限说明)一次）。
 - 其他设备播放时每 5 秒轮询一次；什么都没播放时逐步退避，最长 2 分钟。
 - 菜单中显示"正在同步其他设备"。
+- 跟随其他设备时，应用会保持一路听不见的静音音频（不申请音频焦点，不会打断其他应用）。否则手机没有声音，ColorOS 会冻结应用，媒体卡片就不再更新。
+- 在设置中关闭**跟随并控制其他设备**后，其他设备播放时应用显示为暂停，媒体卡片不再显示那边的歌词；播放切回手机时自动夺回媒体卡片。
 - 令牌有效期 1 小时，打开应用时续期。
 
 ### 翻译与繁简
@@ -93,13 +95,25 @@
 
 ### 已知限制
 
-- ColorOS 专有：其 "Hans" 可能在 Spotify 暂停几秒后冻结本应用；冻结期间收不到恢复播放，也无法响应媒体卡片按钮，打开应用即可恢复。
+- ColorOS 专有：其 "Hans" 可能在 Spotify 暂停几秒后冻结本应用（跟随其他设备时不会，见上文）；冻结期间收不到恢复播放，也无法响应媒体卡片按钮，打开应用即可恢复。
 - 通过 App Remote 控制播放（切歌等）需要 Spotify Premium。
 - Web API 令牌每小时需要续期，续期需要打开应用。
 
 ---
 
 ## 快速开始
+
+### 直接下载 APK 还是自己构建
+
+[Releases](https://github.com/absswds/Spotify_lyric/releases) 页面的 APK 用的是作者的 Spotify 应用，处于 Spotify 开发模式。开发模式下**最多只有 5 个白名单账号**能用 Web API，所以对绝大多数人来说，下载的 APK **用不了** Web API：
+
+| 下载的 APK 可用 | 需要 Web API（白名单账号，或自己构建） |
+|---|---|
+| 播放器、通知、媒体卡片、锁屏和胶囊里的同步歌词 | 跟随并控制其他设备上的播放（Spotify Connect） |
+| 通过手机上的 Spotify 控制播放（需 Premium） | 歌单歌词预缓存 |
+| 歌词搜索、校正、偏移、翻译、缓存、离线模式 | 提前获取下一首的歌词 |
+
+想要全部功能，请用自己的 Client ID 构建（见下文）；自己的 Spotify 应用给自己的账号用没有这个限制。
 
 ### 前置要求
 
@@ -212,6 +226,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
   - 媒体卡片夺回首位的改进。
   - 后台与省电修复。
   - 非官方来源的歌词改为经用户同意后才缓存。
+- **2026-10**：其他设备播放时媒体卡片歌词持续走动；关闭跟随时让出媒体卡片，切回手机时夺回；修复折行时撇号被切开。
 - **2026-10**：引导页拆成多页，加入非官方来源说明、逐字 / 逐行偏好与演示动画、缓存选择；默认开启非官方来源（可关闭），缓存相关页面打开前再次提示版权。
 
 ---
@@ -223,7 +238,7 @@ app/src/main/java/com/example/spotifylyricsproxy/
 ├── core/                设置与数据模型
 ├── database/            Room 数据库、DAO、实体
 ├── lyrics/              搜索、解析、匹配、共识、翻译
-│   ├── amll/  lrclib/  netease/  qqmusic/   各歌词来源
+│   ├── amll/  kugou/  lrclib/  netease/  qqmusic/   各歌词来源
 ├── mediasession/        MediaSession 与媒体按钮
 ├── notification/        前台服务与通知
 ├── playback/clock/      播放进度估算
@@ -299,7 +314,7 @@ app/src/main/java/com/example/spotifylyricsproxy/
 
 **本项目与 Spotify AB 无关，不是 Spotify 官方产品。**
 
-- 本应用不播放音频，所有播放由 Spotify App 完成。
+- 本应用不播放音乐，所有播放由 Spotify App 完成；仅在跟随其他设备时播放听不见的静音，用于避免被冻结。
 - 不修改 Spotify APK，不调用 Spotify 私有接口。
 - 不收集或上传用户的播放历史；缓存只保存在你自己的设备上。
 - 使用者需遵守 Spotify Developer Terms 及各歌词来源的条款。

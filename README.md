@@ -74,6 +74,8 @@ Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Flui
 - When playing on another device, the phone's Spotify often keeps reporting a stale paused state, so the app follows the Spotify Web API instead (`GET /v1/me/player`, scope `user-read-playback-state`, one [extra authorization](#permissions)).
 - Polls every 5 s while another device plays; backs off up to 2 min when nothing is playing.
 - The menu shows "Syncing another device".
+- While following another device, the app keeps an inaudible audio stream open (no audio focus, so other apps aren't interrupted). Otherwise the silent phone lets ColorOS freeze the app and the media card stops updating.
+- With **Follow and control other devices** off in Settings, the app shows paused while another device plays, so the media card stops showing those lyrics. When playback returns to the phone, it takes the media card back.
 - The token lasts one hour and is renewed when you open the app.
 
 ### Translation and Chinese script
@@ -93,13 +95,25 @@ Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Flui
 
 ### Known limits
 
-- ColorOS only: "Hans" may freeze the app a few seconds after Spotify pauses. While frozen it misses Spotify's resume and can't handle media-card buttons; opening the app thaws it.
+- ColorOS only: "Hans" may freeze the app a few seconds after Spotify pauses (not while following another device, see above). While frozen it misses Spotify's resume and can't handle media-card buttons; opening the app thaws it.
 - Playback control through App Remote (skip etc.) needs Spotify Premium.
 - The Web API token needs hourly renewal, which requires opening the app.
 
 ---
 
 ## Quick Start
+
+### Prebuilt APK or build it yourself
+
+The APK on the [Releases](https://github.com/absswds/Spotify_lyric/releases) page uses the maintainer's Spotify app, which is in Spotify's development mode. Development mode lets **at most 5 allow-listed accounts** use the Web API, so for almost everyone the prebuilt APK works **without** the Web API:
+
+| Works with the prebuilt APK | Needs the Web API (allow-listed account, or your own build) |
+|---|---|
+| Synced lyrics in the player, notification, media card, lock screen and capsules | Following and controlling playback on another device (Spotify Connect) |
+| Playback control through the phone's Spotify (Premium) | Playlist lyric pre-caching |
+| Lyric search, correction, offsets, translation, cache, offline mode | Fetching the next song's lyrics in advance |
+
+For every feature, build the app with your own Client ID (below); your own Spotify app has no such limit for your own account.
 
 ### Prerequisites
 
@@ -202,6 +216,7 @@ Many vendor ROMs (ColorOS, MIUI/HyperOS, OriginOS, MagicOS, etc.) aggressively k
 
 - **2026-07**: Initial release. App Remote connection, LRCLIB lyrics, Room cache, MediaSession, foreground notification, playlist pre-caching, lyric correction; manual `.lrc` import, translation target language, Japanese UI.
 - **2026-08**: Offline mode (reads Spotify's MediaSession via notification access); LRCLIB became the default source; Apple Music-style player, word-by-word lyrics, onboarding, media-card priority.
+- **2026-10**: Media card lyrics keep moving while another device plays; the media card is released when following is off and reclaimed when playback returns to the phone; fixed clipped apostrophes on wrapped lines.
 - **2026-10**: Multi-page onboarding for lyric sources, word/line preference with animated examples, and caching. Unofficial sources (NetEase, QQ Music, Kugou) are on by default and can be disabled. Copyright notice appears before cache-related screens.
   - Settings can prefer word-by-word or line-by-line lyrics.
   - Fixed: stale lyrics when mobile data isn't allowed; missing candidates on the correction screen; offset residue after source changes; Spotify authorization error text; Kugou results cancelled too early; compound credit lines; doubled glyphs on wrapped word-timed lines.
@@ -215,7 +230,7 @@ app/src/main/java/com/example/spotifylyricsproxy/
 ├── core/                Settings and data models
 ├── database/            Room database, DAOs, entities
 ├── lyrics/              Search, parsing, matching, consensus, translation
-│   ├── amll/  lrclib/  netease/  qqmusic/   Lyric sources
+│   ├── amll/  kugou/  lrclib/  netease/  qqmusic/   Lyric sources
 ├── mediasession/        MediaSession and media buttons
 ├── notification/        Foreground service and notification
 ├── playback/clock/      Playback position estimation
@@ -291,7 +306,7 @@ Anyone distributing builds (public APK, store listing, paid offering, server fea
 
 **This project is not affiliated with Spotify AB and is not an official Spotify product.**
 
-- The app plays no audio; all playback is handled by the Spotify app.
+- The app plays no music; all playback is handled by the Spotify app. While following another device it plays an inaudible stream only to stay unfrozen.
 - It does not modify the Spotify APK or call private Spotify APIs.
 - It does not collect or upload listening history; caches stay on your own device.
 - Users must follow the Spotify Developer Terms and each lyric source's terms.

@@ -74,6 +74,8 @@
 - 在其他裝置上播放時，手機上的 Spotify 常會一直回報過時的暫停狀態，因此 App 改為跟隨 Spotify Web API（`GET /v1/me/player`，scope `user-read-playback-state`，需要[額外授權](#權限說明)一次）。
 - 其他裝置播放時每 5 秒輪詢一次；沒有任何播放時逐步退避，最長 2 分鐘。
 - 選單中顯示「正在同步其他裝置」。
+- 跟隨其他裝置時，App 會保持一路聽不見的靜音音訊（不要求音訊焦點，不會打斷其他 App）。否則手機沒有聲音，ColorOS 會凍結 App，媒體卡片就不再更新。
+- 在設定中關閉**跟隨並控制其他裝置**後，其他裝置播放時 App 顯示為暫停，媒體卡片不再顯示那邊的歌詞；播放切回手機時自動搶回媒體卡片。
 - 權杖效期 1 小時，開啟 App 時更新。
 
 ### 翻譯與繁簡
@@ -93,13 +95,25 @@
 
 ### 已知限制
 
-- ColorOS 專屬：其「Hans」可能在 Spotify 暫停幾秒後凍結本 App；凍結期間收不到恢復播放，也無法回應媒體卡片按鈕，開啟 App 即可恢復。
+- ColorOS 專屬：其「Hans」可能在 Spotify 暫停幾秒後凍結本 App（跟隨其他裝置時不會，見上文）；凍結期間收不到恢復播放，也無法回應媒體卡片按鈕，開啟 App 即可恢復。
 - 透過 App Remote 控制播放（切歌等）需要 Spotify Premium。
 - Web API 權杖每小時需要更新，更新需要開啟 App。
 
 ---
 
 ## 快速開始
+
+### 直接下載 APK 還是自己建置
+
+[Releases](https://github.com/absswds/Spotify_lyric/releases) 頁面的 APK 使用作者的 Spotify 應用程式，處於 Spotify 開發模式。開發模式下**最多只有 5 個白名單帳號**能使用 Web API，所以對絕大多數人來說，下載的 APK **無法使用** Web API：
+
+| 下載的 APK 可用 | 需要 Web API（白名單帳號，或自己建置） |
+|---|---|
+| 播放器、通知、媒體卡片、鎖定畫面和膠囊裡的同步歌詞 | 跟隨並控制其他裝置上的播放（Spotify Connect） |
+| 透過手機上的 Spotify 控制播放（需 Premium） | 播放清單歌詞預先快取 |
+| 歌詞搜尋、校正、偏移、翻譯、快取、離線模式 | 提前取得下一首的歌詞 |
+
+想要全部功能，請用自己的 Client ID 建置（見下文）；自己的 Spotify 應用程式給自己的帳號用沒有這個限制。
 
 ### 前置需求
 
@@ -202,6 +216,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 - **2026-07**：專案初始化。App Remote 連線、LRCLIB 歌詞、Room 快取、MediaSession、前景通知、播放清單預先快取、歌詞修正；手動 `.lrc` 匯入、翻譯目標語言、日文介面。
 - **2026-08**：離線模式（透過通知存取權讀取 Spotify 的 MediaSession）；預設來源改為 LRCLIB；Apple Music 風格播放器、逐字歌詞、引導頁、媒體卡片優先順序。
+- **2026-10**：其他裝置播放時媒體卡片歌詞持續前進；關閉跟隨時讓出媒體卡片，切回手機時搶回；修正換行時撇號被切開。
 - **2026-10**：引導頁拆分為多頁：歌詞來源說明（網易雲、QQ 音樂、酷狗預設開啟，可關閉）、優先逐字或逐行歌詞、是否快取；進入快取相關頁面前再次提示版權。
   - 設定中可選擇優先逐字或逐行歌詞，並加入逐字／逐行示範動畫。
   - 修復：未授權行動數據時卡在上一首歌詞；歌詞修正頁只顯示一個來源；偏移在換來源後殘留；Spotify 授權錯誤提示；酷狗搜尋結果偶爾被過早取消；複合職位的署名行；逐字換行時的重影。
@@ -215,7 +230,7 @@ app/src/main/java/com/example/spotifylyricsproxy/
 ├── core/                設定與資料模型
 ├── database/            Room 資料庫、DAO、實體
 ├── lyrics/              搜尋、解析、比對、共識、翻譯
-│   ├── amll/  lrclib/  netease/  qqmusic/   各歌詞來源
+│   ├── amll/  kugou/  lrclib/  netease/  qqmusic/   各歌詞來源
 ├── mediasession/        MediaSession 與媒體按鈕
 ├── notification/        前景服務與通知
 ├── playback/clock/      播放進度估算
@@ -291,7 +306,7 @@ app/src/main/java/com/example/spotifylyricsproxy/
 
 **本專案與 Spotify AB 無關，不是 Spotify 官方產品。**
 
-- 本 App 不播放音訊，所有播放由 Spotify App 完成。
+- 本 App 不播放音樂，所有播放由 Spotify App 完成；僅在跟隨其他裝置時播放聽不見的靜音，用來避免被凍結。
 - 不修改 Spotify APK，不呼叫 Spotify 私有介面。
 - 不收集或上傳使用者的播放紀錄；快取只保存在你自己的裝置上。
 - 使用者需遵守 Spotify Developer Terms 及各歌詞來源的條款。
