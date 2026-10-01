@@ -3,3 +3,9 @@
 
 # Spotify Developer app credentials (register at https://developer.spotify.com/dashboard)
 # spotify.client.id=YOUR_SPOTIFY_CLIENT_ID
+
+# Release signing (optional; keep the keystore and passwords out of git and back them up)
+# release.store.file=C:/Users/YourUser/keys/lyrics-card-release.jks
+# release.store.password=...
+# release.key.alias=lyrics-card
+# release.key.password=...

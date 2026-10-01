@@ -37,8 +37,21 @@ android {
         ))
     }
 
+    // Release key from local.properties (never committed). Without it (e.g. CI) the release
+    // build stays unsigned.
+    val releaseStore = localProperties.getProperty("release.store.file")
+    signingConfigs {
+        if (releaseStore != null) create("release") {
+            storeFile = rootProject.file(releaseStore)
+            storePassword = localProperties.getProperty("release.store.password")
+            keyAlias = localProperties.getProperty("release.key.alias")
+            keyPassword = localProperties.getProperty("release.key.password")
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseStore != null) signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
