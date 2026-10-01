@@ -997,12 +997,16 @@ private fun SweepText(
             // with their own row even when the line height is tight.
             fun split(row: Int) = rowSplit(l, row, fontPx)
             List(text.length) { i ->
+                // Spaces have no ink, and the one at a wrap point reports a box spanning most
+                // of the row: drawing it at its (unsung) word's lift repeated the whole sung
+                // part of the row a few pixels lower, the doubled text on wrapped lines.
+                if (text[i].isWhitespace()) return@List Rect.Zero
                 val row = l.getLineForOffset(i)
                 val b = l.getBoundingBox(i)
                 Rect(
-                    b.left,
+                    maxOf(b.left, l.getLineLeft(row)),
                     if (row == 0) l.getLineTop(0) - lift * 3f else split(row - 1),
-                    b.right,
+                    minOf(b.right, l.getLineRight(row)),
                     if (row == l.lineCount - 1) l.getLineBottom(row) + lift * 3f else split(row)
                 )
             }
@@ -1057,6 +1061,7 @@ private inline fun DrawScope.drawLiftedWords(
         val dy = maxLift - maxLift * 2f * eased
         for (i in range) {
             val box = boxes.getOrNull(i) ?: continue
+            if (box.width <= 0f) continue
             clipRect(box.left, box.top, box.right, box.bottom) {
                 translate(top = dy) { glyphs() }
             }
