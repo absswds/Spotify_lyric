@@ -72,7 +72,6 @@ object AppSettings {
     /** Whether unofficial lyric sources may be cached locally; null until the user chooses. */
     val cacheUnofficial = mutableStateOf<Boolean?>(null)
 
-    /** Whether NetEase, QQ Music and Kugou may be queried at all. */
     /** Follow (and control) playback on other Spotify Connect devices through the Web API. */
     val followOtherDevices = mutableStateOf(true)
 
@@ -81,7 +80,7 @@ object AppSettings {
         followOtherDevices.value = value
     }
 
-    /** NetEase / QQ / Kugou, on by default (the guide explains them); can be turned off in Settings. */
+    /** Whether NetEase, QQ Music and Kugou are queried: on by default (the guide explains them). */
     val useUnofficialSources = mutableStateOf(true)
 
     /** Prefer word-timed lyrics when picking a source; false prefers line-timed ones. */

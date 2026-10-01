@@ -6,6 +6,10 @@ import com.example.spotifylyricsproxy.lyrics.LyricsSource
 import com.example.spotifylyricsproxy.lyrics.lrclib.LyricsSearchRequest
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.URLEncoder
@@ -46,13 +50,19 @@ class KugouLyricsSource : LyricsSource {
             Log.w(TAG, "Search failed: ${e.message}")
             return emptyList()
         }
-        return songs.take(MAX_SONGS).mapNotNull { song ->
-            try {
-                fetchCandidate(song)
-            } catch (e: Exception) {
-                Log.w(TAG, "Lyric fetch failed: ${e.message}")
-                null
-            }
+        // Each song needs two more requests; done one after another they often ran past the
+        // search timeout, which dropped every Kugou result (the "only on the second try" case).
+        return coroutineScope {
+            songs.take(MAX_SONGS).map { song ->
+                async(Dispatchers.IO) {
+                    try {
+                        fetchCandidate(song)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Lyric fetch failed: ${e.message}")
+                        null
+                    }
+                }
+            }.awaitAll().filterNotNull()
         }
     }
 

@@ -46,7 +46,7 @@ class LrclibLyricsSource : LyricsSource {
     }
 
     companion object {
-        private const val BROWSER_UA = "LyricsCard/0.1.0 (https://github.com/absswds/Spotify_lyric)"
+        private val BROWSER_UA = "LyricsCard/${com.example.spotifylyricsproxy.BuildConfig.VERSION_NAME} (https://github.com/absswds/Spotify_lyric)"
         private val cnSimplifier: Transliterator by lazy {
             Transliterator.getInstance("Traditional-Simplified")
         }
