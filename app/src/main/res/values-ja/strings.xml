@@ -416,7 +416,7 @@
     <string name="tour_menu_settings_title">設定</string>
     <string name="tour_menu_settings_desc">テーマ、言語、ネットワーク、中国語の字体、キャッシュ、権限。この説明もここから再表示できます。</string>
     <string name="onboarding_perm_spotify">Spotify にログイン</string>
-    <string name="onboarding_perm_spotify_desc">プレイリストと再生状態の読み取りを許可します。パソコンやタブレットなど他のデバイスで再生しても歌詞が同期します。読み取りのみで、アカウントは変更しません。認証は約 1 時間ごとに期限が切れ、アプリを開くと自動で更新されるため、Spotify の読み込み画面が一瞬表示されることがあります。これは正常です。</string>
+    <string name="onboarding_perm_spotify_desc">プレイリストと再生状態の読み取りを許可します。パソコンやタブレットなど他のデバイスで再生しても歌詞が同期します。読み取りのみで、アカウントは変更しません。認証は約 1 時間ごとに期限が切れ、アプリを開くと自動で更新されるため、Spotify の読み込み画面が一瞬表示されることがあります。これは正常です。作者が配布する APK の場合：Spotify は作者のアプリに最大 5 アカウントまでしか認可を許可しません。認可に失敗するとプレイリストと他デバイスとの同期は使えませんが、歌詞などほかの機能は使えます。すべての機能を使うには README に従って自分でビルドしてください。</string>
     <string name="playback_next_up">次の曲：%1$s</string>
     <string name="lyric_source_kugou">🎵 Kugou</string>
     <string name="unofficial_consent_title">歌詞の取得元について</string>

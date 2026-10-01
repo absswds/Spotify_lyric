@@ -421,7 +421,7 @@
     <string name="tour_menu_settings_title">设置</string>
     <string name="tour_menu_settings_desc">主题、语言、网络、繁简、缓存和权限都在这里；也可以再看一次这个介绍。</string>
     <string name="onboarding_perm_spotify">登录 Spotify</string>
-    <string name="onboarding_perm_spotify_desc">授权读取你的歌单和播放状态：在电脑、平板等其他设备播放时也能同步歌词。只读，不会改动你的账号。授权大约每小时过期一次，之后打开应用时会自动续期，可能会闪一下 Spotify 的加载页，属正常现象。</string>
+    <string name="onboarding_perm_spotify_desc">授权读取你的歌单和播放状态：在电脑、平板等其他设备播放时也能同步歌词。只读，不会改动你的账号。授权大约每小时过期一次，之后打开应用时会自动续期，可能会闪一下 Spotify 的加载页，属正常现象。如果下载的是作者打包的 APK：Spotify 只允许作者的应用给最多 5 个账号授权，授权失败时歌单和其他设备同步用不了，歌词等其他功能不受影响；想用全部功能可以按 README 自己构建。</string>
     <string name="playback_next_up">下一首：%1$s</string>
     <string name="lyric_source_kugou">🎵 酷狗</string>
     <string name="unofficial_consent_title">关于歌词来源</string>

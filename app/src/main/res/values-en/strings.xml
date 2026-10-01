@@ -416,7 +416,7 @@
     <string name="tour_menu_settings_title">Settings</string>
     <string name="tour_menu_settings_desc">Theme, language, network, Chinese script, cache and permissions; you can replay this tour there too.</string>
     <string name="onboarding_perm_spotify">Sign in to Spotify</string>
-    <string name="onboarding_perm_spotify_desc">Lets the app read your playlists and playback state, so lyrics stay in sync when you play on another device such as a computer or tablet. Read-only; nothing in your account changes.The authorization expires about every hour and is renewed when you open the app, so a Spotify loading screen may flash briefly. That is normal.</string>
+    <string name="onboarding_perm_spotify_desc">Lets the app read your playlists and playback state, so lyrics stay in sync when you play on another device such as a computer or tablet. Read-only; nothing in your account changes.The authorization expires about every hour and is renewed when you open the app, so a Spotify loading screen may flash briefly. That is normal. If you installed the author\'s prebuilt APK: Spotify lets the author\'s app authorize at most 5 accounts. If authorization fails, playlists and other-device sync are unavailable; lyrics and everything else still work. Build it yourself (see the README) to get every feature.</string>
     <string name="playback_next_up">Next: %1$s</string>
     <string name="lyric_source_kugou">🎵 Kugou</string>
     <string name="unofficial_consent_title">About lyric sources</string>
