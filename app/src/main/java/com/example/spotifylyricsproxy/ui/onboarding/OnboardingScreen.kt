@@ -381,21 +381,41 @@ private fun Feature(icon: ImageVector, text: Int) {
 
 @Composable
 private fun CacheConsentPage() {
+    val useUnofficial by AppSettings.useUnofficialSources
     val allowed by AppSettings.cacheUnofficial
     Spacer(modifier = Modifier.height(24.dp))
-    Text(stringResource(R.string.cache_consent_title), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+    Text(stringResource(R.string.unofficial_consent_title), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Bold)
     Spacer(modifier = Modifier.height(6.dp))
-    Text(stringResource(R.string.cache_consent_message), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
+    Text(stringResource(R.string.unofficial_consent_message), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
     Spacer(modifier = Modifier.height(16.dp))
-    listOf(
-        true to R.string.cache_consent_allow,
-        false to R.string.cache_consent_deny
-    ).forEach { (value, label) ->
-        val selected = allowed == value
-        val bg by animateColorAsState(if (selected) Accent else Color.White.copy(alpha = 0.07f), label = "cacheChoice")
+    ChoiceRows(
+        selected = useUnofficial,
+        options = listOf(true to R.string.unofficial_consent_allow, false to R.string.unofficial_consent_deny),
+        onPick = AppSettings::setUseUnofficialSources
+    )
+    // Caching only matters once those sources are in use.
+    if (useUnofficial == true) {
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(stringResource(R.string.cache_consent_title), color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(stringResource(R.string.cache_consent_message), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+        ChoiceRows(
+            selected = allowed,
+            options = listOf(true to R.string.cache_consent_allow, false to R.string.cache_consent_deny),
+            onPick = AppSettings::setCacheUnofficial
+        )
+    }
+}
+
+@Composable
+private fun ChoiceRows(selected: Boolean?, options: List<Pair<Boolean, Int>>, onPick: (Boolean) -> Unit) {
+    options.forEach { (value, label) ->
+        val isSelected = selected == value
+        val bg by animateColorAsState(if (isSelected) Accent else Color.White.copy(alpha = 0.07f), label = "choice")
         Text(
             text = stringResource(label),
-            color = if (selected) Color.Black else Ink,
+            color = if (isSelected) Color.Black else Ink,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier
@@ -403,7 +423,7 @@ private fun CacheConsentPage() {
                 .padding(vertical = 5.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(bg)
-                .clickable { AppSettings.setCacheUnofficial(value) }
+                .clickable { onPick(value) }
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         )
     }

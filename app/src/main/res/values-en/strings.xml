@@ -418,4 +418,17 @@
     <string name="onboarding_perm_spotify">Sign in to Spotify</string>
     <string name="onboarding_perm_spotify_desc">Lets the app read your playlists and playback state, so lyrics stay in sync when you play on another device such as a computer or tablet. Read-only; nothing in your account changes.The authorization expires about every hour and is renewed when you open the app, so a Spotify loading screen may flash briefly. That is normal.</string>
     <string name="playback_next_up">Next: %1$s</string>
+    <string name="lyric_source_kugou">🎵 Kugou</string>
+    <string name="unofficial_consent_title">Use unofficial lyric sources?</string>
+    <string name="unofficial_consent_message">NetEase, QQ Music and Kugou have no public lyrics API. If enabled, this app calls their non-public endpoints directly from your phone to find lyrics (including word-by-word). That may go against those services\' terms (which forbid third-party clients and reverse engineering), and they could restrict your network access or account. Lyrics belong to their rights holders and are for personal viewing only. By enabling this you accept the risk yourself; the app\'s author is not responsible. If you decline, only LRCLIB and AMLL (public sources) are used. You can change this in Settings.</string>
+    <string name="unofficial_consent_allow">I understand, enable</string>
+    <string name="unofficial_consent_deny">Public sources only</string>
+    <string name="settings_use_unofficial">Use unofficial lyric sources</string>
+    <string name="settings_use_unofficial_desc">NetEase, QQ Music, Kugou. May breach their terms; use at your own risk. Off means LRCLIB and AMLL only</string>
+    <string name="copyright_gate_title">Copyright notice</string>
+    <string name="copyright_gate_message">Lyrics belong to their rights holders. Lyrics here are for your personal viewing on this device only: no sharing, exporting, publishing or commercial use. Continuing means you understand and agree.</string>
+    <string name="copyright_gate_ok">Understood, continue</string>
+    <string name="copyright_gate_back">Go back</string>
+    <string name="settings_follow_other_devices">Follow and control other devices</string>
+    <string name="settings_follow_other_devices_desc">On: when another Spotify device (computer, tablet…) is playing, lyrics and controls follow it. Off: follow this phone only</string>
 </resources>

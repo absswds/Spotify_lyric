@@ -423,4 +423,17 @@
     <string name="onboarding_perm_spotify">登录 Spotify</string>
     <string name="onboarding_perm_spotify_desc">授权读取你的歌单和播放状态：在电脑、平板等其他设备播放时也能同步歌词。只读，不会改动你的账号。授权大约每小时过期一次，之后打开应用时会自动续期，可能会闪一下 Spotify 的加载页，属正常现象。</string>
     <string name="playback_next_up">下一首：%1$s</string>
+    <string name="lyric_source_kugou">🎵 酷狗</string>
+    <string name="unofficial_consent_title">使用非官方歌词源？</string>
+    <string name="unofficial_consent_message">网易云、QQ 音乐、酷狗没有公开的歌词接口。启用后，本应用会在你的手机上直接调用它们的非公开接口来查找歌词（含逐字歌词）。这可能不符合这些服务的用户协议（其中禁止第三方客户端与逆向工程），服务方可能限制你的网络访问或账号。歌词版权归原权利人所有，仅限个人欣赏。启用即表示你自行承担风险，应用作者不对此负责。不启用则只使用 LRCLIB 和 AMLL 这两个公开来源。之后可在设置中修改。</string>
+    <string name="unofficial_consent_allow">我了解风险，启用</string>
+    <string name="unofficial_consent_deny">只用公开来源</string>
+    <string name="settings_use_unofficial">使用非官方歌词源</string>
+    <string name="settings_use_unofficial_desc">网易云、QQ 音乐、酷狗；可能不符合其用户协议，风险自负。关闭后只用 LRCLIB 和 AMLL</string>
+    <string name="copyright_gate_title">版权提示</string>
+    <string name="copyright_gate_message">歌词的版权归原权利人所有。这里的歌词只用于你在本机上的个人欣赏，不得分享、导出、公开发布或商用。继续即表示你了解并同意。</string>
+    <string name="copyright_gate_ok">了解并继续</string>
+    <string name="copyright_gate_back">返回</string>
+    <string name="settings_follow_other_devices">跟随并控制其他设备</string>
+    <string name="settings_follow_other_devices_desc">开启：其他 Spotify 设备（电脑、平板等）在播放时，歌词和控制按钮跟着它走。关闭：只跟随这台手机</string>
 </resources>

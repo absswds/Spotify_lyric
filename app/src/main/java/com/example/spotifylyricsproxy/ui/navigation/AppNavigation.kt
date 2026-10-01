@@ -93,10 +93,14 @@ fun AppNavigation(
                 )
             }
             composable(NavRoute.Cache.route) {
-                CacheScreen(viewModel = cacheViewModel, onBack = { navController.popBackStack() })
+                com.example.spotifylyricsproxy.ui.common.CopyrightGate(onBack = { navController.popBackStack() }) {
+                    CacheScreen(viewModel = cacheViewModel, onBack = { navController.popBackStack() })
+                }
             }
             composable(NavRoute.Precache.route) {
-                PrecacheScreen(viewModel = precacheViewModel, onBack = { navController.popBackStack() })
+                com.example.spotifylyricsproxy.ui.common.CopyrightGate(onBack = { navController.popBackStack() }) {
+                    PrecacheScreen(viewModel = precacheViewModel, onBack = { navController.popBackStack() })
+                }
             }
             composable(NavRoute.Settings.route) {
                 SettingsScreen(onBack = { navController.popBackStack() })

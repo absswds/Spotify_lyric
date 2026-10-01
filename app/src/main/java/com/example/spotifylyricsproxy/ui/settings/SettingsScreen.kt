@@ -94,6 +94,25 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var showClearConfirm by remember { mutableStateOf(false) }
+    var showUnofficialNotice by remember { mutableStateOf(false) }
+    if (showUnofficialNotice) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showUnofficialNotice = false },
+            title = { Text(stringResource(R.string.unofficial_consent_title)) },
+            text = { Text(stringResource(R.string.unofficial_consent_message)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    AppSettings.setUseUnofficialSources(true)
+                    showUnofficialNotice = false
+                }) { Text(stringResource(R.string.unofficial_consent_allow)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showUnofficialNotice = false }) {
+                    Text(stringResource(R.string.unofficial_consent_deny))
+                }
+            }
+        )
+    }
     var permissionGranted by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -211,6 +230,15 @@ fun SettingsScreen(
                 // Playback
                 GroupTitle(stringResource(R.string.settings_group_playback))
                 SettingsGroup {
+                    val followOther by AppSettings.followOtherDevices
+                    SettingsRow(
+                        title = stringResource(R.string.settings_follow_other_devices),
+                        subtitle = stringResource(R.string.settings_follow_other_devices_desc),
+                        trailing = {
+                            androidx.compose.material3.Switch(checked = followOther, onCheckedChange = AppSettings::setFollowOtherDevices)
+                        }
+                    )
+                    Divider()
                     val globalOffset by AppSettings.globalOffsetMs
                     SettingsRow(
                         title = stringResource(R.string.settings_global_offset),
@@ -239,6 +267,19 @@ fun SettingsScreen(
                 // Storage
                 GroupTitle(stringResource(R.string.settings_group_storage))
                 SettingsGroup {
+                    val useUnofficial by AppSettings.useUnofficialSources
+                    SettingsRow(
+                        title = stringResource(R.string.settings_use_unofficial),
+                        subtitle = stringResource(R.string.settings_use_unofficial_desc),
+                        trailing = {
+                            androidx.compose.material3.Switch(
+                                checked = useUnofficial == true,
+                                // Turning it on goes through the notice again.
+                                onCheckedChange = { if (it) showUnofficialNotice = true else AppSettings.setUseUnofficialSources(false) }
+                            )
+                        }
+                    )
+                    Divider()
                     val cacheUnofficial by AppSettings.cacheUnofficial
                     SettingsRow(
                         title = stringResource(R.string.settings_cache_unofficial),

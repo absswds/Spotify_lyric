@@ -16,6 +16,8 @@ object AppSettings {
     private const val KEY_ONBOARDING_DONE = "onboarding_done"
     private const val KEY_TOUR_DONE = "tour_done"
     private const val KEY_CACHE_UNOFFICIAL = "cache_unofficial_sources"
+    private const val KEY_USE_UNOFFICIAL = "use_unofficial_sources"
+    private const val KEY_FOLLOW_OTHER = "follow_other_devices"
 
     /** Clamp for the global offset stepper: ±5 s. */
     const val GLOBAL_OFFSET_LIMIT_MS = 5_000L
@@ -34,6 +36,8 @@ object AppSettings {
         globalOffsetMs.longValue = prefs?.getLong(KEY_GLOBAL_OFFSET, 0L) ?: 0L
         onboardingDone.value = prefs?.getBoolean(KEY_ONBOARDING_DONE, false) ?: true
         tourDone.value = prefs?.getBoolean(KEY_TOUR_DONE, false) ?: true
+        followOtherDevices.value = prefs?.getBoolean(KEY_FOLLOW_OTHER, true) ?: true
+        useUnofficialSources.value = prefs?.takeIf { it.contains(KEY_USE_UNOFFICIAL) }?.getBoolean(KEY_USE_UNOFFICIAL, false)
         cacheUnofficial.value = prefs?.takeIf { it.contains(KEY_CACHE_UNOFFICIAL) }?.getBoolean(KEY_CACHE_UNOFFICIAL, false)
     }
 
@@ -68,6 +72,27 @@ object AppSettings {
      * the offline cache: null until the user has been asked once.
      */
     val cacheUnofficial = mutableStateOf<Boolean?>(null)
+
+    /**
+     * Whether NetEase, QQ Music and Kugou may be queried at all. Null until the user has
+     * read the notice; null and false both mean "official sources only" (LRCLIB, AMLL).
+     */
+    /** Follow (and control) playback on other Spotify Connect devices through the Web API. */
+    val followOtherDevices = mutableStateOf(true)
+
+    fun setFollowOtherDevices(value: Boolean) {
+        prefs?.edit()?.putBoolean(KEY_FOLLOW_OTHER, value)?.apply()
+        followOtherDevices.value = value
+    }
+
+    val useUnofficialSources = mutableStateOf<Boolean?>(null)
+
+    fun setUseUnofficialSources(value: Boolean) {
+        prefs?.edit()?.putBoolean(KEY_USE_UNOFFICIAL, value)?.apply()
+        useUnofficialSources.value = value
+        // Declining also withdraws the permission to keep their lyrics on the device.
+        if (!value) setCacheUnofficial(false)
+    }
 
     fun setCacheUnofficial(value: Boolean) {
         prefs?.edit()?.putBoolean(KEY_CACHE_UNOFFICIAL, value)?.apply()

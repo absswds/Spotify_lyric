@@ -421,4 +421,17 @@
     <string name="onboarding_perm_spotify">登入 Spotify</string>
     <string name="onboarding_perm_spotify_desc">授權讀取你的歌單與播放狀態：在電腦、平板等其他裝置播放時也能同步歌詞。唯讀，不會變更你的帳號。授權大約每小時過期一次，之後開啟應用程式時會自動續期，可能會閃一下 Spotify 的載入頁，屬正常現象。</string>
     <string name="playback_next_up">下一首：%1$s</string>
+    <string name="lyric_source_kugou">🎵 酷狗</string>
+    <string name="unofficial_consent_title">使用非官方歌詞來源？</string>
+    <string name="unofficial_consent_message">網易雲、QQ 音樂、酷狗沒有公開的歌詞介面。啟用後，本應用會在你的手機上直接呼叫它們的非公開介面來查找歌詞（含逐字歌詞）。這可能不符合這些服務的使用者協議（其中禁止第三方用戶端與逆向工程），服務方可能限制你的網路存取或帳號。歌詞版權歸原權利人所有，僅限個人欣賞。啟用即表示你自行承擔風險，應用作者不對此負責。不啟用則只使用 LRCLIB 和 AMLL 這兩個公開來源。之後可在設定中修改。</string>
+    <string name="unofficial_consent_allow">我了解風險，啟用</string>
+    <string name="unofficial_consent_deny">只用公開來源</string>
+    <string name="settings_use_unofficial">使用非官方歌詞來源</string>
+    <string name="settings_use_unofficial_desc">網易雲、QQ 音樂、酷狗；可能不符合其使用者協議，風險自負。關閉後只用 LRCLIB 和 AMLL</string>
+    <string name="copyright_gate_title">版權提示</string>
+    <string name="copyright_gate_message">歌詞的版權歸原權利人所有。這裡的歌詞只用於你在本機上的個人欣賞，不得分享、匯出、公開發布或商用。繼續即表示你了解並同意。</string>
+    <string name="copyright_gate_ok">了解並繼續</string>
+    <string name="copyright_gate_back">返回</string>
+    <string name="settings_follow_other_devices">跟隨並控制其他裝置</string>
+    <string name="settings_follow_other_devices_desc">開啟：其他 Spotify 裝置（電腦、平板等）播放時，歌詞和控制按鈕跟著它走。關閉：只跟隨這支手機</string>
 </resources>
