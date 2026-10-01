@@ -1053,8 +1053,8 @@ private inline fun DrawScope.drawLiftedWords(
     for (range in wordRanges) {
         val len = (range.last - range.first + 1).coerceAtLeast(1)
         val f = ((sung - range.first) / len).coerceIn(0f, 1f)
-        // Rises while the word is sung and settles back, so the baseline stays level.
-        val dy = -maxLift * kotlin.math.sin(Math.PI.toFloat() * f)
+        val eased = 1f - (1f - f) * (1f - f) * (1f - f)
+        val dy = maxLift - maxLift * 2f * eased
         for (i in range) {
             val box = boxes.getOrNull(i) ?: continue
             clipRect(box.left, box.top, box.right, box.bottom) {

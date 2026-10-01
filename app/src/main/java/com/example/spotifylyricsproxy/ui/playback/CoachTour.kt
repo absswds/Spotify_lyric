@@ -113,6 +113,8 @@ fun CoachTour(menuOpen: Boolean, onOpenMenu: () -> Unit, onDone: () -> Unit) {
     // Player controls not in this layout are left out; menu ones only exist once it opens.
     val steps = remember { STEPS.filter { it.inMenu || coachBounds[it.key]?.isEmpty == false } }
     var index by remember { mutableIntStateOf(0) }
+    var scrolledKey by remember { mutableStateOf<String?>(null) }
+    val lastTarget = remember { arrayOfNulls<Rect>(1) }
     val step = steps.getOrNull(index)
     if (step == null) {
         LaunchedEffect(Unit) { onDone() }
@@ -128,15 +130,24 @@ fun CoachTour(menuOpen: Boolean, onOpenMenu: () -> Unit, onDone: () -> Unit) {
         }
     }
     if (step.inMenu && !menuSettled) return
+    // Scroll the control into view and wait for its new bounds before judging it missing:
+    // an item below a short landscape menu reports empty bounds until the scroll lands,
+    // which used to skip the last step and end the tour.
     LaunchedEffect(step.key) {
         coachRequesters[step.key]?.bringIntoView()
+        androidx.compose.runtime.withFrameNanos { }
+        scrolledKey = step.key
     }
-    val target = coachBounds[step.key]
-    if (target == null || target.isEmpty) {
+    val scrolled = scrolledKey == step.key
+    val fresh = coachBounds[step.key]?.takeIf { scrolled && !it.isEmpty }
+    if (scrolled && fresh == null) {
         // Not shown right now (e.g. a toggle these lyrics don't offer).
         LaunchedEffect(index) { index++ }
         return
     }
+    if (fresh != null) lastTarget[0] = fresh
+    // While scrolling, keep the spotlight where it was.
+    val target = fresh ?: lastTarget[0] ?: return
     val pad = with(LocalDensity.current) { 8.dp.toPx() }
     val spec = spring<Float>(dampingRatio = 0.78f, stiffness = 220f)
     val left by animateFloatAsState(target.left - pad, spec, label = "spotL")
@@ -175,12 +186,37 @@ fun CoachTour(menuOpen: Boolean, onOpenMenu: () -> Unit, onDone: () -> Unit) {
         val density = LocalDensity.current
         val below = target.center.y < constraints.maxHeight / 2f
         val gap = with(density) { (if (below) bottom else constraints.maxHeight - top).toDp() } + 16.dp
-        Box(
-            modifier = Modifier
+        // A tall target (the lyrics pane in landscape) leaves no room above or below:
+        // put the bubble beside it instead, or it is pushed off screen.
+        val needed = with(density) { 220.dp.toPx() }
+        val noRoom = top < needed && constraints.maxHeight - bottom < needed
+        val leftRoom = left
+        val rightRoom = constraints.maxWidth - right
+        val side = noRoom && maxOf(leftRoom, rightRoom) >= with(density) { 240.dp.toPx() }
+        val bubbleModifier = when {
+            noRoom && !side -> Modifier
+                // Nowhere to go: sit over the bottom of the target itself.
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 24.dp)
+            !noRoom -> Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
-                .padding(top = if (below) gap else 0.dp, bottom = if (below) 0.dp else gap),
-            contentAlignment = if (below) Alignment.TopCenter else Alignment.BottomCenter
+                .padding(top = if (below) gap else 0.dp, bottom = if (below) 0.dp else gap)
+            leftRoom >= rightRoom -> Modifier
+                .fillMaxSize()
+                .padding(start = 24.dp, end = with(density) { (constraints.maxWidth - left).toDp() } + 16.dp)
+            else -> Modifier
+                .fillMaxSize()
+                .padding(start = with(density) { right.toDp() } + 16.dp, end = 24.dp)
+        }
+        Box(
+            modifier = bubbleModifier,
+            contentAlignment = when {
+                side -> Alignment.Center
+                noRoom -> Alignment.BottomCenter
+                below -> Alignment.TopCenter
+                else -> Alignment.BottomCenter
+            }
         ) {
             AnimatedContent(
                 targetState = index,
