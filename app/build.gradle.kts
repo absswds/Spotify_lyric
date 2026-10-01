@@ -26,6 +26,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        // ML Kit's native translation libraries are ~15 MB per ABI; x86 is emulator-only.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
+
         buildConfigField("String", "SPOTIFY_CLIENT_ID", "\"$spotifyClientId\"")
 
         manifestPlaceholders.putAll(mapOf(
@@ -36,7 +39,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
