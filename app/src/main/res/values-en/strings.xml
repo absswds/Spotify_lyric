@@ -419,16 +419,21 @@
     <string name="onboarding_perm_spotify_desc">Lets the app read your playlists and playback state, so lyrics stay in sync when you play on another device such as a computer or tablet. Read-only; nothing in your account changes.The authorization expires about every hour and is renewed when you open the app, so a Spotify loading screen may flash briefly. That is normal.</string>
     <string name="playback_next_up">Next: %1$s</string>
     <string name="lyric_source_kugou">🎵 Kugou</string>
-    <string name="unofficial_consent_title">Use unofficial lyric sources?</string>
-    <string name="unofficial_consent_message">NetEase, QQ Music and Kugou have no public lyrics API. If enabled, this app calls their non-public endpoints directly from your phone to find lyrics (including word-by-word). That may go against those services\' terms (which forbid third-party clients and reverse engineering), and they could restrict your network access or account. Lyrics belong to their rights holders and are for personal viewing only. By enabling this you accept the risk yourself; the app\'s author is not responsible. If you decline, only LRCLIB and AMLL (public sources) are used. You can change this in Settings.</string>
-    <string name="unofficial_consent_allow">I understand, enable</string>
-    <string name="unofficial_consent_deny">Public sources only</string>
+    <string name="unofficial_consent_title">About lyric sources</string>
+    <string name="unofficial_consent_message">Besides the public sources LRCLIB and AMLL, this app also looks up lyrics on NetEase Cloud Music, QQ Music and Kugou (most word-by-word lyrics come from them). They have no public lyrics API; the app requests them directly from your phone, as many open-source lyric tools do.\n\nBy continuing you confirm you only use this for normal personal listening and won\'t share, export, publish or commercially use the lyrics. Lyrics belong to their rights holders. Any issue arising from using these sources is the user\'s own responsibility, not the developer\'s.\n\nIf you\'d rather not use them, turn them off below. You can change this in Settings later.</string>
+    <string name="unofficial_consent_allow">Use NetEase / QQ Music / Kugou</string>
     <string name="settings_use_unofficial">Use unofficial lyric sources</string>
-    <string name="settings_use_unofficial_desc">NetEase, QQ Music, Kugou. May breach their terms; use at your own risk. Off means LRCLIB and AMLL only</string>
+    <string name="settings_use_unofficial_desc">NetEase, QQ Music, Kugou; personal use only, at your own risk. Off means LRCLIB and AMLL only</string>
     <string name="copyright_gate_title">Copyright notice</string>
     <string name="copyright_gate_message">Lyrics belong to their rights holders. Lyrics here are for your personal viewing on this device only: no sharing, exporting, publishing or commercial use. Continuing means you understand and agree.</string>
     <string name="copyright_gate_ok">Understood, continue</string>
     <string name="copyright_gate_back">Go back</string>
     <string name="settings_follow_other_devices">Follow and control other devices</string>
     <string name="settings_follow_other_devices_desc">On: when another Spotify device (computer, tablet…) is playing, lyrics and controls follow it. Off: follow this phone only</string>
+    <string name="lyric_mode_title">Word by word, or line by line?</string>
+    <string name="lyric_mode_desc">Word-by-word lyrics light up word by word, but their timing comes from each platform and sometimes drifts. Line-timed lyrics are usually more accurate. The search prefers the kind you pick.</string>
+    <string name="lyric_mode_word">Prefer word-by-word lyrics</string>
+    <string name="lyric_mode_line">Prefer line-by-line lyrics (better timing)</string>
+    <string name="settings_prefer_word">Prefer word-by-word lyrics</string>
+    <string name="settings_prefer_word_desc">Off prefers line-timed lyrics, which are usually more accurate. Applies to songs searched from now on</string>
 </resources>

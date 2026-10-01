@@ -94,25 +94,6 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var showClearConfirm by remember { mutableStateOf(false) }
-    var showUnofficialNotice by remember { mutableStateOf(false) }
-    if (showUnofficialNotice) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showUnofficialNotice = false },
-            title = { Text(stringResource(R.string.unofficial_consent_title)) },
-            text = { Text(stringResource(R.string.unofficial_consent_message)) },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    AppSettings.setUseUnofficialSources(true)
-                    showUnofficialNotice = false
-                }) { Text(stringResource(R.string.unofficial_consent_allow)) }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showUnofficialNotice = false }) {
-                    Text(stringResource(R.string.unofficial_consent_deny))
-                }
-            }
-        )
-    }
     var permissionGranted by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -267,15 +248,23 @@ fun SettingsScreen(
                 // Storage
                 GroupTitle(stringResource(R.string.settings_group_storage))
                 SettingsGroup {
+                    val preferWord by AppSettings.preferWordLyrics
+                    SettingsRow(
+                        title = stringResource(R.string.settings_prefer_word),
+                        subtitle = stringResource(R.string.settings_prefer_word_desc),
+                        trailing = {
+                            androidx.compose.material3.Switch(checked = preferWord, onCheckedChange = AppSettings::setPreferWordLyrics)
+                        }
+                    )
+                    Divider()
                     val useUnofficial by AppSettings.useUnofficialSources
                     SettingsRow(
                         title = stringResource(R.string.settings_use_unofficial),
                         subtitle = stringResource(R.string.settings_use_unofficial_desc),
                         trailing = {
                             androidx.compose.material3.Switch(
-                                checked = useUnofficial == true,
-                                // Turning it on goes through the notice again.
-                                onCheckedChange = { if (it) showUnofficialNotice = true else AppSettings.setUseUnofficialSources(false) }
+                                checked = useUnofficial,
+                                onCheckedChange = AppSettings::setUseUnofficialSources
                             )
                         }
                     )

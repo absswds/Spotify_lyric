@@ -18,6 +18,7 @@ object AppSettings {
     private const val KEY_CACHE_UNOFFICIAL = "cache_unofficial_sources"
     private const val KEY_USE_UNOFFICIAL = "use_unofficial_sources"
     private const val KEY_FOLLOW_OTHER = "follow_other_devices"
+    private const val KEY_PREFER_WORD = "prefer_word_lyrics"
 
     /** Clamp for the global offset stepper: ±5 s. */
     const val GLOBAL_OFFSET_LIMIT_MS = 5_000L
@@ -37,7 +38,8 @@ object AppSettings {
         onboardingDone.value = prefs?.getBoolean(KEY_ONBOARDING_DONE, false) ?: true
         tourDone.value = prefs?.getBoolean(KEY_TOUR_DONE, false) ?: true
         followOtherDevices.value = prefs?.getBoolean(KEY_FOLLOW_OTHER, true) ?: true
-        useUnofficialSources.value = prefs?.takeIf { it.contains(KEY_USE_UNOFFICIAL) }?.getBoolean(KEY_USE_UNOFFICIAL, false)
+        useUnofficialSources.value = prefs?.getBoolean(KEY_USE_UNOFFICIAL, true) ?: true
+        preferWordLyrics.value = prefs?.getBoolean(KEY_PREFER_WORD, true) ?: true
         cacheUnofficial.value = prefs?.takeIf { it.contains(KEY_CACHE_UNOFFICIAL) }?.getBoolean(KEY_CACHE_UNOFFICIAL, false)
     }
 
@@ -85,7 +87,16 @@ object AppSettings {
         followOtherDevices.value = value
     }
 
-    val useUnofficialSources = mutableStateOf<Boolean?>(null)
+    /** NetEase / QQ / Kugou, on by default (the guide explains them); can be turned off in Settings. */
+    val useUnofficialSources = mutableStateOf(true)
+
+    /** Prefer word-timed lyrics when picking a source; false prefers line-timed ones. */
+    val preferWordLyrics = mutableStateOf(true)
+
+    fun setPreferWordLyrics(value: Boolean) {
+        prefs?.edit()?.putBoolean(KEY_PREFER_WORD, value)?.apply()
+        preferWordLyrics.value = value
+    }
 
     fun setUseUnofficialSources(value: Boolean) {
         prefs?.edit()?.putBoolean(KEY_USE_UNOFFICIAL, value)?.apply()

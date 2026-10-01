@@ -66,7 +66,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
 
     private val officialSources: List<LyricsSource> = listOf(AmllTtmlLyricsSource(), LrclibLyricsSource())
 
-    /** Third-party services without a public lyric API: used only after the user agreed to it. */
+    /** Third-party services without a public lyric API (on by default; Settings can turn them off). */
     private val unofficialSources: List<LyricsSource> = listOf(
         NeteaseLyricsSource(),
         QQMusicLyricsSource(),
@@ -74,7 +74,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     )
 
     private val sources: List<LyricsSource>
-        get() = if (AppSettings.useUnofficialSources.value == true) officialSources + unofficialSources else officialSources
+        get() = if (AppSettings.useUnofficialSources.value) officialSources + unofficialSources else officialSources
 
     /**
      * Providers whose lyrics may be displayed during the current process but
@@ -144,6 +144,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         // Other sources agree with each other: a candidate that disagrees with all of
         // them is likely the wrong song or badly timed.
         val othersAgree = agreement.any { it != null && it >= CONSENSUS_OK }
+        val preferWords = AppSettings.preferWordLyrics.value
         return list.mapIndexed { i, c ->
             var score = c.score
             if (LyricMatcher.looksLikeCover(c.trackName)) score -= 30
@@ -153,7 +154,11 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
             } else {
                 // Word timing is only worth preferring when its timing is confirmed
                 // (or there is nothing to compare against).
-                if (parsed[i].second.any { it.words.isNotEmpty() } && (agree == null || agree >= CONSENSUS_OK)) {
+                val hasWords = parsed[i].second.any { it.words.isNotEmpty() }
+                if (preferWords && hasWords && (agree == null || agree >= CONSENSUS_OK)) {
+                    score = (score + 5).coerceAtMost(100)
+                } else if (!preferWords && !hasWords && parsed[i].second.isNotEmpty()) {
+                    // The user prefers line timing: it is usually the more accurate one.
                     score = (score + 5).coerceAtMost(100)
                 }
                 if (othersAgree && agree != null && agree < CONSENSUS_BAD) score -= 25
@@ -169,7 +174,10 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
     private fun sortCandidates(list: List<LyricCandidate>): List<LyricCandidate> =
         list.sortedWith(
             compareByDescending<LyricCandidate> { it.score }
-                .thenByDescending { c -> c.syncedLyrics?.let { LrcParser.parse(it).any { l -> l.words.isNotEmpty() } } == true }
+                .thenByDescending { c ->
+                    val words = c.syncedLyrics?.let { LrcParser.parse(it).any { l -> l.words.isNotEmpty() } } == true
+                    words == AppSettings.preferWordLyrics.value
+                }
                 .thenByDescending { it.source == DEFAULT_SOURCE }
         )
 

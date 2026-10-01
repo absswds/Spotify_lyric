@@ -119,6 +119,8 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     val pages = buildList {
         add("welcome")
         if (chinese) add("chinese")
+        add("sources")
+        add("lyricMode")
         add("cache")
         add("permissions")
     }
@@ -175,6 +177,8 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                         when (pages[page]) {
                             "welcome" -> WelcomePage(visible)
                             "chinese" -> ChineseModePage()
+                            "sources" -> SourcesPage()
+                            "lyricMode" -> LyricModePage()
                             "cache" -> CacheConsentPage()
                             else -> PermissionsPage(visible)
                         }
@@ -379,33 +383,58 @@ private fun Feature(icon: ImageVector, text: Int) {
     }
 }
 
+/** What the extra lyric sources are and the terms of using them; on unless turned off here. */
 @Composable
-private fun CacheConsentPage() {
+private fun SourcesPage() {
     val useUnofficial by AppSettings.useUnofficialSources
-    val allowed by AppSettings.cacheUnofficial
     Spacer(modifier = Modifier.height(24.dp))
     Text(stringResource(R.string.unofficial_consent_title), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Bold)
     Spacer(modifier = Modifier.height(6.dp))
     Text(stringResource(R.string.unofficial_consent_message), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
     Spacer(modifier = Modifier.height(16.dp))
-    ChoiceRows(
-        selected = useUnofficial,
-        options = listOf(true to R.string.unofficial_consent_allow, false to R.string.unofficial_consent_deny),
-        onPick = AppSettings::setUseUnofficialSources
-    )
-    // Caching only matters once those sources are in use.
-    if (useUnofficial == true) {
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(stringResource(R.string.cache_consent_title), color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(stringResource(R.string.cache_consent_message), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-        ChoiceRows(
-            selected = allowed,
-            options = listOf(true to R.string.cache_consent_allow, false to R.string.cache_consent_deny),
-            onPick = AppSettings::setCacheUnofficial
-        )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.07f))
+            .clickable { AppSettings.setUseUnofficialSources(!useUnofficial) }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(stringResource(R.string.unofficial_consent_allow), color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        androidx.compose.material3.Switch(checked = useUnofficial, onCheckedChange = AppSettings::setUseUnofficialSources)
     }
+    Spacer(modifier = Modifier.height(24.dp))
+}
+
+@Composable
+private fun LyricModePage() {
+    val preferWord by AppSettings.preferWordLyrics
+    Spacer(modifier = Modifier.height(24.dp))
+    Text(stringResource(R.string.lyric_mode_title), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(stringResource(R.string.lyric_mode_desc), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
+    Spacer(modifier = Modifier.height(16.dp))
+    ChoiceRows(
+        selected = preferWord,
+        options = listOf(true to R.string.lyric_mode_word, false to R.string.lyric_mode_line),
+        onPick = AppSettings::setPreferWordLyrics
+    )
+}
+
+@Composable
+private fun CacheConsentPage() {
+    val allowed by AppSettings.cacheUnofficial
+    Spacer(modifier = Modifier.height(24.dp))
+    Text(stringResource(R.string.cache_consent_title), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(stringResource(R.string.cache_consent_message), color = InkDim, fontSize = 15.sp, lineHeight = 21.sp)
+    Spacer(modifier = Modifier.height(16.dp))
+    ChoiceRows(
+        selected = allowed,
+        options = listOf(true to R.string.cache_consent_allow, false to R.string.cache_consent_deny),
+        onPick = AppSettings::setCacheUnofficial
+    )
 }
 
 @Composable

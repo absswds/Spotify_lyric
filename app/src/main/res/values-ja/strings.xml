@@ -419,16 +419,21 @@
     <string name="onboarding_perm_spotify_desc">プレイリストと再生状態の読み取りを許可します。パソコンやタブレットなど他のデバイスで再生しても歌詞が同期します。読み取りのみで、アカウントは変更しません。認証は約 1 時間ごとに期限が切れ、アプリを開くと自動で更新されるため、Spotify の読み込み画面が一瞬表示されることがあります。これは正常です。</string>
     <string name="playback_next_up">次の曲：%1$s</string>
     <string name="lyric_source_kugou">🎵 Kugou</string>
-    <string name="unofficial_consent_title">非公式の歌詞ソースを使いますか？</string>
-    <string name="unofficial_consent_message">NetEase・QQ Music・Kugou には公開の歌詞 API がありません。有効にすると、このアプリはお使いの端末から各サービスの非公開エンドポイントを直接呼び出して歌詞（単語単位を含む）を探します。これは各サービスの利用規約（サードパーティ製クライアントやリバースエンジニアリングの禁止）に反する可能性があり、通信やアカウントが制限されることがあります。歌詞の著作権は権利者に帰属し、個人での鑑賞に限られます。有効にした場合のリスクはご自身の責任となり、作者は責任を負いません。無効の場合は LRCLIB と AMLL（公開ソース）のみを使います。設定から変更できます。</string>
-    <string name="unofficial_consent_allow">理解して有効にする</string>
-    <string name="unofficial_consent_deny">公開ソースのみ</string>
+    <string name="unofficial_consent_title">歌詞の取得元について</string>
+    <string name="unofficial_consent_message">公開ソースの LRCLIB と AMLL に加えて、NetEase Cloud Music・QQ Music・Kugou からも歌詞を探します（単語単位の歌詞の多くはここから）。これらには公開の歌詞 API がないため、多くのオープンソース歌詞ツールと同じく、端末から直接リクエストします。\n\n続行すると、個人的に音楽を聴いて歌詞を見るためだけに使い、歌詞を共有・書き出し・公開・商用利用しないことに同意したものとみなします。歌詞の著作権は権利者に帰属します。これらのソースの利用によって生じた問題は利用者の責任であり、開発者は責任を負いません。\n\n使いたくない場合は下でオフにできます。あとから設定でも変更できます。</string>
+    <string name="unofficial_consent_allow">NetEase / QQ Music / Kugou を使う</string>
     <string name="settings_use_unofficial">非公式の歌詞ソースを使う</string>
-    <string name="settings_use_unofficial_desc">NetEase・QQ Music・Kugou。規約に反する可能性があり自己責任。オフなら LRCLIB と AMLL のみ</string>
+    <string name="settings_use_unofficial_desc">NetEase・QQ Music・Kugou。個人利用のみ、自己責任。オフにすると LRCLIB と AMLL のみ</string>
     <string name="copyright_gate_title">著作権について</string>
     <string name="copyright_gate_message">歌詞の著作権は権利者に帰属します。ここでの歌詞はこの端末での個人的な鑑賞にのみ使え、共有・エクスポート・公開・商用利用はできません。続行すると、理解し同意したものとみなされます。</string>
     <string name="copyright_gate_ok">理解して続ける</string>
     <string name="copyright_gate_back">戻る</string>
     <string name="settings_follow_other_devices">他のデバイスを追従・操作</string>
     <string name="settings_follow_other_devices_desc">オン：他の Spotify デバイス（PC・タブレットなど）で再生中は、歌詞と操作がそちらに追従します。オフ：この端末のみ追従</string>
+    <string name="lyric_mode_title">単語単位？行単位？</string>
+    <string name="lyric_mode_desc">単語単位の歌詞は一語ずつ光りますが、タイミングは各サービス由来でずれることがあります。行単位の歌詞のほうが一般にタイミングが正確です。検索時は選んだ方を優先します。</string>
+    <string name="lyric_mode_word">単語単位の歌詞を優先</string>
+    <string name="lyric_mode_line">行単位の歌詞を優先（タイミングが正確）</string>
+    <string name="settings_prefer_word">単語単位の歌詞を優先</string>
+    <string name="settings_prefer_word_desc">オフにすると行単位の歌詞を優先します（タイミングが一般に正確）。これから検索する曲に適用</string>
 </resources>
