@@ -37,6 +37,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class LyricsForegroundService : Service() {
@@ -198,6 +199,17 @@ class LyricsForegroundService : Service() {
         // network state here instead of waiting for the ViewModel to report it.
         serviceScope.launch {
             com.example.spotifylyricsproxy.util.ConnectivityObserver.observe(applicationContext).collect { setMeteredState(it) }
+        }
+        // Word/line preference toggled: apply it to the song that is playing right away.
+        serviceScope.launch {
+            androidx.compose.runtime.snapshotFlow { com.example.spotifylyricsproxy.core.AppSettings.preferWordLyrics.value }
+                .drop(1)
+                .collect {
+                    val state = getMeteredState()
+                    val online = state == MeteredState.UNMETERED ||
+                        (state == MeteredState.METERED && LyricDisplayPreferences.effectiveMobileDataChoice() == "allow")
+                    lyricsRepository.repickForPreference(allowOnline = online)
+                }
         }
 
         acquireWakeLock()

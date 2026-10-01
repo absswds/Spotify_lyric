@@ -157,9 +157,6 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 val hasWords = parsed[i].second.any { it.words.isNotEmpty() }
                 if (preferWords && hasWords && (agree == null || agree >= CONSENSUS_OK)) {
                     score = (score + 5).coerceAtMost(100)
-                } else if (!preferWords && !hasWords && parsed[i].second.isNotEmpty()) {
-                    // The user prefers line timing: it is usually the more accurate one.
-                    score = (score + 5).coerceAtMost(100)
                 }
                 if (othersAgree && agree != null && agree < CONSENSUS_BAD) score -= 25
                 // Unconfirmed word timing must not win a tie against line-only lyrics.
@@ -170,16 +167,22 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         }
     }
 
-    /** Sort candidates by score desc; on ties, prefer the default source. */
-    private fun sortCandidates(list: List<LyricCandidate>): List<LyricCandidate> =
-        list.sortedWith(
-            compareByDescending<LyricCandidate> { it.score }
-                .thenByDescending { c ->
-                    val words = c.syncedLyrics?.let { LrcParser.parse(it).any { l -> l.words.isNotEmpty() } } == true
-                    words == AppSettings.preferWordLyrics.value
-                }
+    private fun hasWordTiming(c: LyricCandidate): Boolean =
+        c.syncedLyrics?.let { LrcParser.parse(it).any { l -> l.words.isNotEmpty() } } == true
+
+    /**
+     * Best first: an acceptable match in the format the user prefers (word or line timing)
+     * beats a higher-scored one in the other format; then score; ties to the default source.
+     */
+    private fun sortCandidates(list: List<LyricCandidate>): List<LyricCandidate> {
+        val preferWords = AppSettings.preferWordLyrics.value
+        val words = list.associateWith { hasWordTiming(it) }
+        return list.sortedWith(
+            compareByDescending<LyricCandidate> { it.score >= MIN_ACCEPT_SCORE && words[it] == preferWords }
+                .thenByDescending { it.score }
                 .thenByDescending { it.source == DEFAULT_SOURCE }
         )
+    }
 
     init {
         // Enforce the session-only NetEase policy on existing installations too.
@@ -332,7 +335,10 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                             _parsedLyrics.value = lines
                             _lyricStatus.value = LyricStatus.Synced(cached.confidenceScore)
                             setSource(cached.source)
-                            if (lines.any { it.words.isNotEmpty() } || cached.source == AmllTtmlLyricsSource.SOURCE) return
+                            // Cached lyrics in the preferred format are final; otherwise show
+                            // them and look for the other kind (NetEase word timing is never
+                            // cached, so it can only be found live).
+                            if (lines.any { it.words.isNotEmpty() } == AppSettings.preferWordLyrics.value) return
                             upgrading = true
                         }
                     }
@@ -418,8 +424,8 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
                 return
             }
 
-            val best = filtered.maxByOrNull { it.score }!!
-            _candidates.value = sortCandidates(scored)
+            val best = filtered.first()
+            _candidates.value = scored
             Log.i(TAG, "Best match: ${best.trackName} (score: ${best.score})")
             if (best.score < MIN_ACCEPT_SCORE) {
                 // Probably a different song with the same title: wrong lyrics are worse
@@ -569,7 +575,7 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
 
             _candidates.value = scored
 
-            val best = filtered.maxByOrNull { it.score }
+            val best = filtered.firstOrNull()
             if (best != null && LyricMatcher.isAutoAccept(best.score)) {
                 setSource(best.source)
                 cacheResult(t, searchTitle, searchArtist, searchAlbum, searchDuration, best)
@@ -613,6 +619,31 @@ class LyricsRepository private constructor(private val database: AppDatabase) {
         }
         if (t != currentTrackId) return
         _candidates.value = sortCandidates(adjustForQuality(results.map { LyricMatcher.score(it, title, artist, album, durationMs) }))
+    }
+
+    /**
+     * The word/line preference changed: pick again for the song that is playing, from the
+     * candidates already found (searching once if there are none). Hand-imported lyrics stay.
+     */
+    suspend fun repickForPreference(allowOnline: Boolean) {
+        val t = currentTrackId.ifBlank { return }
+        if (_lyricSource.value == "manual") return
+        if (_candidates.value.isEmpty()) {
+            if (!allowOnline) return
+            loadCandidates(lastSearchTitle, lastSearchArtist, lastSearchAlbum, lastSearchDurationMs)
+        }
+        if (t != currentTrackId) return
+        val sorted = sortCandidates(_candidates.value)
+        _candidates.value = sorted
+        val best = sorted.firstOrNull { it.score >= MIN_ACCEPT_SCORE && !it.syncedLyrics.isNullOrEmpty() } ?: return
+        val lines = LrcParser.parse(best.syncedLyrics!!, best.translation)
+        if (lines.isEmpty() || lines == _parsedLyrics.value) return
+        Log.i(TAG, "Preference re-pick: source=${best.source} words=${hasWordTiming(best)}")
+        setSource(best.source)
+        cacheResult(t, lastSearchTitle, lastSearchArtist, lastSearchAlbum, lastSearchDurationMs, best)
+        if (t != currentTrackId) return
+        _parsedLyrics.value = lines
+        _lyricStatus.value = LyricStatus.Synced(best.score)
     }
 
     /** Mark the current best match as wrong and blacklist it. */
