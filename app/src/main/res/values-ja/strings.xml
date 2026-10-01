@@ -144,7 +144,7 @@
     <string name="settings_clear_cache">歌詞キャッシュをクリア</string>
     <string name="settings_clear_cache_desc">歌詞、アルバムアート、失敗記録をすべて削除</string>
     <string name="settings_about_app">Lyrics Proxyについて</string>
-    <string name="settings_about_version_detail">バージョン0.1.0</string>
+    <string name="settings_about_version_detail">バージョン %1$s</string>
     <string name="settings_group_about">バージョン情報</string>
     <string name="settings_about_version">バージョン</string>
     <string name="settings_open_source_licenses">オープンソースライセンス</string>

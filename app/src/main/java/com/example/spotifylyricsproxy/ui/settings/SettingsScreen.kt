@@ -301,7 +301,7 @@ fun SettingsScreen(
                         }
                     )
                     Divider()
-                    SettingsRow(stringResource(R.string.settings_about_app), stringResource(R.string.settings_about_version_detail))
+                    SettingsRow(stringResource(R.string.settings_about_app), stringResource(R.string.settings_about_version_detail, com.example.spotifylyricsproxy.BuildConfig.VERSION_NAME))
                     Divider()
                     SettingsRow(
                         title = stringResource(R.string.settings_github),

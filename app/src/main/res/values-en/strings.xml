@@ -144,7 +144,7 @@
     <string name="settings_clear_cache">Clear lyric cache</string>
     <string name="settings_clear_cache_desc">Delete all lyrics, album art and failure records</string>
     <string name="settings_about_app">About Lyrics Proxy</string>
-    <string name="settings_about_version_detail">Version 0.1.0</string>
+    <string name="settings_about_version_detail">Version %1$s</string>
     <string name="settings_group_about">About</string>
     <string name="settings_about_version">Version</string>
     <string name="settings_open_source_licenses">Open source licenses</string>

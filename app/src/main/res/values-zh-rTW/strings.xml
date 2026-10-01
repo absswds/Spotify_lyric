@@ -144,7 +144,7 @@
     <string name="settings_clear_cache">清理歌詞緩存</string>
     <string name="settings_clear_cache_desc">刪除所有歌詞、封面和失敗記錄</string>
     <string name="settings_about_app">關於 Lyrics Proxy</string>
-    <string name="settings_about_version_detail">版本 0.1.0</string>
+    <string name="settings_about_version_detail">版本 %1$s</string>
     <string name="settings_group_about">關於</string>
     <string name="settings_about_version">版本</string>
     <string name="settings_open_source_licenses">開放原始碼授權</string>
