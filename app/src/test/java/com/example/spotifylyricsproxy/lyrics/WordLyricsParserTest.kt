@@ -92,7 +92,7 @@ class WordLyricsParserTest {
 
     @Test
     fun `lyrics without labels are untouched`() {
-        val lines = LrcParser.parse("[00:01.00]作词：方文山\n[00:02.00]hello")
+        val lines = LrcParser.parse("[00:01.00]hi\n[00:02.00]hello")
         assertEquals(2, lines.size)
         assertFalse(lines.any { it.isSecondaryVoice })
     }

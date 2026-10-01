@@ -32,11 +32,11 @@ object LrcParser {
      */
     fun parse(lrcText: String, translationLrc: String? = null): List<LrcLine> {
         val trimmed = lrcText.trimStart()
-        val lines = when {
+        val lines = stripLeadingCredits(when {
             trimmed.startsWith("<tt") || trimmed.startsWith("<?xml") -> parseTtml(trimmed)
             lrcText.lineSequence().any { YRC_LINE.matches(it.trim()) } -> assignSpeakers(parseYrc(lrcText))
             else -> assignSpeakers(parseLrc(lrcText))
-        }
+        })
         if (translationLrc.isNullOrBlank()) return lines
         val translated = parseLrc(translationLrc).filter { it.text.isNotBlank() }
         if (translated.isEmpty()) return lines
@@ -45,6 +45,34 @@ object LrcParser {
             val match = translated.minByOrNull { abs(it.startMs - line.startMs) }
             if (match != null && abs(match.startMs - line.startMs) <= 1_000) line.copy(translation = match.text) else line
         }
+    }
+
+    private val CREDIT_LINE = Regex(
+        """^\s*(作?[词詞曲]|[编編]曲|制作人?|製作人?|监制|監製|混音|录音|錄音|母带|母帶|和声|和聲|吉他|贝斯|貝斯|鼓|企划|企劃|发行|發行|出品|OP|SP|ISRC|Lyrics?|Lyricist|Music|Composer|Arranger|Arrangement|Producer|Written by|Words)\s*[:：]""",
+        RegexOption.IGNORE_CASE
+    )
+    private val TITLE_LINE = Regex("""^.{1,40}\s[-–—]\s.{1,40}$""")
+
+    /**
+     * Credit lines ("词: …", "作曲: …") and a leading "Artist - Title" line are not sung:
+     * drop them from the start of the lyrics so they are neither lit up word by word nor
+     * shown on the media card as the current line.
+     */
+    internal fun stripLeadingCredits(lines: List<LrcLine>): List<LrcLine> {
+        var i = 0
+        val limit = minOf(lines.size, 14)
+        var seenCredit = false
+        while (i < limit) {
+            val t = lines[i].text.trim()
+            when {
+                CREDIT_LINE.containsMatchIn(t) -> seenCredit = true
+                i == 0 && TITLE_LINE.matches(t) -> {}
+                else -> break
+            }
+            i++
+        }
+        // A lone "A - B" first line without any credits could be a real lyric: keep it.
+        return if (i > 0 && (seenCredit || i > 1)) lines.drop(i) else lines
     }
 
     // "Jay:" / "aMEI：" / "合:" on a line of its own marks who sings the following lines.
