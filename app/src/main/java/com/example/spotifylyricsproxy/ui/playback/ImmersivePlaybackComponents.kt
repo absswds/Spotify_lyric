@@ -1094,8 +1094,16 @@ private fun revealedChars(words: List<LyricWord>, ranges: List<IntRange>, positi
 }
 
 /** Erase the unsung part of each row, with the soft edge sitting at the exact sung position. */
-/** Boundary between [row] and the next one: just below the baseline, past descenders. */
-private fun rowSplit(l: TextLayoutResult, row: Int, fontPx: Float) = l.getLineBaseline(row) + fontPx * 0.42f
+/**
+ * Boundary between [row] and the next one: halfway between this row's descenders (g, y, p)
+ * and the next row's tallest marks (apostrophes, caps). A fixed depth below the baseline cut
+ * the top off the next row's apostrophes and drew it with the wrong word's lift.
+ */
+private fun rowSplit(l: TextLayoutResult, row: Int, fontPx: Float): Float {
+    val descent = l.getLineBaseline(row) + fontPx * 0.22f
+    val nextTop = l.getLineBaseline(row + 1) - fontPx * 0.74f
+    return (descent + nextTop) / 2f
+}
 
 private fun DrawScope.drawCharReveal(l: TextLayoutResult, sung: Float, softEdge: Float, lift: Float, fontPx: Float) {
     for (row in 0 until l.lineCount) {

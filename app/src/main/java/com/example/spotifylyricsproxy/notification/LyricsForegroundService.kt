@@ -37,6 +37,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -59,6 +60,7 @@ class LyricsForegroundService : Service() {
     private var lastFetchedTrackId = ""
     private var lastStartAt = 0L
     private var wakeLock: PowerManager.WakeLock? = null
+    private val silentAudio = SilentAudioKeeper()
 
     override fun onCreate() {
         super.onCreate()
@@ -117,6 +119,7 @@ class LyricsForegroundService : Service() {
             getSystemService(android.media.session.MediaSessionManager::class.java)?.removeOnActiveSessionsChangedListener(it)
         }
         serviceScope.cancel()
+        silentAudio.stop()
         mediaSessionController.release()
         spotifyRepository.disconnect()
         releaseWakeLock()
@@ -149,7 +152,9 @@ class LyricsForegroundService : Service() {
         reclaimJob = serviceScope.launch {
             delay(RECLAIM_DELAY_MS)
             try {
-                if (mediaSessionController.beginReclaim(playbackClock.estimatedPositionMs())) {
+                val began = mediaSessionController.beginReclaim(playbackClock.estimatedPositionMs())
+                Log.i(TAG, "Reclaim media card: began=$began")
+                if (began) {
                     delay(MediaSessionController.RECLAIM_GAP_MS)
                 }
             } finally {
@@ -256,6 +261,28 @@ class LyricsForegroundService : Service() {
 
             launch {
                 spotifyRepository.albumArt.collect { currentAlbumArt.value = it }
+            }
+
+            // Playing on another device: the phone is silent and ColorOS freezes us; keep an
+            // (inaudible) stream open so the media card lyrics keep moving.
+            launch {
+                combine(spotifyRepository.otherDevicePlayingFlow, currentTrack) { other, track ->
+                    other && !track.isPaused
+                }.collect { if (it) silentAudio.start() else silentAudio.stop() }
+            }
+
+            // Playback moved back to this phone: Spotify promotes its own session while our
+            // track never looked paused, so no track-change/resume reclaim fires. Reclaim now,
+            // and once more after Spotify has finished taking over its local playback.
+            launch {
+                spotifyRepository.playbackAwayFlow.distinctUntilChanged().drop(1).collect { away ->
+                    Log.i(TAG, "Playback away from this device: $away")
+                    if (!away) {
+                        reclaimSoon()
+                        delay(HANDOVER_RECLAIM_MS)
+                        reclaimSoon()
+                    }
+                }
             }
 
             launch {
@@ -494,6 +521,8 @@ class LyricsForegroundService : Service() {
         private const val CHANNEL_ID = "lyrics_foreground"
         /** Let Spotify finish its own state change before we re-promote our session. */
         private const val RECLAIM_DELAY_MS = 1_200L
+        /** Second reclaim after playback returns from another device; Spotify settles slowly. */
+        private const val HANDOVER_RECLAIM_MS = 3_000L
         /** Longer than this since the last start: assume the Spotify connection went stale. */
         private const val STALE_AFTER_MS = 60_000L
         private const val IDLE_STOP_MS = 10 * 60_000L

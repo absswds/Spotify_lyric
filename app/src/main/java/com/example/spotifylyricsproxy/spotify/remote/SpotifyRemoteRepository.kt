@@ -84,6 +84,20 @@ class SpotifyRemoteRepository(
         get() = _otherDevicePlaying.value
         set(value) { _otherDevicePlaying.value = value }
 
+    /**
+     * Another device plays while following it is turned off. The phone's Spotify mirrors that
+     * playback as its own "playing" state, so we show paused and ignore its playing events,
+     * or the media card would keep showing lyrics for music the user chose not to follow.
+     */
+    private val _playingElsewhere = MutableStateFlow(false)
+    private var playingElsewhere: Boolean
+        get() = _playingElsewhere.value
+        set(value) { _playingElsewhere.value = value }
+
+    /** Playback is on another device, followed or not: true → false means it came back here. */
+    val playbackAwayFlow: kotlinx.coroutines.flow.Flow<Boolean> =
+        kotlinx.coroutines.flow.combine(_otherDevicePlaying, _playingElsewhere) { a, b -> a || b }
+
     /** Off for the UI's copy while the app is in the background; the service keeps polling. */
     @Volatile var webPollEnabled = true
 
@@ -137,13 +151,15 @@ class SpotifyRemoteRepository(
                 // stale "playing" state too while another device has moved on.
                 val localPlaying = !_currentTrack.value.isPaused && !otherDevicePlaying
                 if (localPlaying) idlePollMs = IDLE_POLL_MS
-                if (!com.example.spotifylyricsproxy.core.AppSettings.followOtherDevices.value) {
-                    // Off: only this phone counts; drop a leftover "other device" state.
-                    if (otherDevicePlaying) otherDevicePlaying = false
-                } else if (webPollEnabled && !SpotifyTokenStore.needsRefresh()) pollOtherDevice()
+                // Off: only this phone counts. Still polled, to tell the phone's mirrored
+                // "playing" state apart from real local playback (see playingElsewhere).
+                if (!com.example.spotifylyricsproxy.core.AppSettings.followOtherDevices.value && otherDevicePlaying) {
+                    otherDevicePlaying = false
+                }
+                if (webPollEnabled && !SpotifyTokenStore.needsRefresh()) pollOtherDevice()
                 delay(
                     when {
-                        otherDevicePlaying -> OTHER_DEVICE_POLL_MS
+                        otherDevicePlaying || playingElsewhere -> OTHER_DEVICE_POLL_MS
                         localPlaying -> LOCAL_CHECK_POLL_MS
                         else -> idlePollMs
                     }
@@ -183,8 +199,19 @@ class SpotifyRemoteRepository(
             // Playing on this device: App Remote reports it directly.
             if (here) {
                 otherDevicePlaying = false
+                if (playingElsewhere) {
+                    // Its playing events were ignored meanwhile: fetch the current state.
+                    playingElsewhere = false
+                    refreshState()
+                }
                 return
             }
+            if (!com.example.spotifylyricsproxy.core.AppSettings.followOtherDevices.value) {
+                playingElsewhere = true
+                if (!_currentTrack.value.isPaused) _currentTrack.value = _currentTrack.value.copy(isPaused = true)
+                return
+            }
+            playingElsewhere = false
             otherDevicePlaying = true
             watchdogJob?.cancel()
             _playbackOptions.value = _playbackOptions.value.copy(
@@ -211,6 +238,11 @@ class SpotifyRemoteRepository(
                 loadAlbumArt(item.id, null)
             }
         } else if (!otherDevicePlaying) {
+            // Stopped elsewhere: the phone's own events count again.
+            if (playingElsewhere) {
+                playingElsewhere = false
+                refreshState()
+            }
             idlePollMs = (idlePollMs * 2).coerceAtMost(IDLE_POLL_MAX_MS)
         } else {
             otherDevicePlaying = false
@@ -239,15 +271,18 @@ class SpotifyRemoteRepository(
     /**
      * Whether the Web API's active device is this one. Its type alone isn't enough: a tablet
      * reports "Tablet", and the user's phone is a "Smartphone" too when this app runs on the
-     * tablet. Match the name first; failing that, a phone or tablet playing the same track
-     * this device's Spotify says it is playing.
+     * tablet. Match the name first; failing that, a device of this device's own type playing
+     * the same track this device's Spotify says it is playing. The type must match: the
+     * phone's Spotify mirrors a tablet's playback as its own "playing" state, which made the
+     * tablet look local and left the lyrics on the phone's frozen position.
      */
     private fun isThisDevice(device: com.example.spotifylyricsproxy.spotify.webapi.SpotifyDevice?, itemId: String?): Boolean {
         if (device == null) return false
         if (device.name.trim().lowercase() in localDeviceNames) return true
-        val handheld = device.type.equals("Smartphone", ignoreCase = true) || device.type.equals("Tablet", ignoreCase = true)
+        val ownType = if (context.resources.configuration.smallestScreenWidthDp >= 600) "Tablet" else "Smartphone"
         val local = _currentTrack.value
-        return handheld && !local.isPaused && !otherDevicePlaying && itemId != null && local.trackId == itemId
+        return device.type.equals(ownType, ignoreCase = true) &&
+            !local.isPaused && !otherDevicePlaying && itemId != null && local.trackId == itemId
     }
 
     private val albumArtCache = AlbumArtCache.getInstance(context)
@@ -488,6 +523,7 @@ class SpotifyRemoteRepository(
                     if (track.isPaused) return@collect
                     otherDevicePlaying = false
                 }
+                if (playingElsewhere && !track.isPaused) return@collect
                 if (_connectionState.value !is SpotifyConnectionState.Connected) {
                     _currentTrack.value = track
                 } else {
@@ -580,6 +616,7 @@ class SpotifyRemoteRepository(
                     if (playerState.isPaused) return@setEventCallback
                     otherDevicePlaying = false
                 }
+                if (playingElsewhere && !playerState.isPaused) return@setEventCallback
                 val rawUri = playerState.track?.imageUri?.raw ?: ""
                 val track = SpotifyTrackInfo(
                     trackId = playerState.track?.uri?.split(":")?.lastOrNull() ?: "",
