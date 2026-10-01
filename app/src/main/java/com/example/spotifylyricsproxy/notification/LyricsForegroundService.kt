@@ -130,8 +130,17 @@ class LyricsForegroundService : Service() {
         if (idleStopJob?.isActive == true) return
         idleStopJob = serviceScope.launch {
             delay(IDLE_STOP_MS)
+            // Spotify has sat paused in the background for just as long: let it go too.
+            runCatching {
+                getSystemService(android.app.ActivityManager::class.java).killBackgroundProcesses(SPOTIFY_PACKAGE)
+            }
             stopSelf()
         }
+    }
+
+    private fun cancelIdleStop() {
+        idleStopJob?.cancel()
+        idleStopJob = null
     }
 
     private fun reclaimSoon() {
@@ -220,11 +229,14 @@ class LyricsForegroundService : Service() {
                         paused = track.isPaused,
                         duration = track.durationMs
                     )
-                    if (track.isPaused) {
-                        // Nothing to sync while paused: let the CPU sleep.
+                    if (track.isPaused || track.trackId.isBlank()) {
+                        // Nothing to sync while paused: let the CPU sleep, and stop for good
+                        // if it stays that way.
                         releaseWakeLock()
+                        scheduleIdleStop()
                     } else {
                         acquireWakeLock()
+                        cancelIdleStop()
                     }
                     fetchLyricsWhenTrackChanges(track)
                 }
@@ -472,7 +484,7 @@ class LyricsForegroundService : Service() {
         private const val RECLAIM_DELAY_MS = 1_200L
         /** Longer than this since the last start: assume the Spotify connection went stale. */
         private const val STALE_AFTER_MS = 60_000L
-        private const val IDLE_STOP_MS = 30 * 60_000L
+        private const val IDLE_STOP_MS = 10 * 60_000L
         private const val NOTIFICATION_ID = 4001
         private const val REQUEST_OPEN_APP = 4002
         private const val REDIRECT_URI = "spotifylyricsproxy://callback"
