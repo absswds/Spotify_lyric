@@ -6,12 +6,21 @@ on:
   pull_request:
     branches: [ master ]
 
+# A newer push to the same PR makes the older run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+
+    # A PR could swap in a modified gradle-wrapper.jar; refuse unknown wrapper binaries.
+    - name: Validate Gradle wrapper
+      uses: gradle/actions/wrapper-validation@v6
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -22,8 +31,20 @@ jobs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Build and test
+    - name: Set up Gradle (with cache)
+      uses: gradle/actions/setup-gradle@v6
+
+    # Unit tests include LocaleStringsTest (all four languages have every string).
+    # assembleRelease runs R8 and resource shrinking, which a debug build never exercises.
+    - name: Test and build
       run: |
         echo "sdk.dir=$ANDROID_HOME" > local.properties
         chmod +x gradlew
-        ./gradlew testDebugUnitTest assembleDebug
+        ./gradlew testDebugUnitTest assembleDebug assembleRelease
+
+    - name: Upload test reports
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-reports
+        path: app/build/reports/tests/

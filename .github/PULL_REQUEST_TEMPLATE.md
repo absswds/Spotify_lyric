@@ -4,7 +4,7 @@
 
 ## How to test?
 
-- [ ] `./gradlew assembleDebug`
+- [ ] `./gradlew testDebugUnitTest assembleDebug assembleRelease` (CI runs the same)
 - [ ] Real-device verification, if playback, notifications, MediaSession, Spotify, networking, or UI behavior changed
 - [ ] Not applicable — explain why:
 
@@ -19,4 +19,5 @@
 
 - [ ] No secrets or tokens committed
 - [ ] Documentation updated if user-facing behavior, providers, or public-release boundaries changed
+- [ ] New UI strings added to all four `strings.xml` locales (checked by `LocaleStringsTest`)
 - [ ] No generated build output, backups, IDE files, agent workspaces, or local caches committed
