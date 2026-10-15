@@ -84,6 +84,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -313,12 +314,24 @@ fun PlaybackScreen(
 // Layouts
 // ---------------------------------------------------------------------------
 
+/** Cover-size setting as a multiplier on each layout's default (medium) cover. */
+@Composable
+private fun coverSizeFactor(): Float = when (LyricDisplayPreferences.coverSize.value) {
+    "small" -> 0.72f
+    "large" -> 1.24f
+    else -> 1f
+}
+
 /** Phone portrait: clear cover stage on top, header + scrubber, lyrics fill the rest. */
 @Composable
 private fun PhonePortraitLayout(state: PlayerUiState, actions: PlayerActions) {
     Box(modifier = Modifier.fillMaxSize()) {
         AmbientAlbumBackdrop(albumArt = state.albumArt, palette = state.palette, animate = state.isPlaying)
-        ImmersiveAlbumBackground(albumArt = state.albumArt, palette = state.palette)
+
+        // Width share per size setting, also capped by height so short screens keep room for lyrics.
+        val configuration = LocalConfiguration.current
+        val coverFraction = 0.58f * coverSizeFactor()
+        val coverSize = min(configuration.screenWidthDp.dp * coverFraction, configuration.screenHeightDp.dp * coverFraction * 0.5f)
 
         PlayerChrome(
             state = state,
@@ -334,7 +347,12 @@ private fun PhonePortraitLayout(state: PlayerUiState, actions: PlayerActions) {
                 .fillMaxSize()
                 .navigationBarsPadding()
         ) {
-            Spacer(modifier = Modifier.height(LocalConfiguration.current.screenHeightDp.dp * 0.36f))
+            // Cover starts right under the top-right buttons; it shrinks toward its top edge
+            // when paused so the gap above it stays the same.
+            Spacer(modifier = Modifier.statusBarsPadding().height(46.dp))
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                AlbumCover(state.albumArt, state.isPlaying, coverSize, shrinkOrigin = TransformOrigin(0.5f, 0f))
+            }
             ImmersiveTrackHeader(
                 trackInfo = state.trackInfo,
                 connectionState = state.connectionState,
@@ -343,14 +361,16 @@ private fun PhonePortraitLayout(state: PlayerUiState, actions: PlayerActions) {
                 onPlayPause = actions.onPlayPause,
                 onSkipNext = actions.onSkipNext,
                 onSkipPrevious = actions.onSkipPrevious,
-                modifier = Modifier.padding(top = 28.dp)
+                modifier = Modifier.padding(top = 16.dp)
             )
             ReadPosition(state.positionMs) { position ->
                 ImmersiveSeekControl(
                     estimatedPositionMs = position,
                     durationMs = state.trackInfo.durationMs,
                     onSeek = actions.onSeek,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = if (state.nextUp.isNullOrBlank()) 14.dp else 4.dp)
+                    modifier = Modifier
+                        .padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = if (state.nextUp.isNullOrBlank()) 14.dp else 4.dp)
+                        .coachTarget("progress")
                 )
             }
             Box(Modifier.padding(horizontal = 24.dp)) { NextUpLine(state) }
@@ -404,8 +424,10 @@ private fun SplitPlayerLayout(state: PlayerUiState, actions: PlayerActions, scal
             // Compact: the cover takes whatever height the title, progress and
             // transport rows (~180dp, plus the "next" line) leave, capped by the left pane's width.
             val reserved = if (state.nextUp.isNullOrBlank()) 180.dp else 200.dp
-            val coverSize = if (compact) min(maxHeight - reserved, maxWidth * 0.45f * 0.82f)
+            val baseCover = if (compact) min(maxHeight - reserved, maxWidth * 0.45f * 0.82f)
                 else min(maxHeight * 0.58f, maxWidth * 0.34f)
+            // Large can only grow into what the other rows leave.
+            val coverSize = min(baseCover * coverSizeFactor(), if (compact) maxHeight - reserved else maxHeight * 0.7f)
             Row(modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
@@ -485,7 +507,7 @@ private fun TabletPortraitLayout(state: PlayerUiState, actions: PlayerActions) {
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            val coverSize = maxWidth * 0.30f
+            val coverSize = maxWidth * 0.30f * coverSizeFactor()
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
                     modifier = Modifier
@@ -653,9 +675,12 @@ private fun LiveProgressBar(state: PlayerUiState, actions: PlayerActions, scale:
     }
 }
 
-/** Cover that settles back when paused and springs forward when playback resumes. */
+/**
+ * Cover that settles back when paused and springs forward when playback resumes.
+ * [shrinkOrigin] is the point it shrinks toward.
+ */
 @Composable
-private fun AlbumCover(albumArt: Bitmap?, isPlaying: Boolean, size: Dp) {
+private fun AlbumCover(albumArt: Bitmap?, isPlaying: Boolean, size: Dp, shrinkOrigin: TransformOrigin = TransformOrigin.Center) {
     val coverScale by animateFloatAsState(
         targetValue = if (isPlaying) 1f else 0.86f,
         animationSpec = spring(dampingRatio = 0.62f, stiffness = 220f),
@@ -668,6 +693,7 @@ private fun AlbumCover(albumArt: Bitmap?, isPlaying: Boolean, size: Dp) {
             .graphicsLayer {
                 scaleX = coverScale
                 scaleY = coverScale
+                transformOrigin = shrinkOrigin
             }
             .shadow(elevation = 24.dp * coverScale, shape = shape, ambientColor = Color.Black, spotColor = Color.Black)
             .clip(shape)
@@ -1209,6 +1235,45 @@ private fun LyricDisplaySettingsDialog(
                             FilterChip(
                                 selected = currentDim == value,
                                 onClick = { LyricDisplayPreferences.setDimLevel(value) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                }
+
+                val lineGap = LyricDisplayPreferences.lineSpacing.value
+                Column {
+                    Text(
+                        text = stringResource(R.string.lyric_settings_line_spacing, "${lineGap.toInt()}dp"),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Slider(
+                        value = lineGap,
+                        onValueChange = { LyricDisplayPreferences.setLineSpacing(it) },
+                        valueRange = 0f..30f,
+                        steps = 14
+                    )
+                }
+
+                val currentCover by LyricDisplayPreferences.coverSize
+                Column {
+                    Text(
+                        text = stringResource(R.string.lyric_settings_cover_size),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val coverLabels = listOf(
+                            "small" to stringResource(R.string.lyric_settings_cover_small),
+                            "medium" to stringResource(R.string.lyric_settings_cover_medium),
+                            "large" to stringResource(R.string.lyric_settings_cover_large)
+                        )
+                        coverLabels.forEach { (value, label) ->
+                            FilterChip(
+                                selected = currentCover == value,
+                                onClick = { LyricDisplayPreferences.setCoverSize(value) },
                                 label = { Text(label) }
                             )
                         }

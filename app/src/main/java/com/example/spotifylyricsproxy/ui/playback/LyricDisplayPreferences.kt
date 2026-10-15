@@ -5,7 +5,9 @@ import android.content.SharedPreferences
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object LyricDisplayPreferences {
@@ -19,6 +21,8 @@ object LyricDisplayPreferences {
     private const val KEY_MOBILE_STRATEGY = "mobile_data_strategy"
     private const val KEY_CHINESE_FORM = "chinese_form"
     private const val KEY_CHINESE_MODE = "chinese_convert_mode"
+    private const val KEY_COVER_SIZE = "cover_size"
+    private const val KEY_LINE_SPACING = "line_spacing"
 
     private var prefs: SharedPreferences? = null
 
@@ -41,6 +45,14 @@ object LyricDisplayPreferences {
     val mobileDataStrategy: State<String> = _mobileDataStrategy
     val chineseForm: State<String> = _chineseForm
 
+    /** Phone-portrait album cover size: "small" | "medium" | "large". */
+    private val _coverSize = mutableStateOf("medium")
+    val coverSize: State<String> = _coverSize
+
+    /** Extra gap between lyric lines in dp, [0f, 30f]. */
+    private val _lineSpacing = mutableFloatStateOf(10f)
+    val lineSpacing: State<Float> = _lineSpacing
+
     /**
      * How Chinese lyrics meet a Chinese translation target: "replace" converts the
      * lyrics themselves to the target script, "below" keeps them and shows the
@@ -61,12 +73,26 @@ object LyricDisplayPreferences {
         _mobileDataStrategy.value = prefs?.getString(KEY_MOBILE_STRATEGY, "ask") ?: "ask"
         _chineseForm.value = prefs?.getString(KEY_CHINESE_FORM, "original") ?: "original"
         _chineseConvertMode.value = prefs?.getString(KEY_CHINESE_MODE, "replace") ?: "replace"
+        _coverSize.value = prefs?.getString(KEY_COVER_SIZE, "medium") ?: "medium"
+        _lineSpacing.value = prefs?.getFloat(KEY_LINE_SPACING, 10f) ?: 10f
     }
 
     fun setDimLevel(value: String) {
         if (value !in listOf("low", "medium", "high")) return
         prefs?.edit()?.putString(KEY_DIM, value)?.apply()
         _dimLevel.value = value
+    }
+
+    fun setCoverSize(value: String) {
+        if (value !in listOf("small", "medium", "large")) return
+        prefs?.edit()?.putString(KEY_COVER_SIZE, value)?.apply()
+        _coverSize.value = value
+    }
+
+    fun setLineSpacing(valueDp: Float) {
+        val clamped = valueDp.coerceIn(0f, 30f)
+        prefs?.edit()?.putFloat(KEY_LINE_SPACING, clamped)?.apply()
+        _lineSpacing.value = clamped
     }
 
     fun setAlignment(value: String) {
@@ -162,7 +188,8 @@ object LyricDisplayPreferences {
             futureLineAlpha = futureAlpha,
             textAlign = if (align == "start") TextAlign.Start else TextAlign.Center,
             blurEnabled = _blurEnabled.value,
-            chineseForm = _chineseForm.value
+            chineseForm = _chineseForm.value,
+            lineSpacing = _lineSpacing.value.dp
         )
     }
 }
@@ -176,5 +203,6 @@ data class LyricDisplayConfig(
     val futureLineAlpha: Float,
     val textAlign: TextAlign,
     val blurEnabled: Boolean = true,
-    val chineseForm: String = "original"
+    val chineseForm: String = "original",
+    val lineSpacing: Dp = 10.dp
 )

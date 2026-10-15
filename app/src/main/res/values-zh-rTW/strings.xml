@@ -106,10 +106,15 @@
     <string name="lyric_settings_dim_low">低</string>
     <string name="lyric_settings_dim_medium">中</string>
     <string name="lyric_settings_dim_high">高</string>
+    <string name="lyric_settings_cover_size">封面大小</string>
+    <string name="lyric_settings_cover_small">小</string>
+    <string name="lyric_settings_cover_medium">中</string>
+    <string name="lyric_settings_cover_large">大</string>
     <string name="lyric_settings_align_center">居中</string>
     <string name="lyric_settings_align_left">靠左</string>
     <string name="lyric_settings_done">完成</string>
     <string name="lyric_settings_font_size">歌詞字型大小: %1$s</string>
+    <string name="lyric_settings_line_spacing">歌詞行距: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻譯</string>
@@ -413,13 +418,13 @@
     <string name="tour_menu_offset_title">調快 / 調慢</string>
     <string name="tour_menu_offset_desc">歌詞和歌聲對不上時微調；每個歌詞來源分別記住。</string>
     <string name="tour_menu_display_title">歌詞顯示</string>
-    <string name="tour_menu_display_desc">字級和其他行的暗度。</string>
+    <string name="tour_menu_display_desc">字級、行距、其他行的暗度和封面大小。</string>
     <string name="tour_menu_library_title">歌單、預先快取、快取</string>
     <string name="tour_menu_library_desc">瀏覽 Spotify 歌單、提前下載歌詞、管理本機快取。</string>
     <string name="tour_menu_settings_title">設定</string>
     <string name="tour_menu_settings_desc">主題、語言、網路、繁簡、快取和權限都在這裡；也可以再看一次這個介紹。</string>
     <string name="onboarding_perm_spotify">登入 Spotify</string>
-    <string name="onboarding_perm_spotify_desc">授權讀取你的歌單與播放狀態：在電腦、平板等其他裝置播放時也能同步歌詞。唯讀，不會變更你的帳號。授權大約每小時過期一次，之後開啟應用程式時會自動續期，可能會閃一下 Spotify 的載入頁，屬正常現象。如果下載的是作者打包的 APK：Spotify 只允許作者的應用程式授權給最多 5 個帳號，授權失敗時播放清單和其他裝置同步無法使用，歌詞等其他功能不受影響；想使用全部功能可以依 README 自行建置。</string>
+    <string name="onboarding_perm_spotify_desc">授權讀取你的歌單與播放狀態：在電腦、平板等其他裝置播放時也能同步歌詞。唯讀，不會變更你的帳號。授權大約每小時過期一次，之後開啟應用程式時會自動續期，可能會閃一下 Spotify 的載入頁，屬正常現象。如果下載的是作者打包的 APK：Spotify 只允許作者的應用程式授權給最多 5 個帳號，授權失敗時播放清單和其他裝置同步無法使用，歌詞等其他功能不受影響；想使用全部功能可以依 README 自行建置。有需要也可以透過作者 GitHub 主頁上的信箱聯絡作者。</string>
     <string name="playback_next_up">下一首：%1$s</string>
     <string name="lyric_source_kugou">🎵 酷狗</string>
     <string name="unofficial_consent_title">關於歌詞來源</string>

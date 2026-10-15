@@ -91,8 +91,6 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextLayoutResult
@@ -304,48 +302,6 @@ internal fun AmbientAlbumBackdrop(
     }
 }
 
-/**
- * Clear immersive album-art stage. The artwork dissolves into the extracted palette.
- */
-@Composable
-internal fun ImmersiveAlbumBackground(
-    albumArt: Bitmap?,
-    palette: AlbumPalette,
-    modifier: Modifier = Modifier
-) {
-    val configuration = LocalConfiguration.current
-    val stageHeight = configuration.screenHeightDp.dp * 0.36f
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(stageHeight)
-    ) {
-        if (albumArt != null) {
-            Image(
-                bitmap = albumArt.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                // Preserve the complete album artwork; the mesh fills the remaining stage.
-                contentScale = ContentScale.Fit,
-                filterQuality = FilterQuality.High
-            )
-        } else {
-            Box(
-                modifier = Modifier.fillMaxSize().background(palette.deep),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = stringResource(R.string.playback_cd_album_art_placeholder),
-                    modifier = Modifier.size(64.dp),
-                    tint = Color.White.copy(alpha = 0.6f)
-                )
-            }
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------
 // Buttons: bare icons, no circle; press feedback is scale + fade
 // ---------------------------------------------------------------------------
@@ -451,6 +407,7 @@ fun ImmersiveTrackHeader(
         }
 
         Row(
+            modifier = Modifier.coachTarget("play"),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -680,7 +637,7 @@ private fun SyncedLyricsList(
             state = listState,
             modifier = Modifier.fillMaxWidth(),
             contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(10.dp * textScale)
+            verticalArrangement = Arrangement.spacedBy(config.lineSpacing * textScale)
         ) {
             itemsIndexed(lines, key = { index, line -> "${line.startMs}_$index" }) { index, line ->
                 val isCurrent = index == currentIndex

@@ -106,10 +106,15 @@
     <string name="lyric_settings_dim_low">Low</string>
     <string name="lyric_settings_dim_medium">Medium</string>
     <string name="lyric_settings_dim_high">High</string>
+    <string name="lyric_settings_cover_size">Cover size</string>
+    <string name="lyric_settings_cover_small">Small</string>
+    <string name="lyric_settings_cover_medium">Medium</string>
+    <string name="lyric_settings_cover_large">Large</string>
     <string name="lyric_settings_align_center">Center</string>
     <string name="lyric_settings_align_left">Left</string>
     <string name="lyric_settings_done">Done</string>
     <string name="lyric_settings_font_size">Lyrics font: %1$s</string>
+    <string name="lyric_settings_line_spacing">Line spacing: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">Translate</string>
@@ -410,13 +415,13 @@
     <string name="tour_menu_offset_title">Earlier / later</string>
     <string name="tour_menu_offset_desc">Nudge the timing when lyrics and singing drift apart; remembered per lyric source.</string>
     <string name="tour_menu_display_title">Lyric display</string>
-    <string name="tour_menu_display_desc">Font size and how dim the other lines are.</string>
+    <string name="tour_menu_display_desc">Font size, line spacing, how dim the other lines are, and cover size.</string>
     <string name="tour_menu_library_title">Playlists, pre-cache, cache</string>
     <string name="tour_menu_library_desc">Browse Spotify playlists, download lyrics ahead of time, manage the local cache.</string>
     <string name="tour_menu_settings_title">Settings</string>
     <string name="tour_menu_settings_desc">Theme, language, network, Chinese script, cache and permissions; you can replay this tour there too.</string>
     <string name="onboarding_perm_spotify">Sign in to Spotify</string>
-    <string name="onboarding_perm_spotify_desc">Lets the app read your playlists and playback state, so lyrics stay in sync when you play on another device such as a computer or tablet. Read-only; nothing in your account changes.The authorization expires about every hour and is renewed when you open the app, so a Spotify loading screen may flash briefly. That is normal. If you installed the author\'s prebuilt APK: Spotify lets the author\'s app authorize at most 5 accounts. If authorization fails, playlists and other-device sync are unavailable; lyrics and everything else still work. Build it yourself (see the README) to get every feature.</string>
+    <string name="onboarding_perm_spotify_desc">Lets the app read your playlists and playback state, so lyrics stay in sync when you play on another device such as a computer or tablet. Read-only; nothing in your account changes.The authorization expires about every hour and is renewed when you open the app, so a Spotify loading screen may flash briefly. That is normal. If you installed the author\'s prebuilt APK: Spotify lets the author\'s app authorize at most 5 accounts. If authorization fails, playlists and other-device sync are unavailable; lyrics and everything else still work. Build it yourself (see the README) to get every feature. If you need help, you can also reach the author by the email on their GitHub profile.</string>
     <string name="playback_next_up">Next: %1$s</string>
     <string name="lyric_source_kugou">🎵 Kugou</string>
     <string name="unofficial_consent_title">About lyric sources</string>

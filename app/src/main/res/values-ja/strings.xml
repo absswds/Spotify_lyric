@@ -106,10 +106,15 @@
     <string name="lyric_settings_dim_low">低</string>
     <string name="lyric_settings_dim_medium">中</string>
     <string name="lyric_settings_dim_high">高</string>
+    <string name="lyric_settings_cover_size">カバーのサイズ</string>
+    <string name="lyric_settings_cover_small">小</string>
+    <string name="lyric_settings_cover_medium">中</string>
+    <string name="lyric_settings_cover_large">大</string>
     <string name="lyric_settings_align_center">中央揃え</string>
     <string name="lyric_settings_align_left">左揃え</string>
     <string name="lyric_settings_done">完了</string>
     <string name="lyric_settings_font_size">歌詞の文字サイズ: %1$s</string>
+    <string name="lyric_settings_line_spacing">歌詞の行間: %1$s</string>
 
     <!-- Playback - Translation -->
     <string name="playback_translate_lyrics">翻訳</string>
@@ -410,13 +415,13 @@
     <string name="tour_menu_offset_title">早く / 遅く</string>
     <string name="tour_menu_offset_desc">歌詞と歌声がずれたときに微調整。歌詞ソースごとに記憶します。</string>
     <string name="tour_menu_display_title">歌詞の表示</string>
-    <string name="tour_menu_display_desc">文字サイズと他の行の暗さ。</string>
+    <string name="tour_menu_display_desc">文字サイズ、行間、他の行の暗さ、カバーのサイズ。</string>
     <string name="tour_menu_library_title">プレイリスト・事前キャッシュ・キャッシュ</string>
     <string name="tour_menu_library_desc">Spotify のプレイリスト閲覧、歌詞の事前ダウンロード、ローカルキャッシュの管理。</string>
     <string name="tour_menu_settings_title">設定</string>
     <string name="tour_menu_settings_desc">テーマ、言語、ネットワーク、中国語の字体、キャッシュ、権限。この説明もここから再表示できます。</string>
     <string name="onboarding_perm_spotify">Spotify にログイン</string>
-    <string name="onboarding_perm_spotify_desc">プレイリストと再生状態の読み取りを許可します。パソコンやタブレットなど他のデバイスで再生しても歌詞が同期します。読み取りのみで、アカウントは変更しません。認証は約 1 時間ごとに期限が切れ、アプリを開くと自動で更新されるため、Spotify の読み込み画面が一瞬表示されることがあります。これは正常です。作者が配布する APK の場合：Spotify は作者のアプリに最大 5 アカウントまでしか認可を許可しません。認可に失敗するとプレイリストと他デバイスとの同期は使えませんが、歌詞などほかの機能は使えます。すべての機能を使うには README に従って自分でビルドしてください。</string>
+    <string name="onboarding_perm_spotify_desc">プレイリストと再生状態の読み取りを許可します。パソコンやタブレットなど他のデバイスで再生しても歌詞が同期します。読み取りのみで、アカウントは変更しません。認証は約 1 時間ごとに期限が切れ、アプリを開くと自動で更新されるため、Spotify の読み込み画面が一瞬表示されることがあります。これは正常です。作者が配布する APK の場合：Spotify は作者のアプリに最大 5 アカウントまでしか認可を許可しません。認可に失敗するとプレイリストと他デバイスとの同期は使えませんが、歌詞などほかの機能は使えます。すべての機能を使うには README に従って自分でビルドしてください。必要であれば、作者の GitHub プロフィールにあるメールアドレスから連絡することもできます。</string>
     <string name="playback_next_up">次の曲：%1$s</string>
     <string name="lyric_source_kugou">🎵 Kugou</string>
     <string name="unofficial_consent_title">歌詞の取得元について</string>

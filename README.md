@@ -46,6 +46,7 @@ Tested mainly on OPPO ColorOS, where the lock-screen island (锁屏岛) and Flui
 - Duet lines on opposite sides; translations under each line.
 - Rolling, blurred time digits; marquee for long titles and albums.
 - Layouts: phone portrait, landscape (Lyricify-like left block with cover, title, translate and menu buttons, progress, transport), tablet portrait, and split screen.
+- Adjustable cover size (small / medium / large, in every layout) and lyric line spacing.
 
 ### Lyric sources
 
