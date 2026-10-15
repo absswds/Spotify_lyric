@@ -45,7 +45,7 @@ object LyricDisplayPreferences {
     val mobileDataStrategy: State<String> = _mobileDataStrategy
     val chineseForm: State<String> = _chineseForm
 
-    /** Phone-portrait album cover size: "small" | "medium" | "large". */
+    /** Album cover size in every player layout: "small" | "medium" | "large". */
     private val _coverSize = mutableStateOf("medium")
     val coverSize: State<String> = _coverSize
 
