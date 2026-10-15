@@ -72,7 +72,14 @@ fun Modifier.coachTarget(key: String): Modifier = composed {
     val requester = remember { BringIntoViewRequester() }
     DisposableEffect(key, requester) {
         coachRequesters[key] = requester
-        onDispose { coachRequesters.remove(key) }
+        // Forget the bounds too: a control left behind by a rotation (shuffle/repeat
+        // only exist in landscape) would otherwise get a spotlight on empty space.
+        onDispose {
+            if (coachRequesters[key] === requester) {
+                coachRequesters.remove(key)
+                coachBounds.remove(key)
+            }
+        }
     }
     bringIntoViewRequester(requester).onGloballyPositioned { coachBounds[key] = it.boundsInRoot() }
 }
